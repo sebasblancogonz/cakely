@@ -9,14 +9,20 @@ import {
   integer,
   timestamp,
   pgEnum,
-  serial
+  serial,
+  jsonb
 } from 'drizzle-orm/pg-core';
 import { count, eq, ilike } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
+import { ProductType } from '@types';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
 export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);
+export const orderStatusEnum = pgEnum('order_status', ['Pendiente', 'En Preparación', 'Listo', 'Entregado']);
+export const paymentStatusEnum = pgEnum('payment_status', ['Pendiente', 'Pagado', 'Cancelado']);
+export const paymentMethodEnum = pgEnum('payment_method', ['Efectivo', 'Tarjeta', 'Transferencia Bancaria', 'Bizum']);
+export const productTypeEnum = pgEnum('product_type', Object.values(ProductType) as [string]);
 
 export const products = pgTable('products', {
   id: serial('id').primaryKey(),
@@ -28,7 +34,28 @@ export const products = pgTable('products', {
   availableAt: timestamp('available_at').notNull()
 });
 
+export const orders = pgTable('orders', {
+  id: serial('order_id').primaryKey(),
+  customerName: text('customer_name').notNull(),
+  customerContact: text('customer_contact').notNull(),
+  orderDate: timestamp('order_date').notNull(),
+  deliveryDate: timestamp('delivery_date'),
+  orderStatus: orderStatusEnum('order_status').notNull(),
+  productType: productTypeEnum('product_type').notNull(),
+  customizationDetails: text('customization_details'),
+  quantity: integer('quantity').notNull(),
+  sizeOrWeight: text('size_or_weight').notNull(),
+  flavor: text('flavor').notNull(),
+  allergyInformation: text('allergy_information'),
+  totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
+  paymentStatus: paymentStatusEnum('payment_status').notNull(),
+  paymentMethod: paymentMethodEnum('payment_method').notNull(),
+  notes: text('notes'),
+  orderHistory: jsonb('order_history')
+});
+
 export type SelectProduct = typeof products.$inferSelect;
+export type SelectOrder = typeof orders.$inferSelect;
 export const insertProductSchema = createInsertSchema(products);
 
 export async function getProducts(
@@ -67,6 +94,46 @@ export async function getProducts(
   };
 }
 
+export async function getOrders(
+  search: string,
+  offset: number
+): Promise<{
+  orders: typeof orders.$inferSelect[];
+  newOffset: number | null;
+  totalOrders: number;
+}> {
+  // Always search the full table, not per page
+  if (search) {
+    return {
+      orders: await db
+        .select()
+        .from(orders)
+        .where(ilike(orders.customerName, `%${search}%`))
+        .limit(1000),
+      newOffset: null,
+      totalOrders: 0
+    };
+  }
+
+  if (offset === null) {
+    return { orders: [], newOffset: null, totalOrders: 0 };
+  }
+
+  let totalOrders = await db.select({ count: count() }).from(orders);
+  let moreOrders = await db.select().from(orders).limit(5).offset(offset);
+  let newOffset = moreOrders.length >= 5 ? offset + 5 : null;
+
+  return {
+    orders: moreOrders,
+    newOffset,
+    totalOrders: totalOrders[0].count
+  };
+}
+
 export async function deleteProductById(id: number) {
   await db.delete(products).where(eq(products.id, id));
+}
+
+export async function deleteOrderById(id: number) {
+  await db.delete(orders).where(eq(orders.id, id));
 }

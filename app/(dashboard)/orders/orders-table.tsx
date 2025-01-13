@@ -15,62 +15,67 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { Product } from './product';
-import { SelectProduct } from '@/lib/db';
+import { SelectOrder } from '@/lib/db';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Order } from './order';
 
-export function ProductsTable({
-  products,
+export function OrdersTable({
+  orders,
   offset,
-  totalProducts
+  totalOrders
 }: {
-  products: SelectProduct[];
+  orders: SelectOrder[];
   offset: number;
-  totalProducts: number;
+  totalOrders: number;
 }) {
   let router = useRouter();
-  let productsPerPage = 5;
+  let ordersPerPage = 5;
 
   function prevPage() {
     router.back();
   }
 
   function nextPage() {
-    router.push(`/products?offset=${offset}`, { scroll: false });
+    router.push(`/orders?offset=${offset}`, { scroll: false });
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Products</CardTitle>
+        <CardTitle>Pedidos</CardTitle>
         <CardDescription>
-          Manage your products and view their sales performance.
+          Gestiona los pedidos de Aura: Cookies and Cakes
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
+              {/* Agregar columna cliente */}
+              {/* borrar columna image */}
               <TableHead className="hidden w-[100px] sm:table-cell">
                 <span className="sr-only">Image</span>
               </TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Price</TableHead>
+              <TableHead>Descripción</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="hidden md:table-cell">Precio</TableHead>
+              {/* borrar columna total sales */}
               <TableHead className="hidden md:table-cell">
                 Total Sales
               </TableHead>
-              <TableHead className="hidden md:table-cell">Created at</TableHead>
+              <TableHead className="hidden md:table-cell">
+                Fecha del pedido
+              </TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => (
-              <Product key={product.id} product={product} />
+            {orders.map((order) => (
+              <Order key={order.id} order={order} />
             ))}
           </TableBody>
         </Table>
@@ -78,11 +83,12 @@ export function ProductsTable({
       <CardFooter>
         <form className="flex items-center w-full justify-between">
           <div className="text-xs text-muted-foreground">
-            Showing{' '}
+            Mostrando{' '}
             <strong>
-              {Math.max(0, Math.min(offset - productsPerPage, totalProducts) + 1)}-{offset}
+              {Math.max(1, offset + 1)}-
+              {Math.min(offset + ordersPerPage, totalOrders)}
             </strong>{' '}
-            of <strong>{totalProducts}</strong> products
+            de <strong>{totalOrders}</strong> pedidos
           </div>
           <div className="flex">
             <Button
@@ -90,20 +96,18 @@ export function ProductsTable({
               variant="ghost"
               size="sm"
               type="submit"
-              disabled={offset === productsPerPage}
+              disabled={offset === 0}
             >
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Prev
+              Anterior
             </Button>
             <Button
               formAction={nextPage}
               variant="ghost"
               size="sm"
               type="submit"
-              disabled={offset + productsPerPage > totalProducts}
+              disabled={offset + ordersPerPage >= totalOrders}
             >
-              Next
-              <ChevronRight className="ml-2 h-4 w-4" />
+              Siguiente
             </Button>
           </div>
         </form>

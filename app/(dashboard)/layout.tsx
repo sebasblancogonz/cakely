@@ -10,14 +10,6 @@ import {
   Users2
 } from 'lucide-react';
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -31,12 +23,23 @@ import { VercelLogo } from '@/components/icons';
 import Providers from './providers';
 import { NavItem } from './nav-item';
 import { SearchInput } from './search';
+import React from 'react';
+import DashboardBreadcrumb from './common/DashboardBreadcrumb';
 
 export default function DashboardLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+
+  const breadcrumbItems = [
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/orders', label: 'Orders' },
+    { href: '/products', label: 'Products' },
+    { href: '/customers', label: 'Customers' },
+    { href: '/analytics', label: 'Analytics' }
+  ];
+
   return (
     <Providers>
       <main className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -44,7 +47,7 @@ export default function DashboardLayout({
         <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <MobileNav />
-            <DashboardBreadcrumb />
+            <DashboardBreadcrumb items={breadcrumbItems} />
             <SearchInput />
             <User />
           </header>
@@ -74,7 +77,7 @@ function DesktopNav() {
           <Home className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="#" label="Orders">
+        <NavItem href="/orders" label="Orders">
           <ShoppingCart className="h-5 w-5" />
         </NavItem>
 
@@ -134,14 +137,14 @@ function MobileNav() {
             Dashboard
           </Link>
           <Link
-            href="#"
+            href="/orders"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <ShoppingCart className="h-5 w-5" />
             Orders
           </Link>
           <Link
-            href="#"
+            href="/products"
             className="flex items-center gap-4 px-2.5 text-foreground"
           >
             <Package className="h-5 w-5" />
@@ -167,26 +170,3 @@ function MobileNav() {
   );
 }
 
-function DashboardBreadcrumb() {
-  return (
-    <Breadcrumb className="hidden md:flex">
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="#">Dashboard</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="#">Products</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>All Products</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
-}
