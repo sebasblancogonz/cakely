@@ -28,8 +28,10 @@ export enum PaymentMethod {
 
 export interface Order {
   id: number;
+  description: string;
   customerName: string;
   customerContact: string;
+  amount: number | undefined;
   orderDate: Date;
   deliveryDate: Date;
   orderStatus: OrderStatus;
@@ -51,12 +53,12 @@ export interface OrderHistory {
   timestamp: Date;
 }
 
+
 interface BreadcrumbItem {
   href: string;
   label: string;
 }
 
-interface DashboardBreadcrumbProps {
+export interface DashboardBreadcrumbProps {
   items: BreadcrumbItem[];
-  current: string;
 }

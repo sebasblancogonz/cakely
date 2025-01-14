@@ -12,9 +12,9 @@ import {
   serial,
   jsonb
 } from 'drizzle-orm/pg-core';
-import { count, eq, ilike } from 'drizzle-orm';
+import { count, desc, eq, ilike } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
-import { ProductType } from '@types';
+import { Order, ProductType } from '@types';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
@@ -36,9 +36,11 @@ export const products = pgTable('products', {
 
 export const orders = pgTable('orders', {
   id: serial('order_id').primaryKey(),
+  description: text('description').notNull(),
   customerName: text('customer_name').notNull(),
   customerContact: text('customer_contact').notNull(),
   orderDate: timestamp('order_date').notNull(),
+  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
   deliveryDate: timestamp('delivery_date'),
   orderStatus: orderStatusEnum('order_status').notNull(),
   productType: productTypeEnum('product_type').notNull(),
@@ -56,7 +58,9 @@ export const orders = pgTable('orders', {
 
 export type SelectProduct = typeof products.$inferSelect;
 export type SelectOrder = typeof orders.$inferSelect;
+
 export const insertProductSchema = createInsertSchema(products);
+
 
 export async function getProducts(
   search: string,
@@ -94,40 +98,41 @@ export async function getProducts(
   };
 }
 
+function mapOrders(orderData: any[]): Order[] {
+  return orderData.map((order) => ({
+    ...order,
+    orderDate: new Date(order.orderDate),
+    amount: Number(order.amount)
+  }));
+}
+
 export async function getOrders(
   search: string,
   offset: number
 ): Promise<{
-  orders: typeof orders.$inferSelect[];
+  orders: Order[];
   newOffset: number | null;
   totalOrders: number;
 }> {
-  // Always search the full table, not per page
   if (search) {
-    return {
-      orders: await db
-        .select()
-        .from(orders)
-        .where(ilike(orders.customerName, `%${search}%`))
-        .limit(1000),
-      newOffset: null,
-      totalOrders: 0
-    };
+    const result = await db
+      .select()
+      .from(orders)
+      .limit(1000);
+
+    return { orders: mapOrders(result), newOffset: null, totalOrders: 0 };
   }
 
   if (offset === null) {
     return { orders: [], newOffset: null, totalOrders: 0 };
   }
 
-  let totalOrders = await db.select({ count: count() }).from(orders);
-  let moreOrders = await db.select().from(orders).limit(5).offset(offset);
-  let newOffset = moreOrders.length >= 5 ? offset + 5 : null;
+  const totalOrders = (await db.select({ count: count() }).from(orders))[0].count;
+  const newOrdersFromOffset = await db.select().from(orders).limit(5).offset(offset);
+  const mappedOrders = mapOrders(newOrdersFromOffset);
+  const newOffset = mappedOrders.length >= 5 ? offset + 5 : null;
 
-  return {
-    orders: moreOrders,
-    newOffset,
-    totalOrders: totalOrders[0].count
-  };
+  return { orders: mappedOrders, newOffset, totalOrders };
 }
 
 export async function deleteProductById(id: number) {

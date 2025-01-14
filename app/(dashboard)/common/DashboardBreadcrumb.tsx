@@ -13,14 +13,8 @@ import {
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
 
-interface BreadcrumbItem {
-  href: string;
-  label: string;
-}
+import { DashboardBreadcrumbProps } from '@types';
 
-interface DashboardBreadcrumbProps {
-  items: BreadcrumbItem[];
-}
 
 function DashboardBreadcrumb({ items }: DashboardBreadcrumbProps) {
     const pathname = usePathname();

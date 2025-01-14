@@ -15,31 +15,64 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { SelectOrder } from '@/lib/db';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Order } from './order';
+import { Order as OrderType } from '@types';
+
+const ORDERS_PER_PAGE = 5;
 
 export function OrdersTable({
   orders,
   offset,
   totalOrders
 }: {
-  orders: SelectOrder[];
+  orders: OrderType[];
   offset: number;
   totalOrders: number;
 }) {
-  let router = useRouter();
-  let ordersPerPage = 5;
+  const router = useRouter();
 
-  function prevPage() {
-    router.back();
-  }
+  const prevPage = () => router.back();
+  const nextPage = () => router.push(`/orders?offset=${offset}`, { scroll: false });
 
-  function nextPage() {
-    router.push(`/orders?offset=${offset}`, { scroll: false });
-  }
+  const renderPaginationInfo = () => {
+    if (totalOrders === 1) {
+      return (
+        <>
+          Mostrando <strong>1</strong> pedido
+        </>
+      );
+    }
+
+    return (
+      <>
+        Mostrando{' '}
+        <strong>
+          {Math.max(1, offset + 1)}-
+          {Math.min(offset + orders.length, totalOrders)}
+        </strong>{' '}
+        de <strong>{totalOrders}</strong> pedidos
+      </>
+    );
+  };
+
+  const renderTableHeaders = () => (
+    <TableHeader>
+      <TableRow>
+        <TableHead>Cliente</TableHead>
+        <TableHead className="hidden lg:table-cell">Contacto</TableHead>
+        <TableHead>Descripción</TableHead>
+        <TableHead>Estado</TableHead>
+        <TableHead className="hidden md:table-cell">Precio</TableHead>
+        <TableHead className="hidden md:table-cell">Producto</TableHead>
+        <TableHead className="hidden md:table-cell">Fecha del pedido</TableHead>
+        <TableHead>
+          <span className="sr-only">Acciones</span>
+        </TableHead>
+      </TableRow>
+    </TableHeader>
+  );
 
   return (
     <Card>
@@ -51,28 +84,7 @@ export function OrdersTable({
       </CardHeader>
       <CardContent>
         <Table>
-          <TableHeader>
-            <TableRow>
-              {/* Agregar columna cliente */}
-              {/* borrar columna image */}
-              <TableHead className="hidden w-[100px] sm:table-cell">
-                <span className="sr-only">Image</span>
-              </TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="hidden md:table-cell">Precio</TableHead>
-              {/* borrar columna total sales */}
-              <TableHead className="hidden md:table-cell">
-                Total Sales
-              </TableHead>
-              <TableHead className="hidden md:table-cell">
-                Fecha del pedido
-              </TableHead>
-              <TableHead>
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
+          {renderTableHeaders()}
           <TableBody>
             {orders.map((order) => (
               <Order key={order.id} order={order} />
@@ -83,12 +95,7 @@ export function OrdersTable({
       <CardFooter>
         <form className="flex items-center w-full justify-between">
           <div className="text-xs text-muted-foreground">
-            Mostrando{' '}
-            <strong>
-              {Math.max(1, offset + 1)}-
-              {Math.min(offset + ordersPerPage, totalOrders)}
-            </strong>{' '}
-            de <strong>{totalOrders}</strong> pedidos
+            {renderPaginationInfo()}
           </div>
           <div className="flex">
             <Button
@@ -105,7 +112,7 @@ export function OrdersTable({
               variant="ghost"
               size="sm"
               type="submit"
-              disabled={offset + ordersPerPage >= totalOrders}
+              disabled={offset + ORDERS_PER_PAGE >= totalOrders}
             >
               Siguiente
             </Button>

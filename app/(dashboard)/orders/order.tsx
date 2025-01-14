@@ -9,25 +9,26 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { SelectOrder } from '@/lib/db';
 import { deleteProduct } from '../actions';
+import { Order as OrderType } from '@types';
 
-export function Order({ order }: { order: SelectOrder }) {
+export function Order({ order }: { order: OrderType }) {
   return (
     <TableRow>
-      <TableCell className="hidden sm:table-cell">
-        {order.id}
+      <TableCell className="font-medium">
+        {order.customerName}
       </TableCell>
-      <TableCell className="font-medium">{order.customerName}</TableCell>
+      <TableCell className="hidden lg:table-cell">{order.customerContact}</TableCell>
+      <TableCell>{order.description}</TableCell>
       <TableCell>
         <Badge variant="outline" className="capitalize">
           {order.orderStatus}
         </Badge>
       </TableCell>
-      <TableCell className="hidden md:table-cell">{`$${order.customerContact}`}</TableCell>
+      <TableCell className="hidden md:table-cell">{`$${order.amount}`}</TableCell>
       <TableCell className="hidden md:table-cell">{order.productType}</TableCell>
       <TableCell className="hidden md:table-cell">
-        {order.orderDate.toLocaleDateString("en-US")}
+      {new Date(order.orderDate).toLocaleDateString("es-ES")}
       </TableCell>
       <TableCell>
         <DropdownMenu>
