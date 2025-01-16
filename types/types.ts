@@ -1,8 +1,8 @@
 export enum OrderStatus {
-  Pendiente = 'Pendiente',
-  'En Preparación' = 'En Preparación',
-  Listo = 'Listo',
-  Entregado = 'Entregado'
+  pending = 'Pendiente',
+  processing = 'En Preparación',
+  ready = 'Listo',
+  delivered = 'Entregado'
 }
 
 export enum ProductType {
@@ -27,11 +27,11 @@ export enum PaymentMethod {
 }
 
 export interface Order {
-  id: number;
+  id: number | undefined;
   description: string;
   customerName: string;
   customerContact: string;
-  amount: number | undefined;
+  amount: number;
   orderDate: Date;
   deliveryDate: Date;
   orderStatus: OrderStatus;

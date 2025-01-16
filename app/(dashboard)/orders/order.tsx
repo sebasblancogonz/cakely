@@ -5,7 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -13,22 +13,28 @@ import { deleteProduct } from '../actions';
 import { Order as OrderType } from '@types';
 
 export function Order({ order }: { order: OrderType }) {
+  // Mapeo de estados a clases CSS
+  const statusTranslations: Record<string, string> = {
+    pendiente: 'bg-pending text-pending-text',
+    'en preparacion': 'bg-wip text-wip-text',
+    listo: 'bg-ready text-ready-text',
+    entregado: 'bg-delivered  text-delivered-text',
+  };
+
   return (
     <TableRow>
-      <TableCell className="font-medium">
-        {order.customerName}
-      </TableCell>
+      <TableCell className="font-medium">{order.customerName}</TableCell>
       <TableCell className="hidden lg:table-cell">{order.customerContact}</TableCell>
       <TableCell>{order.description}</TableCell>
       <TableCell>
-        <Badge variant="outline" className="capitalize">
+        <Badge variant="outline" className={`capitalize ${statusTranslations[order.orderStatus.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase()]}`}>
           {order.orderStatus}
         </Badge>
       </TableCell>
       <TableCell className="hidden md:table-cell">{`$${order.amount}`}</TableCell>
       <TableCell className="hidden md:table-cell">{order.productType}</TableCell>
       <TableCell className="hidden md:table-cell">
-      {new Date(order.orderDate).toLocaleDateString("es-ES")}
+        {new Date(order.orderDate).toLocaleDateString('es-ES')}
       </TableCell>
       <TableCell>
         <DropdownMenu>
