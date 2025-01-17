@@ -25,16 +25,18 @@ const ORDERS_PER_PAGE = 5;
 export function OrdersTable({
   orders,
   offset,
-  totalOrders
+  totalOrders,
+  setOrders
 }: {
   orders: OrderType[];
   offset: number;
   totalOrders: number;
+  setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
 }) {
   const router = useRouter();
 
   const prevPage = () => router.back();
-  const nextPage = () => router.push(`/orders?offset=${offset}`, { scroll: false });
+  const nextPage = () => router.push(`/pedidos?offset=${offset}`, { scroll: false });
 
   const renderPaginationInfo = () => {
     if (totalOrders === 1) {
@@ -87,7 +89,7 @@ export function OrdersTable({
           {renderTableHeaders()}
           <TableBody>
             {orders.map((order) => (
-              <Order key={order.id} order={order} />
+              <Order key={order.id} order={order} setOrders={setOrders} />
             ))}
           </TableBody>
         </Table>

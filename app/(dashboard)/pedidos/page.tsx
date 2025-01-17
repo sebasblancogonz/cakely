@@ -14,7 +14,6 @@ export default function OrdersPage(props: {
 }) {
   const [selectedTab, setSelectedTab] = useState('all');
   const [orders, setOrders] = useState<Order[]>([]);
-  const [totalOrders, setTotalOrders] = useState(0);
   const [newOffset, setNewOffset] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -31,7 +30,6 @@ export default function OrdersPage(props: {
 
       setOrders(data.orders);
       setNewOffset(data.newOffset ?? 0);
-      setTotalOrders(data.totalOrders);
     }
     fetchOrders();
   }, [props.searchParams]);
@@ -120,6 +118,7 @@ export default function OrdersPage(props: {
       ) : (
         <TabsContent value={selectedTab} className=' w-[80%] xs:w-full'>
           <OrdersTable
+            setOrders={setOrders}
             orders={filteredOrders}
             offset={newOffset ?? 0}
             totalOrders={filteredOrders.length}
