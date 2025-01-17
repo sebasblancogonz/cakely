@@ -16,6 +16,12 @@ export default function OrdersPage(props: {
   const [orders, setOrders] = useState<Order[]>([]);
   const [newOffset, setNewOffset] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
+
+  const editOrder = (order: Order) => {
+    setOrderToEdit(order);
+    setIsModalOpen(true);
+  }
 
   useEffect(() => {
     async function fetchOrders() {
@@ -107,7 +113,7 @@ export default function OrdersPage(props: {
             </span>
           </Button>
           <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-            <OrderForm setIsModalOpen={setIsModalOpen} setOrders={setOrders}/>
+            <OrderForm setIsModalOpen={setIsModalOpen} setOrders={setOrders} orderToEdit={orderToEdit}/>
           </Modal>
         </div>
       </div>
@@ -119,6 +125,7 @@ export default function OrdersPage(props: {
         <TabsContent value={selectedTab} className=' w-[80%] xs:w-full'>
           <OrdersTable
             setOrders={setOrders}
+            editOrder={editOrder}
             orders={filteredOrders}
             offset={newOffset ?? 0}
             totalOrders={filteredOrders.length}

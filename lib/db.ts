@@ -14,28 +14,24 @@ import {
 } from 'drizzle-orm/pg-core';
 import { count, eq, ilike } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
-import { Order, ProductType } from '@types';
+import { Order, OrderStatus, PaymentMethod, PaymentStatus, ProductType } from '@types';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
 export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);
-export const orderStatusEnum = pgEnum('order_status', [
-  'Pendiente',
-  'En Preparación',
-  'Listo',
-  'Entregado'
-]);
-export const paymentStatusEnum = pgEnum('payment_status', [
-  'Pendiente',
-  'Pagado',
-  'Cancelado'
-]);
-export const paymentMethodEnum = pgEnum('payment_method', [
-  'Efectivo',
-  'Tarjeta',
-  'Transferencia Bancaria',
-  'Bizum'
-]);
+
+export const orderStatusEnum = pgEnum('order_status', 
+  Object.values(OrderStatus) as [string]
+);
+
+export const paymentStatusEnum = pgEnum('payment_status',
+  Object.values(PaymentStatus) as [string]
+);
+
+export const paymentMethodEnum = pgEnum('payment_method', 
+  Object.values(PaymentMethod) as [string]
+);
+
 export const productTypeEnum = pgEnum(
   'product_type',
   Object.values(ProductType) as [string]
@@ -86,7 +82,6 @@ export async function getProducts(
   newOffset: number | null;
   totalProducts: number;
 }> {
-  // Always search the full table, not per page
   if (search) {
     return {
       products: await db
@@ -193,7 +188,6 @@ export async function saveOrder(order: Order): Promise<number> {
   };
 
   try {
-    // Inserta el pedido y devuelve el ID
     console.log('Inserting order:', orderToSave);
     const result = await db
       .insert(orders)
@@ -203,5 +197,46 @@ export async function saveOrder(order: Order): Promise<number> {
   } catch (error) {
     console.error('Error saving order:', error);
     throw new Error('Failed to save order');
+  }
+}
+
+export async function updateOrder(order: Order, orderId: number) {
+  const orderDate = order.orderDate instanceof Date 
+    ? order.orderDate 
+    : new Date(order.orderDate);
+
+  const deliveryDate = order.deliveryDate instanceof Date 
+    ? order.deliveryDate 
+    : new Date(order.deliveryDate);
+
+  const orderToUpdate = {
+    description: order.description,
+    customerName: order.customerName,
+    customerContact: order.customerContact,
+    orderDate: orderDate,
+    amount: order.amount.toString(),
+    deliveryDate: deliveryDate,
+    orderStatus: order.orderStatus,
+    productType: order.productType,
+    customizationDetails: order.customizationDetails,
+    quantity: order.quantity,
+    sizeOrWeight: order.sizeOrWeight,
+    flavor: order.flavor,
+    allergyInformation: order.allergyInformation,
+    totalPrice: order.totalPrice.toString(),
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    notes: order.notes,
+    orderHistory: order.orderHistory
+  };
+
+  try {
+    await db
+      .update(orders)
+      .set(orderToUpdate)
+      .where(eq(orders.id, orderId));
+  } catch (error) {
+    console.error('Error updating order:', error);
+    throw new Error('Failed to update order');
   }
 }
