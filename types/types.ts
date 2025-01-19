@@ -1,6 +1,6 @@
 export enum OrderStatus {
   pending = 'Pendiente',
-  processing = 'En Preparación',
+  processing = 'Preparando',
   ready = 'Listo',
   delivered = 'Entregado'
 }
@@ -22,7 +22,7 @@ export enum PaymentStatus {
 export enum PaymentMethod {
   Efectivo = 'Efectivo',
   Tarjeta = 'Tarjeta',
-  'Transferencia Bancaria' = 'Transferencia Bancaria',
+  'Transferencia' = 'Transferencia',
   Bizum = 'Bizum'
 }
 
@@ -52,7 +52,6 @@ export interface OrderHistory {
   status: OrderStatus;
   timestamp: Date;
 }
-
 
 interface BreadcrumbItem {
   href: string;

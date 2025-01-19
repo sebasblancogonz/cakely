@@ -135,9 +135,7 @@ const OrderForm = ({
     });
 
     if (response.ok) {
-      setOrders((orders) =>
-        orders.map((o) => (o.id === order.id ? order : o))
-      );
+      setOrders((orders) => orders.map((o) => (o.id === order.id ? order : o)));
       setIsModalOpen(false);
     }
   }
@@ -222,8 +220,8 @@ const OrderForm = ({
             { value: PaymentMethod.Efectivo, label: 'Efectivo' },
             { value: PaymentMethod.Tarjeta, label: 'Tarjeta' },
             {
-              value: PaymentMethod['Transferencia Bancaria'],
-              label: 'Transferencia Bancaria'
+              value: PaymentMethod['Transferencia'],
+              label: 'Transferencia'
             },
             { value: PaymentMethod.Bizum, label: 'Bizum' }
           ]}
