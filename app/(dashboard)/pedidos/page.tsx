@@ -6,14 +6,22 @@ import { File, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrdersTable } from './orders-table';
 import { Order } from '@types';
+import Modal from '../common/Modal';
+import OrderForm from './order-form';
 
 export default function OrdersPage(props: {
   searchParams: Promise<{ q: string; offset: string }>;
 }) {
   const [selectedTab, setSelectedTab] = useState('all');
   const [orders, setOrders] = useState<Order[]>([]);
-  const [totalOrders, setTotalOrders] = useState(0);
   const [newOffset, setNewOffset] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
+
+  const editOrder = (order: Order) => {
+    setOrderToEdit(order);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     async function fetchOrders() {
@@ -28,7 +36,6 @@ export default function OrdersPage(props: {
 
       setOrders(data.orders);
       setNewOffset(data.newOffset ?? 0);
-      setTotalOrders(data.totalOrders);
     }
     fetchOrders();
   }, [props.searchParams]);
@@ -44,21 +51,27 @@ export default function OrdersPage(props: {
       case 'all':
         return true;
       case 'pending':
-        return normalizeString(order.orderStatus) === normalizeString('Pendiente');
+        return (
+          normalizeString(order.orderStatus) === normalizeString('Pendiente')
+        );
       case 'in_progress':
-        return normalizeString(order.orderStatus) === normalizeString('En Preparación');
+        return (
+          normalizeString(order.orderStatus) === normalizeString('Preparando')
+        );
       case 'ready':
         return normalizeString(order.orderStatus) === normalizeString('Listo');
       case 'delivered':
-        return normalizeString(order.orderStatus) === normalizeString('Entregado');
+        return (
+          normalizeString(order.orderStatus) === normalizeString('Entregado')
+        );
       default:
         return true;
     }
   });
 
   return (
-    <Tabs defaultValue="all">
-      <div className="flex items-center">
+    <Tabs defaultValue="all" className="flex flex-col gap-4 mt-auto">
+      <div className="flex items-center justify-center flex-col gap-4 w-[80%] xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row ">
         <TabsList>
           <TabsTrigger onClick={() => setSelectedTab('all')} value="all">
             Todos
@@ -73,7 +86,7 @@ export default function OrdersPage(props: {
             onClick={() => setSelectedTab('in_progress')}
             value="in_progress"
           >
-            En Preparación
+            Preparando
           </TabsTrigger>
           <TabsTrigger onClick={() => setSelectedTab('ready')} value="ready">
             Listo
@@ -85,19 +98,30 @@ export default function OrdersPage(props: {
             Entregado
           </TabsTrigger>
         </TabsList>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="h-8 gap-1">
             <File className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Exportar
             </span>
           </Button>
-          <Button size="sm" className="h-8 gap-1">
+          <Button
+            size="sm"
+            className="h-8 gap-1"
+            onClick={() => setIsModalOpen(true)}
+          >
             <PlusCircle className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Nuevo pedido
             </span>
           </Button>
+          <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+            <OrderForm
+              setIsModalOpen={setIsModalOpen}
+              setOrders={setOrders}
+              orderToEdit={orderToEdit}
+            />
+          </Modal>
         </div>
       </div>
       {filteredOrders.length === 0 ? (
@@ -105,8 +129,10 @@ export default function OrdersPage(props: {
           <p className="text-lg text-gray-500">No hay pedidos</p>
         </div>
       ) : (
-        <TabsContent value={selectedTab}>
+        <TabsContent value={selectedTab} className=" w-[80%] xs:w-full">
           <OrdersTable
+            setOrders={setOrders}
+            editOrder={editOrder}
             orders={filteredOrders}
             offset={newOffset ?? 0}
             totalOrders={filteredOrders.length}

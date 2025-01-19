@@ -12,17 +12,30 @@ import {
   serial,
   jsonb
 } from 'drizzle-orm/pg-core';
-import { count, desc, eq, ilike } from 'drizzle-orm';
+import { count, eq, ilike } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
-import { Order, ProductType } from '@types';
+import { Order, OrderStatus, PaymentMethod, PaymentStatus, ProductType } from '@types';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
 export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);
-export const orderStatusEnum = pgEnum('order_status', ['Pendiente', 'En Preparación', 'Listo', 'Entregado']);
-export const paymentStatusEnum = pgEnum('payment_status', ['Pendiente', 'Pagado', 'Cancelado']);
-export const paymentMethodEnum = pgEnum('payment_method', ['Efectivo', 'Tarjeta', 'Transferencia Bancaria', 'Bizum']);
-export const productTypeEnum = pgEnum('product_type', Object.values(ProductType) as [string]);
+
+export const orderStatusEnum = pgEnum('order_status', 
+  Object.values(OrderStatus) as [string]
+);
+
+export const paymentStatusEnum = pgEnum('payment_status',
+  Object.values(PaymentStatus) as [string]
+);
+
+export const paymentMethodEnum = pgEnum('payment_method', 
+  Object.values(PaymentMethod) as [string]
+);
+
+export const productTypeEnum = pgEnum(
+  'product_type',
+  Object.values(ProductType) as [string]
+);
 
 export const products = pgTable('products', {
   id: serial('id').primaryKey(),
@@ -61,7 +74,6 @@ export type SelectOrder = typeof orders.$inferSelect;
 
 export const insertProductSchema = createInsertSchema(products);
 
-
 export async function getProducts(
   search: string,
   offset: number
@@ -70,7 +82,6 @@ export async function getProducts(
   newOffset: number | null;
   totalProducts: number;
 }> {
-  // Always search the full table, not per page
   if (search) {
     return {
       products: await db
@@ -115,10 +126,7 @@ export async function getOrders(
   totalOrders: number;
 }> {
   if (search) {
-    const result = await db
-      .select()
-      .from(orders)
-      .limit(1000);
+    const result = await db.select().from(orders).limit(1000);
 
     return { orders: mapOrders(result), newOffset: null, totalOrders: 0 };
   }
@@ -127,8 +135,13 @@ export async function getOrders(
     return { orders: [], newOffset: null, totalOrders: 0 };
   }
 
-  const totalOrders = (await db.select({ count: count() }).from(orders))[0].count;
-  const newOrdersFromOffset = await db.select().from(orders).limit(5).offset(offset);
+  const totalOrders = (await db.select({ count: count() }).from(orders))[0]
+    .count;
+  const newOrdersFromOffset = await db
+    .select()
+    .from(orders)
+    .limit(5)
+    .offset(offset);
   const mappedOrders = mapOrders(newOrdersFromOffset);
   const newOffset = mappedOrders.length >= 5 ? offset + 5 : null;
 
@@ -141,4 +154,89 @@ export async function deleteProductById(id: number) {
 
 export async function deleteOrderById(id: number) {
   await db.delete(orders).where(eq(orders.id, id));
+}
+
+export async function saveOrder(order: Order): Promise<number> {
+
+  const deliveryDate = order.deliveryDate instanceof Date 
+    ? order.deliveryDate 
+    : new Date(order.deliveryDate);
+
+  const orderDate = order.orderDate instanceof Date 
+    ? order.orderDate 
+    : new Date(order.orderDate);
+
+  const orderToSave: typeof orders.$inferInsert = {
+    description: order.description,
+    customerName: order.customerName,
+    customerContact: order.customerContact,
+    orderDate: orderDate,
+    amount:  order.amount.toString(),
+    deliveryDate: deliveryDate,
+    orderStatus: order.orderStatus,
+    productType: order.productType,
+    customizationDetails: order.customizationDetails,
+    quantity: order.quantity,
+    sizeOrWeight: order.sizeOrWeight,
+    flavor: order.flavor,
+    allergyInformation: order.allergyInformation,
+    totalPrice: order.totalPrice.toString(),
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    notes: order.notes,
+    orderHistory: order.orderHistory
+  };
+
+  try {
+    console.log('Inserting order:', orderToSave);
+    const result = await db
+      .insert(orders)
+      .values(orderToSave)
+      .returning({ id: orders.id });
+    return result[0]?.id ?? 0; 
+  } catch (error) {
+    console.error('Error saving order:', error);
+    throw new Error('Failed to save order');
+  }
+}
+
+export async function updateOrder(order: Order, orderId: number) {
+  const orderDate = order.orderDate instanceof Date 
+    ? order.orderDate 
+    : new Date(order.orderDate);
+
+  const deliveryDate = order.deliveryDate instanceof Date 
+    ? order.deliveryDate 
+    : new Date(order.deliveryDate);
+
+  const orderToUpdate = {
+    description: order.description,
+    customerName: order.customerName,
+    customerContact: order.customerContact,
+    orderDate: orderDate,
+    amount: order.amount.toString(),
+    deliveryDate: deliveryDate,
+    orderStatus: order.orderStatus,
+    productType: order.productType,
+    customizationDetails: order.customizationDetails,
+    quantity: order.quantity,
+    sizeOrWeight: order.sizeOrWeight,
+    flavor: order.flavor,
+    allergyInformation: order.allergyInformation,
+    totalPrice: order.totalPrice.toString(),
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    notes: order.notes,
+    orderHistory: order.orderHistory
+  };
+
+  try {
+    await db
+      .update(orders)
+      .set(orderToUpdate)
+      .where(eq(orders.id, orderId));
+  } catch (error) {
+    console.error('Error updating order:', error);
+    throw new Error('Failed to update order');
+  }
 }

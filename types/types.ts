@@ -1,8 +1,8 @@
 export enum OrderStatus {
-  Pendiente = 'Pendiente',
-  'En Preparación' = 'En Preparación',
-  Listo = 'Listo',
-  Entregado = 'Entregado'
+  pending = 'Pendiente',
+  processing = 'Preparando',
+  ready = 'Listo',
+  delivered = 'Entregado'
 }
 
 export enum ProductType {
@@ -22,16 +22,16 @@ export enum PaymentStatus {
 export enum PaymentMethod {
   Efectivo = 'Efectivo',
   Tarjeta = 'Tarjeta',
-  'Transferencia Bancaria' = 'Transferencia Bancaria',
+  'Transferencia' = 'Transferencia',
   Bizum = 'Bizum'
 }
 
 export interface Order {
-  id: number;
+  id: number | undefined;
   description: string;
   customerName: string;
   customerContact: string;
-  amount: number | undefined;
+  amount: number;
   orderDate: Date;
   deliveryDate: Date;
   orderStatus: OrderStatus;
@@ -52,7 +52,6 @@ export interface OrderHistory {
   status: OrderStatus;
   timestamp: Date;
 }
-
 
 interface BreadcrumbItem {
   href: string;

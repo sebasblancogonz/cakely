@@ -19,24 +19,31 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Order } from './order';
 import { Order as OrderType } from '@types';
+import { JSX } from 'react';
 
 const ORDERS_PER_PAGE = 5;
+
+interface OrdersTableProps {
+  orders: OrderType[];
+  offset: number;
+  totalOrders: number;
+  setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
+  editOrder: (order: OrderType) => void;
+}
 
 export function OrdersTable({
   orders,
   offset,
-  totalOrders
-}: {
-  orders: OrderType[];
-  offset: number;
-  totalOrders: number;
-}) {
+  totalOrders,
+  setOrders,
+  editOrder
+}: OrdersTableProps): JSX.Element {
   const router = useRouter();
 
   const prevPage = () => router.back();
-  const nextPage = () => router.push(`/orders?offset=${offset}`, { scroll: false });
+  const nextPage = () => router.push(`/pedidos?offset=${offset}`, { scroll: false });
 
-  const renderPaginationInfo = () => {
+  const renderPaginationInfo = (): JSX.Element => {
     if (totalOrders === 1) {
       return (
         <>
@@ -57,7 +64,7 @@ export function OrdersTable({
     );
   };
 
-  const renderTableHeaders = () => (
+  const renderTableHeaders = (): JSX.Element => (
     <TableHeader>
       <TableRow>
         <TableHead>Cliente</TableHead>
@@ -87,7 +94,7 @@ export function OrdersTable({
           {renderTableHeaders()}
           <TableBody>
             {orders.map((order) => (
-              <Order key={order.id} order={order} />
+              <Order key={order.id} order={order} setOrders={setOrders} editOrder={editOrder}/>
             ))}
           </TableBody>
         </Table>

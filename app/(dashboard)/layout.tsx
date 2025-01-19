@@ -25,6 +25,7 @@ import { NavItem } from './nav-item';
 import { SearchInput } from './search';
 import React from 'react';
 import DashboardBreadcrumb from './common/DashboardBreadcrumb';
+import Image from 'next/image';
 
 export default function DashboardLayout({
   children
@@ -34,7 +35,7 @@ export default function DashboardLayout({
 
   const breadcrumbItems = [
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/orders', label: 'Orders' },
+    { href: '/pedidos', label: 'Pedidos' },
     { href: '/products', label: 'Products' },
     { href: '/customers', label: 'Customers' },
     { href: '/analytics', label: 'Analytics' }
@@ -66,10 +67,16 @@ function DesktopNav() {
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
-          href="https://vercel.com/templates/next.js/admin-dashboard-tailwind-postgres-react-nextjs"
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+          href="#"
+          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
         >
-          <VercelLogo className="h-3 w-3 transition-all group-hover:scale-110" />
+          <Image
+            src="/logo small-01.webp"
+            alt="Vercel"
+            width={32}
+            height={32}
+            className="rounded-full"
+          />
           <span className="sr-only">Acme Inc</span>
         </Link>
 
@@ -77,7 +84,7 @@ function DesktopNav() {
           <Home className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="/orders" label="Orders">
+        <NavItem href="/pedidos" label="Pedidos">
           <ShoppingCart className="h-5 w-5" />
         </NavItem>
 
@@ -137,11 +144,11 @@ function MobileNav() {
             Dashboard
           </Link>
           <Link
-            href="/orders"
+            href="/pedidos"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <ShoppingCart className="h-5 w-5" />
-            Orders
+            Pedidos
           </Link>
           <Link
             href="/products"

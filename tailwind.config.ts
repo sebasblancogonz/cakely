@@ -51,7 +51,23 @@ export default {
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))'
-        }
+        },
+        pending: {
+          DEFAULT: '#eaf0fa',
+          text: '#3579e5',
+        },
+        wip: {
+          DEFAULT: '#fcf4e5',
+          text: '#df901b',
+        },
+        ready: {
+          DEFAULT: '#eaf9f4',
+          text: '#539e84', 
+        },
+        delivered: {
+          DEFAULT: '#eaf9f4', 
+          text: '#539e84', 
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -71,6 +87,9 @@ export default {
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out'
+      },
+      screens: {
+        "xs": "400px",
       }
     }
   },
