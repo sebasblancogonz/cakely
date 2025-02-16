@@ -26,6 +26,15 @@ export enum PaymentMethod {
   Bizum = 'Bizum'
 }
 
+export interface Customer {
+  id: number | undefined;
+  name: string;
+  email: string;
+  phone: string;
+  registrationDate: Date;
+  notes: string;
+}
+
 export interface Order {
   id: number | undefined;
   description: string;

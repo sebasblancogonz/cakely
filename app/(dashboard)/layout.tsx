@@ -32,12 +32,11 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-
   const breadcrumbItems = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/pedidos', label: 'Pedidos' },
     { href: '/products', label: 'Products' },
-    { href: '/customers', label: 'Customers' },
+    { href: '/clientes', label: 'Clientes' },
     { href: '/analytics', label: 'Analytics' }
   ];
 
@@ -92,7 +91,7 @@ function DesktopNav() {
           <Package className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="/customers" label="Customers">
+        <NavItem href="/clientes" label="Clientes">
           <Users2 className="h-5 w-5" />
         </NavItem>
 
@@ -176,4 +175,3 @@ function MobileNav() {
     </Sheet>
   );
 }
-

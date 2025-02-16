@@ -1,16 +1,20 @@
-export default {
+import { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
-        search: ''
+        pathname: '/**'
       },
       {
         protocol: 'https',
         hostname: '*.public.blob.vercel-storage.com',
-        search: ''
+        pathname: '/**'
       }
     ]
   }
 };
+
+export default nextConfig;
