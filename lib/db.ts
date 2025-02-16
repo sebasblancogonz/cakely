@@ -14,21 +14,31 @@ import {
 } from 'drizzle-orm/pg-core';
 import { count, eq, ilike } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
-import { Order, OrderStatus, PaymentMethod, PaymentStatus, ProductType } from '@types';
+import {
+  Customer,
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  ProductType
+} from '@types';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
 export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);
 
-export const orderStatusEnum = pgEnum('order_status', 
+export const orderStatusEnum = pgEnum(
+  'order_status',
   Object.values(OrderStatus) as [string]
 );
 
-export const paymentStatusEnum = pgEnum('payment_status',
+export const paymentStatusEnum = pgEnum(
+  'payment_status',
   Object.values(PaymentStatus) as [string]
 );
 
-export const paymentMethodEnum = pgEnum('payment_method', 
+export const paymentMethodEnum = pgEnum(
+  'payment_method',
   Object.values(PaymentMethod) as [string]
 );
 
@@ -69,10 +79,18 @@ export const orders = pgTable('orders', {
   orderHistory: jsonb('order_history')
 });
 
+const customers = pgTable('customers', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone').notNull(),
+  registrationDate: timestamp('registration_date').notNull(),
+  notes: text('notes')
+});
+
 export type SelectProduct = typeof products.$inferSelect;
 export type SelectOrder = typeof orders.$inferSelect;
-
-export const insertProductSchema = createInsertSchema(products);
+export type SelectCustomer = typeof customers.$inferSelect;
 
 export async function getProducts(
   search: string,
@@ -117,6 +135,41 @@ function mapOrders(orderData: any[]): Order[] {
   }));
 }
 
+export async function getCustomers(
+  search: string,
+  offset: number
+): Promise<{
+  customers: SelectCustomer[];
+  newOffset: number | null;
+  totalCustomers: number;
+}> {
+  if (search) {
+    return {
+      customers: await db
+        .select()
+        .from(customers)
+        .where(ilike(customers.name, `%${search}%`))
+        .limit(1000),
+      newOffset: null,
+      totalCustomers: 0
+    };
+  }
+
+  if (offset === null) {
+    return { customers: [], newOffset: null, totalCustomers: 0 };
+  }
+
+  let totalCustomers = await db.select({ count: count() }).from(customers);
+  let moreCustomers = await db.select().from(customers).limit(5).offset(offset);
+  let newOffset = moreCustomers.length >= 5 ? offset + 5 : null;
+
+  return {
+    customers: moreCustomers,
+    newOffset,
+    totalCustomers: totalCustomers[0].count
+  };
+}
+
 export async function getOrders(
   search: string,
   offset: number
@@ -142,6 +195,7 @@ export async function getOrders(
     .from(orders)
     .limit(5)
     .offset(offset);
+
   const mappedOrders = mapOrders(newOrdersFromOffset);
   const newOffset = mappedOrders.length >= 5 ? offset + 5 : null;
 
@@ -152,26 +206,31 @@ export async function deleteProductById(id: number) {
   await db.delete(products).where(eq(products.id, id));
 }
 
+export async function deleteCustomerById(id: number) {
+  await db.delete(customers).where(eq(customers.id, id));
+}
+
 export async function deleteOrderById(id: number) {
   await db.delete(orders).where(eq(orders.id, id));
 }
 
 export async function saveOrder(order: Order): Promise<number> {
+  const deliveryDate =
+    order.deliveryDate instanceof Date
+      ? order.deliveryDate
+      : new Date(order.deliveryDate);
 
-  const deliveryDate = order.deliveryDate instanceof Date 
-    ? order.deliveryDate 
-    : new Date(order.deliveryDate);
-
-  const orderDate = order.orderDate instanceof Date 
-    ? order.orderDate 
-    : new Date(order.orderDate);
+  const orderDate =
+    order.orderDate instanceof Date
+      ? order.orderDate
+      : new Date(order.orderDate);
 
   const orderToSave: typeof orders.$inferInsert = {
     description: order.description,
     customerName: order.customerName,
     customerContact: order.customerContact,
     orderDate: orderDate,
-    amount:  order.amount.toString(),
+    amount: order.amount.toString(),
     deliveryDate: deliveryDate,
     orderStatus: order.orderStatus,
     productType: order.productType,
@@ -193,7 +252,7 @@ export async function saveOrder(order: Order): Promise<number> {
       .insert(orders)
       .values(orderToSave)
       .returning({ id: orders.id });
-    return result[0]?.id ?? 0; 
+    return result[0]?.id ?? 0;
   } catch (error) {
     console.error('Error saving order:', error);
     throw new Error('Failed to save order');
@@ -201,13 +260,15 @@ export async function saveOrder(order: Order): Promise<number> {
 }
 
 export async function updateOrder(order: Order, orderId: number) {
-  const orderDate = order.orderDate instanceof Date 
-    ? order.orderDate 
-    : new Date(order.orderDate);
+  const orderDate =
+    order.orderDate instanceof Date
+      ? order.orderDate
+      : new Date(order.orderDate);
 
-  const deliveryDate = order.deliveryDate instanceof Date 
-    ? order.deliveryDate 
-    : new Date(order.deliveryDate);
+  const deliveryDate =
+    order.deliveryDate instanceof Date
+      ? order.deliveryDate
+      : new Date(order.deliveryDate);
 
   const orderToUpdate = {
     description: order.description,
@@ -231,12 +292,34 @@ export async function updateOrder(order: Order, orderId: number) {
   };
 
   try {
-    await db
-      .update(orders)
-      .set(orderToUpdate)
-      .where(eq(orders.id, orderId));
+    await db.update(orders).set(orderToUpdate).where(eq(orders.id, orderId));
   } catch (error) {
     console.error('Error updating order:', error);
     throw new Error('Failed to update order');
+  }
+}
+
+export async function updateCustomer(customer: Customer, customerId: number) {
+  const registrationDate =
+    customer.registrationDate instanceof Date
+      ? customer.registrationDate
+      : new Date(customer.registrationDate);
+
+  const customerToUpdate = {
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    registrationDate: registrationDate,
+    notes: customer.notes
+  };
+
+  try {
+    await db
+      .update(customers)
+      .set(customerToUpdate)
+      .where(eq(customers.id, customerId));
+  } catch (error) {
+    console.error('Error updating customer:', error);
+    throw new Error('Failed to update customer');
   }
 }

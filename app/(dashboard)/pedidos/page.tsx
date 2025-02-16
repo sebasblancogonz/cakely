@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,9 +13,13 @@ import OrderForm from './order-form';
 export default function OrdersPage(props: {
   searchParams: Promise<{ q: string; offset: string }>;
 }) {
+  const searchParams = useSearchParams();
+  const search = searchParams.get('q') || '';
+  const offsetParam = Number(searchParams.get('offset')) || 0;
+
   const [selectedTab, setSelectedTab] = useState('all');
   const [orders, setOrders] = useState<Order[]>([]);
-  const [newOffset, setNewOffset] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
 
@@ -25,20 +30,17 @@ export default function OrdersPage(props: {
 
   useEffect(() => {
     async function fetchOrders() {
-      const searchParams = await props.searchParams;
-      const search = searchParams.q ?? '';
-      const offset = searchParams.offset ?? 0;
-
       const response = await fetch(
-        `/api/orders?search=${search}&offset=${offset}`
+        `/api/orders?search=${search}&offset=${offsetParam}`
       );
       const data = await response.json();
 
       setOrders(data.orders);
-      setNewOffset(data.newOffset ?? 0);
+      setOffset(offsetParam);
     }
+
     fetchOrders();
-  }, [props.searchParams]);
+  }, [search, offsetParam]);
 
   const normalizeString = (str: string) =>
     str
@@ -134,7 +136,7 @@ export default function OrdersPage(props: {
             setOrders={setOrders}
             editOrder={editOrder}
             orders={filteredOrders}
-            offset={newOffset ?? 0}
+            offset={offset ?? 0}
             totalOrders={filteredOrders.length}
           />
         </TabsContent>

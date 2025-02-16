@@ -1,7 +1,10 @@
 'use server';
 
-import { deleteOrderById, deleteProductById } from '@/lib/db';
-import { Order } from '@types';
+import {
+  deleteOrderById,
+  deleteProductById,
+  deleteCustomerById
+} from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
 export async function deleteProduct(formData: FormData) {
@@ -12,4 +15,8 @@ export async function deleteProduct(formData: FormData) {
 
 export async function deleteOrder(orderId: number | undefined) {
   await deleteOrderById(orderId!);
+}
+
+export async function deleteCustomer(customerId: number | undefined) {
+  await deleteCustomerById(customerId!);
 }

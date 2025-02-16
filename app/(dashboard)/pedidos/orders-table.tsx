@@ -41,7 +41,8 @@ export function OrdersTable({
   const router = useRouter();
 
   const prevPage = () => router.back();
-  const nextPage = () => router.push(`/pedidos?offset=${offset}`, { scroll: false });
+  const nextPage = () =>
+    router.push(`/pedidos?offset=${offset}`, { scroll: false });
 
   const renderPaginationInfo = (): JSX.Element => {
     if (totalOrders === 1) {
@@ -85,16 +86,19 @@ export function OrdersTable({
     <Card>
       <CardHeader>
         <CardTitle>Pedidos</CardTitle>
-        <CardDescription>
-          Gestiona los pedidos de Aura: Cookies and Cakes
-        </CardDescription>
+        <CardDescription>Gestiona los pedidos de Aura Bakery</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           {renderTableHeaders()}
           <TableBody>
             {orders.map((order) => (
-              <Order key={order.id} order={order} setOrders={setOrders} editOrder={editOrder}/>
+              <Order
+                key={order.id}
+                order={order}
+                setOrders={setOrders}
+                editOrder={editOrder}
+              />
             ))}
           </TableBody>
         </Table>
