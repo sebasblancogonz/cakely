@@ -5,10 +5,12 @@ import { PaymentMethod, OrderStatus, ProductType, PaymentStatus } from '@types';
 const OrderForm = ({
   setIsModalOpen,
   setOrders,
+  setIsEditing,
   orderToEdit
 }: {
   setIsModalOpen: (value: boolean) => void;
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  setIsEditing: (value: boolean) => void;
   orderToEdit: Order | null;
 }) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -123,6 +125,8 @@ const OrderForm = ({
       setOrders((orders) => [...orders, order]);
       setIsModalOpen(false);
     }
+
+    setIsEditing(false);
   }
 
   async function updateOrder(order: Order) {

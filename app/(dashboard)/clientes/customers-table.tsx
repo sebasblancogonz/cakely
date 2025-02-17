@@ -29,6 +29,7 @@ interface CustomersTableProps {
   totalCustomers: number;
   setCustomers: React.Dispatch<React.SetStateAction<CustomerType[]>>;
   editCustomer: (customer: CustomerType) => void;
+  showDetails: (customer: CustomerType) => void;
 }
 
 export function CustomersTable({
@@ -36,7 +37,8 @@ export function CustomersTable({
   offset,
   totalCustomers,
   setCustomers,
-  editCustomer
+  editCustomer,
+  showDetails
 }: CustomersTableProps): JSX.Element {
   const router = useRouter();
 
@@ -107,6 +109,7 @@ export function CustomersTable({
             {customers.length > 0 ? (
               customers.map((customer) => (
                 <Customer
+                  showDetails={showDetails}
                   key={customer.id}
                   customer={customer}
                   setCustomers={setCustomers}

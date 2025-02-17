@@ -9,6 +9,7 @@ import { OrdersTable } from './orders-table';
 import { Order } from '@types';
 import Modal from '../common/Modal';
 import OrderForm from './order-form';
+import OrderDetails from './order-details';
 
 export default function OrdersPage(props: {
   searchParams: Promise<{ q: string; offset: string }>;
@@ -21,11 +22,19 @@ export default function OrdersPage(props: {
   const [orders, setOrders] = useState<Order[]>([]);
   const [offset, setOffset] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
 
   const editOrder = (order: Order) => {
     setOrderToEdit(order);
     setIsModalOpen(true);
+    setIsEditing(true);
+  };
+
+  const showDetails = (order: Order) => {
+    setOrderToEdit(order);
+    setIsModalOpen(true);
+    setIsEditing(false);
   };
 
   useEffect(() => {
@@ -118,11 +127,16 @@ export default function OrdersPage(props: {
             </span>
           </Button>
           <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-            <OrderForm
-              setIsModalOpen={setIsModalOpen}
-              setOrders={setOrders}
-              orderToEdit={orderToEdit}
-            />
+            {isEditing ? (
+              <OrderForm
+                setIsModalOpen={setIsModalOpen}
+                setOrders={setOrders}
+                setIsEditing={setIsEditing}
+                orderToEdit={orderToEdit}
+              />
+            ) : (
+              <OrderDetails order={orderToEdit!} />
+            )}
           </Modal>
         </div>
       </div>
@@ -135,6 +149,7 @@ export default function OrdersPage(props: {
           <OrdersTable
             setOrders={setOrders}
             editOrder={editOrder}
+            showDetails={showDetails}
             orders={filteredOrders}
             offset={offset ?? 0}
             totalOrders={filteredOrders.length}
