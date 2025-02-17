@@ -15,10 +15,12 @@ import { Order as OrderType } from '@types';
 export function Order({
   order,
   setOrders,
+  showDetails,
   editOrder
 }: {
   order: OrderType;
   setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
+  showDetails: (order: OrderType) => void;
   editOrder: (order: OrderType) => void;
 }) {
   const statusTranslations: Record<string, string> = {
@@ -67,6 +69,15 @@ export function Order({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+            <DropdownMenuItem>
+              <button
+                onClick={() => {
+                  showDetails(order);
+                }}
+              >
+                Ver detalles
+              </button>
+            </DropdownMenuItem>
             <DropdownMenuItem>
               <button
                 onClick={() => {

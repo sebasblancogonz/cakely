@@ -9,6 +9,7 @@ import { CustomersTable } from './customers-table';
 import { Customer } from '@types';
 import Modal from '../common/Modal';
 import CustomerForm from './customer-form';
+import CustomerDetails from './customer-details';
 
 const CUSTOMERS_PER_PAGE = 5;
 
@@ -21,6 +22,7 @@ export default function CustomersPage() {
   const [offset, setOffset] = useState(offsetParam);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
 
   useEffect(() => {
@@ -41,6 +43,12 @@ export default function CustomersPage() {
   const editCustomer = (customer: Customer) => {
     setCustomerToEdit(customer);
     setIsModalOpen(true);
+  };
+
+  const showDetails = (customer: Customer) => {
+    setCustomerToEdit(customer);
+    setIsModalOpen(true);
+    setIsEditing(false);
   };
 
   return (
@@ -74,6 +82,7 @@ export default function CustomersPage() {
           customers={customers}
           setCustomers={setCustomers}
           editCustomer={editCustomer}
+          showDetails={showDetails}
           offset={offset}
           totalCustomers={totalCustomers}
         />
@@ -81,11 +90,15 @@ export default function CustomersPage() {
 
       {/* Modal para agregar o editar cliente */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <CustomerForm
-          setIsModalOpen={setIsModalOpen}
-          setCustomers={setCustomers}
-          customerToEdit={customerToEdit}
-        />
+        {isEditing ? (
+          <CustomerForm
+            setIsModalOpen={setIsModalOpen}
+            setCustomers={setCustomers}
+            customerToEdit={customerToEdit}
+          />
+        ) : (
+          <CustomerDetails customer={customerToEdit!} />
+        )}
       </Modal>
     </Tabs>
   );

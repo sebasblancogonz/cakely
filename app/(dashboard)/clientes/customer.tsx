@@ -15,10 +15,12 @@ import { Customer as CustomerType } from '@types';
 export function Customer({
   customer,
   setCustomers,
+  showDetails,
   editCustomer
 }: {
   customer: CustomerType;
   setCustomers: React.Dispatch<React.SetStateAction<CustomerType[]>>;
+  showDetails: (customer: CustomerType) => void;
   editCustomer: (customer: CustomerType) => void;
 }) {
   const statusTranslations: Record<string, string> = {
@@ -49,6 +51,15 @@ export function Customer({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+            <DropdownMenuItem>
+              <button
+                onClick={() => {
+                  showDetails(customer);
+                }}
+              >
+                Ver detalles
+              </button>
+            </DropdownMenuItem>
             <DropdownMenuItem>
               <button
                 onClick={() => {
