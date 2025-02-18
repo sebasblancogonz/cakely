@@ -11,8 +11,6 @@ import Modal from '../common/Modal';
 import CustomerForm from './customer-form';
 import CustomerDetails from './customer-details';
 
-const CUSTOMERS_PER_PAGE = 5;
-
 export default function CustomersPage() {
   const searchParams = useSearchParams();
   const search = searchParams.get('q') || '';
@@ -24,6 +22,17 @@ export default function CustomersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
+
+  const editCustomer = (customer: Customer) => {
+    setCustomerToEdit(customer);
+    setIsModalOpen(true);
+  };
+
+  const showDetails = (customer: Customer) => {
+    setCustomerToEdit(customer);
+    setIsModalOpen(true);
+    setIsEditing(false);
+  };
 
   useEffect(() => {
     async function fetchCustomers() {
@@ -39,17 +48,6 @@ export default function CustomersPage() {
 
     fetchCustomers();
   }, [search, offsetParam]);
-
-  const editCustomer = (customer: Customer) => {
-    setCustomerToEdit(customer);
-    setIsModalOpen(true);
-  };
-
-  const showDetails = (customer: Customer) => {
-    setCustomerToEdit(customer);
-    setIsModalOpen(true);
-    setIsEditing(false);
-  };
 
   return (
     <Tabs defaultValue="all" className="flex flex-col gap-4 mt-auto">
@@ -88,7 +86,6 @@ export default function CustomersPage() {
         />
       </TabsContent>
 
-      {/* Modal para agregar o editar cliente */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         {isEditing ? (
           <CustomerForm
