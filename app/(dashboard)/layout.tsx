@@ -76,10 +76,10 @@ function DesktopNav() {
             height={32}
             className="rounded-full"
           />
-          <span className="sr-only">Acme Inc</span>
+          <span className="sr-only">Aura Bakery</span>
         </Link>
 
-        <NavItem href="#" label="Dashboard">
+        <NavItem href="/" label="Dashboard">
           <Home className="h-5 w-5" />
         </NavItem>
 
@@ -87,16 +87,8 @@ function DesktopNav() {
           <ShoppingCart className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="/products" label="Products">
-          <Package className="h-5 w-5" />
-        </NavItem>
-
         <NavItem href="/clientes" label="Clientes">
           <Users2 className="h-5 w-5" />
-        </NavItem>
-
-        <NavItem href="#" label="Analytics">
-          <LineChart className="h-5 w-5" />
         </NavItem>
       </nav>
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
@@ -107,10 +99,10 @@ function DesktopNav() {
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
             >
               <Settings className="h-5 w-5" />
-              <span className="sr-only">Settings</span>
+              <span className="sr-only">Ajustes</span>
             </Link>
           </TooltipTrigger>
-          <TooltipContent side="right">Settings</TooltipContent>
+          <TooltipContent side="right">Ajustes</TooltipContent>
         </Tooltip>
       </nav>
     </aside>
@@ -123,7 +115,7 @@ function MobileNav() {
       <SheetTrigger asChild>
         <Button size="icon" variant="outline" className="sm:hidden">
           <PanelLeft className="h-5 w-5" />
-          <span className="sr-only">Toggle Menu</span>
+          <span className="sr-only">Abrir menú</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="sm:max-w-xs">
@@ -133,14 +125,14 @@ function MobileNav() {
             className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
           >
             <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
-            <span className="sr-only">Vercel</span>
+            <span className="sr-only">Aura Bakery</span>
           </Link>
           <Link
-            href="#"
+            href="/"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Home className="h-5 w-5" />
-            Dashboard
+            Resumen
           </Link>
           <Link
             href="/pedidos"
@@ -150,25 +142,18 @@ function MobileNav() {
             Pedidos
           </Link>
           <Link
-            href="/products"
-            className="flex items-center gap-4 px-2.5 text-foreground"
-          >
-            <Package className="h-5 w-5" />
-            Products
-          </Link>
-          <Link
-            href="#"
+            href="/clientes"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Users2 className="h-5 w-5" />
-            Customers
+            Clientes
           </Link>
           <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <LineChart className="h-5 w-5" />
-            Settings
+            Ajustes
           </Link>
         </nav>
       </SheetContent>

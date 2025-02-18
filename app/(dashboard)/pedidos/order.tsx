@@ -52,7 +52,7 @@ export function Order({
           {order.orderStatus}
         </Badge>
       </TableCell>
-      <TableCell className="hidden md:table-cell">{`$${order.amount}`}</TableCell>
+      <TableCell className="hidden md:table-cell">{`${order.amount}€`}</TableCell>
       <TableCell className="hidden md:table-cell">
         {order.productType}
       </TableCell>
