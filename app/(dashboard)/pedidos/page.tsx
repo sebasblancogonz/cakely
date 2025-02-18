@@ -80,6 +80,70 @@ export default function OrdersPage(props: {
     }
   });
 
+  const downloadCSV = () => {
+    if (orders.length === 0) {
+      alert('No hay pedidos para exportar.');
+      return;
+    }
+
+    const headers = [
+      'Nombre del cliente',
+      'Contacto del cliente',
+      'Descripción',
+      'Cantidad',
+      'Tipo de producto',
+      'Fecha de entrega',
+      'Estado del pedido',
+      'Fecha del pedido',
+      'Detalles de personalización',
+      'Cantidad',
+      'Tamaño o peso',
+      'Sabor',
+      'Información de alergias',
+      'Precio total',
+      'Estado de pago',
+      'Método de pago',
+      'Notas',
+      'Historial'
+    ];
+
+    const csvRows = [
+      headers.join(','), // Encabezados
+      ...orders.map((order) =>
+        [
+          order.customerName,
+          order.customerContact,
+          order.description,
+          order.amount,
+          order.productType,
+          order.deliveryDate.toString(),
+          order.orderStatus,
+          order.orderDate.toString(),
+          order.customizationDetails,
+          order.quantity,
+          order.sizeOrWeight,
+          order.flavor,
+          order.allergyInformation,
+          order.totalPrice,
+          order.paymentStatus,
+          order.paymentMethod,
+          order.notes,
+          order.orderHistory.toString()
+        ]
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`) // Escapar comillas
+          .join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'pedidos.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Tabs defaultValue="all" className="flex flex-col gap-4 mt-auto">
       <div className="flex items-center justify-center flex-col gap-4 w-[80%] xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row ">
@@ -110,7 +174,12 @@ export default function OrdersPage(props: {
           </TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-8 gap-1">
+          <Button
+            onClick={downloadCSV}
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1"
+          >
             <File className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Exportar
