@@ -146,7 +146,7 @@ export default function OrdersPage(props: {
   };
 
   return (
-    <Tabs defaultValue="all" className="flex flex-col gap-4 mt-auto">
+    <Tabs defaultValue="all" className=" overflow-hidden">
       <div className="flex items-center justify-center flex-col gap-4 w-[80%] xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row ">
         <TabsList>
           <TabsTrigger onClick={() => setSelectedTab('all')} value="all">

@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {
   Home,
   LineChart,
-  Package,
   Package2,
   PanelLeft,
   Settings,
@@ -11,7 +10,12 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
@@ -119,42 +123,53 @@ function MobileNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="sm:max-w-xs">
+        <SheetTitle>Menu</SheetTitle>
         <nav className="grid gap-6 text-lg font-medium">
-          <Link
-            href="#"
-            className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
-          >
-            <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
-            <span className="sr-only">Aura Bakery</span>
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <Home className="h-5 w-5" />
-            Resumen
-          </Link>
-          <Link
-            href="/pedidos"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            Pedidos
-          </Link>
-          <Link
-            href="/clientes"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <Users2 className="h-5 w-5" />
-            Clientes
-          </Link>
-          <Link
-            href="#"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <LineChart className="h-5 w-5" />
-            Ajustes
-          </Link>
+          <SheetTrigger asChild>
+            <Link
+              href="#"
+              className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
+            >
+              <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
+              <span className="sr-only">Aura Bakery</span>
+            </Link>
+          </SheetTrigger>
+          <SheetTrigger asChild>
+            <Link
+              href="/"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Home className="h-5 w-5" />
+              Resumen
+            </Link>
+          </SheetTrigger>
+          <SheetTrigger asChild>
+            <Link
+              href="/pedidos"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              Pedidos
+            </Link>
+          </SheetTrigger>
+          <SheetTrigger asChild>
+            <Link
+              href="/clientes"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Users2 className="h-5 w-5" />
+              Clientes
+            </Link>
+          </SheetTrigger>
+          <SheetTrigger asChild>
+            <Link
+              href="#"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <LineChart className="h-5 w-5" />
+              Ajustes
+            </Link>
+          </SheetTrigger>
         </nav>
       </SheetContent>
     </Sheet>
