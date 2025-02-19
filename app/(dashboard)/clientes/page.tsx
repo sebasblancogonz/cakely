@@ -99,6 +99,8 @@ export default function CustomersPage() {
         onClose={() => {
           setCustomerToEdit(null);
           setIsModalOpen(false);
+          setIsEditing(false);
+          setIsCreating(false);
         }}
       >
         {isEditing || isCreating ? (

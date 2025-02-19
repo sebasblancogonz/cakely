@@ -204,6 +204,8 @@ export default function OrdersPage(props: {
             onClose={() => {
               setOrderToEdit(null);
               setIsModalOpen(false);
+              setIsEditing(false);
+              setIsCreating(false);
             }}
           >
             {isEditing || isCreating ? (
