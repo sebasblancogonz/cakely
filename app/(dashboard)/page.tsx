@@ -106,15 +106,8 @@ export default function StatisticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h2 className="text-lg font-semibold">Pedidos por Estado</h2>
-          <PieChart width={400} height={300}>
-            <Pie
-              data={orderStatusData}
-              cx={200}
-              cy={150}
-              outerRadius={100}
-              fill="#8884d8"
-              dataKey="value"
-            >
+          <PieChart width={350} height={250}>
+            <Pie data={orderStatusData} fill="#8884d8" dataKey="value">
               {orderStatusData.map((_, index) => (
                 <Cell
                   key={`cell-${index}`}
@@ -131,9 +124,15 @@ export default function StatisticsPage() {
           <h2 className="text-lg font-semibold">
             Pedidos por Tipo de Producto
           </h2>
-          <BarChart width={500} height={300} data={productTypeData}>
+          <BarChart width={300} height={300} data={productTypeData} compact>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
+            <XAxis
+              dataKey="name"
+              angle={45}
+              textAnchor="start"
+              overflow={'visible'}
+              height={100}
+            />
             <YAxis />
             <Tooltip />
             <Bar dataKey="value" fill="#82ca9d" />
@@ -143,15 +142,8 @@ export default function StatisticsPage() {
 
       <div className="mt-6">
         <h2 className="text-lg font-semibold">Métodos de Pago</h2>
-        <PieChart width={400} height={300}>
-          <Pie
-            data={paymentMethodData}
-            cx={200}
-            cy={150}
-            outerRadius={100}
-            fill="#8884d8"
-            dataKey="value"
-          >
+        <PieChart width={350} height={250}>
+          <Pie data={paymentMethodData} fill="#8884d8" dataKey="value">
             {paymentMethodData.map((_, index) => (
               <Cell
                 key={`cell-${index}`}
