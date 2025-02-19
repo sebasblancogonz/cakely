@@ -6,11 +6,13 @@ const OrderForm = ({
   setIsModalOpen,
   setOrders,
   setIsEditing,
+  setIsCreating,
   orderToEdit
 }: {
   setIsModalOpen: (value: boolean) => void;
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   setIsEditing: (value: boolean) => void;
+  setIsCreating: (value: boolean) => void;
   orderToEdit: Order | null;
 }) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -127,6 +129,7 @@ const OrderForm = ({
     }
 
     setIsEditing(false);
+    setIsCreating(false);
   }
 
   async function updateOrder(order: Order) {
@@ -173,11 +176,13 @@ const OrderForm = ({
           name="deliveryDate"
           type="date"
           defaultValue={
-            orderToEdit?.deliveryDate instanceof Date
-              ? orderToEdit.deliveryDate.toISOString().split('T')[0]
-              : new Date(orderToEdit?.deliveryDate || '')
-                  .toISOString()
-                  .split('T')[0]
+            orderToEdit
+              ? orderToEdit?.deliveryDate instanceof Date
+                ? orderToEdit.deliveryDate.toISOString().split('T')[0]
+                : new Date(orderToEdit?.deliveryDate || '')
+                    .toISOString()
+                    .split('T')[0]
+              : new Date().toISOString()
           }
         />
 

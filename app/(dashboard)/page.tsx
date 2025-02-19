@@ -34,7 +34,11 @@ export default function StatisticsPage() {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Cargando...
+      </div>
+    );
   }
 
   const filteredOrders = orders.filter((order) => {

@@ -23,6 +23,7 @@ export default function OrdersPage(props: {
   const [offset, setOffset] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
 
   const editOrder = (order: Order) => {
@@ -188,20 +189,30 @@ export default function OrdersPage(props: {
           <Button
             size="sm"
             className="h-8 gap-1"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsCreating(true);
+              setIsModalOpen(true);
+            }}
           >
             <PlusCircle className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Nuevo pedido
             </span>
           </Button>
-          <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-            {isEditing ? (
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setOrderToEdit(null);
+              setIsModalOpen(false);
+            }}
+          >
+            {isEditing || isCreating ? (
               <OrderForm
                 setIsModalOpen={setIsModalOpen}
                 setOrders={setOrders}
                 setIsEditing={setIsEditing}
-                orderToEdit={orderToEdit}
+                setIsCreating={setIsCreating}
+                orderToEdit={isEditing ? orderToEdit : null}
               />
             ) : (
               <OrderDetails order={orderToEdit!} />

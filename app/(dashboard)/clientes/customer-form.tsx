@@ -5,10 +5,14 @@ import { PaymentMethod, ProductType, PaymentStatus } from '@types';
 const CustomerForm = ({
   setIsModalOpen,
   setCustomers,
+  setIsEditing,
+  setIsCreating,
   customerToEdit
 }: {
   setIsModalOpen: (value: boolean) => void;
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  setIsEditing: (value: boolean) => void;
+  setIsCreating: (value: boolean) => void;
   customerToEdit: Customer | null;
 }) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -23,6 +27,9 @@ const CustomerForm = ({
       const customer: Customer = buildCustomer(formData, null);
       saveCustomer(customer);
     }
+
+    setIsEditing(false);
+    setIsCreating(false);
   };
 
   const getFormValue = <T,>(

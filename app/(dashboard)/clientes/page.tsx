@@ -21,11 +21,13 @@ export default function CustomersPage() {
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
 
   const editCustomer = (customer: Customer) => {
     setCustomerToEdit(customer);
     setIsModalOpen(true);
+    setIsEditing(true);
   };
 
   const showDetails = (customer: Customer) => {
@@ -65,7 +67,10 @@ export default function CustomersPage() {
           <Button
             size="sm"
             className="h-8 gap-1"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsCreating(true);
+              setIsModalOpen(true);
+            }}
           >
             <PlusCircle className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
@@ -86,12 +91,20 @@ export default function CustomersPage() {
         />
       </TabsContent>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        {isEditing ? (
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setCustomerToEdit(null);
+          setIsModalOpen(false);
+        }}
+      >
+        {isEditing || isCreating ? (
           <CustomerForm
             setIsModalOpen={setIsModalOpen}
             setCustomers={setCustomers}
-            customerToEdit={customerToEdit}
+            setIsEditing={setIsEditing}
+            setIsCreating={setIsCreating}
+            customerToEdit={isEditing ? customerToEdit : null}
           />
         ) : (
           <CustomerDetails customer={customerToEdit!} />
