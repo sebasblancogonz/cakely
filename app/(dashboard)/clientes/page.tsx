@@ -56,7 +56,7 @@ export default function CustomersPage() {
       defaultValue="all"
       className="flex flex-col gap-4 mt-auto overflow-hidden"
     >
-      <div className="flex items-center justify-center flex-col gap-4 w-[80%] xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row">
+      <div className="flex items-center justify-center flex-col gap-4 xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row">
         <TabsList>
           <TabsTrigger value="all">Todos</TabsTrigger>
         </TabsList>

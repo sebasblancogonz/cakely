@@ -147,7 +147,7 @@ export default function OrdersPage(props: {
 
   return (
     <Tabs defaultValue="all" className=" overflow-hidden">
-      <div className="flex items-center justify-center flex-col gap-4 w-[80%] xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row ">
+      <div className="flex items-center justify-center flex-col gap-4 xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row ">
         <TabsList>
           <TabsTrigger onClick={() => setSelectedTab('all')} value="all">
             Todos
@@ -225,7 +225,7 @@ export default function OrdersPage(props: {
           <p className="text-lg text-gray-500">No hay pedidos</p>
         </div>
       ) : (
-        <TabsContent value={selectedTab} className=" w-[80%] xs:w-full">
+        <TabsContent value={selectedTab} className=" xs:w-full">
           <OrdersTable
             setOrders={setOrders}
             editOrder={editOrder}
