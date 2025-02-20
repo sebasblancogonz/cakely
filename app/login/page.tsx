@@ -30,6 +30,17 @@ export default function LoginPage() {
           >
             <Button className="w-full">Sign in with GitHub</Button>
           </form>
+          <form
+            action={async () => {
+              'use server';
+              await signIn('google', {
+                redirectTo: '/'
+              });
+            }}
+            className="w-full"
+          >
+            <Button className="w-full">Sign in with Google</Button>
+          </form>
         </CardFooter>
       </Card>
     </div>
