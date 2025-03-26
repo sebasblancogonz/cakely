@@ -24,6 +24,7 @@ export default function OrdersPage(props: {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
+  const [orderToShow, setOrderToShow] = useState<Order | null>(null);
 
   const editOrder = (order: Order) => {
     setOrderToEdit(order);
@@ -32,7 +33,7 @@ export default function OrdersPage(props: {
   };
 
   const showDetails = (order: Order) => {
-    setOrderToEdit(order);
+    setOrderToShow(order);
     setIsModalOpen(true);
     setIsEditing(false);
   };

@@ -13,23 +13,12 @@ export default function LoginPage() {
     <div className="min-h-screen flex justify-center items-start md:items-center p-8">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
           <CardDescription>
-            This demo uses GitHub for authentication.
+            Inicia sesión para acceder a la aplicación
           </CardDescription>
         </CardHeader>
         <CardFooter>
-          <form
-            action={async () => {
-              'use server';
-              await signIn('github', {
-                redirectTo: '/'
-              });
-            }}
-            className="w-full"
-          >
-            <Button className="w-full">Sign in with GitHub</Button>
-          </form>
           <form
             action={async () => {
               'use server';
@@ -39,7 +28,7 @@ export default function LoginPage() {
             }}
             className="w-full"
           >
-            <Button className="w-full">Sign in with Google</Button>
+            <Button className="w-full">Iniciar sesión con Google</Button>
           </form>
         </CardFooter>
       </Card>
