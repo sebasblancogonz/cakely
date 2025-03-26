@@ -124,7 +124,7 @@ const CustomerForm = ({
   return (
     <>
       <h2 className="text-lg font-semibold leading-none tracking-tight mb-4">
-        {customerToEdit ? 'Editar Pedido' : 'Nuevo Pedido'}
+        {customerToEdit ? 'Editar Cliente' : 'Nuevo Cliente'}
       </h2>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <InputField
