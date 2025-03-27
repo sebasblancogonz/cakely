@@ -23,6 +23,7 @@ export default function CustomersPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
+  const [customerToShow, setCustomerToShow] = useState<Customer | null>(null);
 
   const editCustomer = (customer: Customer) => {
     setCustomerToEdit(customer);
@@ -31,7 +32,7 @@ export default function CustomersPage() {
   };
 
   const showDetails = (customer: Customer) => {
-    setCustomerToEdit(customer);
+    setCustomerToShow(customer);
     setIsModalOpen(true);
     setIsEditing(false);
   };
@@ -101,6 +102,7 @@ export default function CustomersPage() {
           setIsModalOpen(false);
           setIsEditing(false);
           setIsCreating(false);
+          setCustomerToShow(null);
         }}
       >
         {isEditing || isCreating ? (
@@ -112,7 +114,7 @@ export default function CustomersPage() {
             customerToEdit={isEditing ? customerToEdit : null}
           />
         ) : (
-          <CustomerDetails customer={customerToEdit!} />
+          <CustomerDetails customer={customerToShow!} />
         )}
       </Modal>
     </Tabs>

@@ -207,6 +207,7 @@ export default function OrdersPage(props: {
               setIsModalOpen(false);
               setIsEditing(false);
               setIsCreating(false);
+              setOrderToShow(null);
             }}
           >
             {isEditing || isCreating ? (
@@ -218,7 +219,7 @@ export default function OrdersPage(props: {
                 orderToEdit={isEditing ? orderToEdit : null}
               />
             ) : (
-              <OrderDetails order={orderToEdit!} />
+              <OrderDetails order={orderToShow!} />
             )}
           </Modal>
         </div>

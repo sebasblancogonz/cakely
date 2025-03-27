@@ -102,6 +102,9 @@ const CustomerForm = ({
       setCustomers((customers) => [...customers, customer]);
       setIsModalOpen(false);
     }
+
+    setIsEditing(false);
+    setIsCreating(false);
   }
 
   async function updateCustomer(customer: Customer) {
