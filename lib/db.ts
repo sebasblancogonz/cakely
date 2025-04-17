@@ -13,7 +13,6 @@ import {
   jsonb
 } from 'drizzle-orm/pg-core';
 import { count, eq, ilike } from 'drizzle-orm';
-import { createInsertSchema } from 'drizzle-zod';
 import {
   Customer,
   Order,
@@ -76,7 +75,8 @@ export const orders = pgTable('orders', {
   paymentStatus: paymentStatusEnum('payment_status').notNull(),
   paymentMethod: paymentMethodEnum('payment_method').notNull(),
   notes: text('notes'),
-  orderHistory: jsonb('order_history')
+  orderHistory: jsonb('order_history'),
+  images: text('images').array()
 });
 
 const customers = pgTable('customers', {
@@ -243,7 +243,8 @@ export async function saveOrder(order: Order): Promise<number> {
     paymentStatus: order.paymentStatus,
     paymentMethod: order.paymentMethod,
     notes: order.notes,
-    orderHistory: order.orderHistory
+    orderHistory: order.orderHistory,
+    images: order.images
   };
 
   try {

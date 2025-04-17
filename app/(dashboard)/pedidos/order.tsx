@@ -16,12 +16,14 @@ export function Order({
   order,
   setOrders,
   showDetails,
-  editOrder
+  editOrder,
+  uploadImages
 }: {
   order: OrderType;
   setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
   showDetails: (order: OrderType) => void;
   editOrder: (order: OrderType) => void;
+  uploadImages: (order: OrderType) => void;
 }) {
   const statusTranslations: Record<string, string> = {
     pendiente: 'bg-pending text-pending-text',
@@ -70,12 +72,11 @@ export function Order({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuItem>
-              <button
-                onClick={() => {
-                  showDetails(order);
-                }}
-              >
-                Ver detalles
+              <button onClick={() => showDetails(order)}>Ver detalles</button>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <button onClick={() => uploadImages(order)}>
+                Subir imágenes
               </button>
             </DropdownMenuItem>
             <DropdownMenuItem>

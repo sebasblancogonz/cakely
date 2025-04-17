@@ -1,6 +1,11 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Order, OrderHistory } from '@types';
 import { PaymentMethod, OrderStatus, ProductType, PaymentStatus } from '@types';
+
+const CLOUDINARY_UPLOAD_URL =
+  'https://api.cloudinary.com/v1_1/TU_CLOUD_NAME/image/upload';
+const CLOUDINARY_UPLOAD_PRESET = 'TU_UPLOAD_PRESET';
 
 const OrderForm = ({
   setIsModalOpen,
@@ -67,7 +72,8 @@ const OrderForm = ({
         paymentMethod: (value) => value as PaymentMethod,
         notes: (value) => value.toString(),
         amount: (value) => parseFloat(value.toString()),
-        totalPrice: (value) => parseFloat(value.toString())
+        totalPrice: (value) => parseFloat(value.toString()),
+        images: (value) => []
       };
 
       for (const field in fieldTransformers) {
@@ -110,7 +116,8 @@ const OrderForm = ({
       ),
       notes: getFormValue(formData, 'notes', ''),
       amount: parseFloat(getFormValue(formData, 'amount', '0')),
-      totalPrice: parseFloat(getFormValue(formData, 'amount', '0'))
+      totalPrice: parseFloat(getFormValue(formData, 'amount', '0')),
+      images: []
     };
   };
 

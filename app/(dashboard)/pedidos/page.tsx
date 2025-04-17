@@ -10,6 +10,7 @@ import { Order } from '@types';
 import Modal from '../common/Modal';
 import OrderForm from './order-form';
 import OrderDetails from './order-details';
+import UploadImage from '../common/MultiUpload';
 
 export default function OrdersPage(props: {
   searchParams: Promise<{ q: string; offset: string }>;
@@ -24,6 +25,7 @@ export default function OrdersPage(props: {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
   const [orderToShow, setOrderToShow] = useState<Order | null>(null);
 
@@ -37,6 +39,12 @@ export default function OrdersPage(props: {
     setOrderToShow(order);
     setIsModalOpen(true);
     setIsEditing(false);
+  };
+
+  const uploadImages = (order: Order) => {
+    setIsModalOpen(true);
+    setIsUploadingImage(true);
+    setOrderToEdit(order);
   };
 
   useEffect(() => {
@@ -208,9 +216,10 @@ export default function OrdersPage(props: {
               setIsEditing(false);
               setIsCreating(false);
               setOrderToShow(null);
+              setIsUploadingImage(false);
             }}
           >
-            {isEditing || isCreating ? (
+            {(isEditing || isCreating) ?? (
               <OrderForm
                 setIsModalOpen={setIsModalOpen}
                 setOrders={setOrders}
@@ -218,9 +227,9 @@ export default function OrdersPage(props: {
                 setIsCreating={setIsCreating}
                 orderToEdit={isEditing ? orderToEdit : null}
               />
-            ) : (
-              <OrderDetails order={orderToShow!} />
             )}
+            {orderToShow && <OrderDetails order={orderToShow!} />}
+            {isUploadingImage && <UploadImage orderId={orderToEdit!.id!} />}
           </Modal>
         </div>
       </div>
@@ -234,6 +243,7 @@ export default function OrdersPage(props: {
             setOrders={setOrders}
             editOrder={editOrder}
             showDetails={showDetails}
+            uploadImages={uploadImages}
             orders={filteredOrders}
             offset={offset ?? 0}
             totalOrders={filteredOrders.length}

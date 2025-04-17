@@ -30,6 +30,7 @@ interface OrdersTableProps {
   setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
   editOrder: (order: OrderType) => void;
   showDetails: (order: OrderType) => void;
+  uploadImages: (order: OrderType) => void;
 }
 
 export function OrdersTable({
@@ -38,7 +39,8 @@ export function OrdersTable({
   totalOrders,
   setOrders,
   editOrder,
-  showDetails
+  showDetails,
+  uploadImages
 }: OrdersTableProps): JSX.Element {
   const router = useRouter();
 
@@ -101,6 +103,7 @@ export function OrdersTable({
                 showDetails={showDetails}
                 setOrders={setOrders}
                 editOrder={editOrder}
+                uploadImages={uploadImages}
               />
             ))}
           </TableBody>

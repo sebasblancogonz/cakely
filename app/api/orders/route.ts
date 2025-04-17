@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
 
   console.log('Received order:', order);
 
-  // Save order to database
   const orderId = await saveOrder(order);
 
   return NextResponse.json({ message: 'Order created' });

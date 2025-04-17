@@ -55,6 +55,7 @@ export interface Order {
   paymentMethod: PaymentMethod;
   notes: string;
   orderHistory: OrderHistory[];
+  images: string[];
 }
 
 export interface OrderHistory {
