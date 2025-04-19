@@ -1,7 +1,20 @@
+'use client';
+
+import { useState } from 'react';
 import { Order } from '@types';
 import DetailsTable from '../common/DetailsTable';
+import Lightbox from 'yet-another-react-lightbox';
+import 'yet-another-react-lightbox/styles.css';
 
 const OrderDetails = ({ order }: { order: Order }) => {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const handleImageClick = (index: number) => {
+    setSelectedIndex(index);
+    setLightboxOpen(true);
+  };
+
   const orderDetails = [
     {
       label: 'Nombre del cliente',
@@ -55,10 +68,50 @@ const OrderDetails = ({ order }: { order: Order }) => {
       value: order.paymentMethod,
       key: 'paymentMethod'
     },
-    { label: 'Notas', value: order.notes, key: 'notes' }
+    { label: 'Notas', value: order.notes, key: 'notes' },
+    {
+      label: 'Imágenes',
+      key: 'images',
+      value:
+        Array.isArray(order.images) && order.images.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {order.images.map((imgUrl, index) => (
+              <img
+                key={index}
+                src={imgUrl}
+                alt={`Imagen ${index + 1}`}
+                className="w-24 h-24 object-cover rounded-md border cursor-pointer"
+                onClick={() => handleImageClick(index)}
+              />
+            ))}
+          </div>
+        ) : (
+          'No hay imágenes'
+        )
+    }
   ];
 
-  return <DetailsTable data={orderDetails} />;
+  return (
+    <>
+      <DetailsTable data={orderDetails} />
+      <Lightbox
+        carousel={{ finite: order.images.length <= 1 }}
+        render={{
+          buttonPrev: order.images.length <= 1 ? () => null : undefined,
+          buttonNext: order.images.length <= 1 ? () => null : undefined
+        }}
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        index={selectedIndex}
+        slides={order.images.map((src) => ({ src }))}
+        styles={{
+          container: {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)' // 20% opacidad
+          }
+        }}
+      />
+    </>
+  );
 };
 
 export default OrderDetails;

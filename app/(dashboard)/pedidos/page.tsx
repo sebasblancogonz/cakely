@@ -31,20 +31,20 @@ export default function OrdersPage(props: {
 
   const editOrder = (order: Order) => {
     setOrderToEdit(order);
-    setIsModalOpen(true);
     setIsEditing(true);
+    setIsModalOpen(true);
   };
 
   const showDetails = (order: Order) => {
     setOrderToShow(order);
-    setIsModalOpen(true);
     setIsEditing(false);
+    setIsModalOpen(true);
   };
 
   const uploadImages = (order: Order) => {
     setOrderToEdit(order);
-    setIsModalOpen(true);
     setIsUploadingImage(true);
+    setIsModalOpen(true);
   };
 
   useEffect(() => {
@@ -219,7 +219,7 @@ export default function OrdersPage(props: {
               setIsUploadingImage(false);
             }}
           >
-            {(isEditing || isCreating) ?? (
+            {isEditing || isCreating ? (
               <OrderForm
                 setIsModalOpen={setIsModalOpen}
                 setOrders={setOrders}
@@ -227,9 +227,11 @@ export default function OrdersPage(props: {
                 setIsCreating={setIsCreating}
                 orderToEdit={isEditing ? orderToEdit : null}
               />
-            )}
-            {orderToShow && <OrderDetails order={orderToShow!} />}
-            {isUploadingImage && <UploadImage orderId={orderToEdit!.id!} />}
+            ) : isUploadingImage ? (
+              <UploadImage orderId={orderToEdit!.id!} />
+            ) : orderToShow ? (
+              <OrderDetails order={orderToShow} />
+            ) : null}
           </Modal>
         </div>
       </div>

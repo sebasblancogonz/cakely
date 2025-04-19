@@ -7,7 +7,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
+import { Eye, MoreHorizontal, Pen, Trash, Upload } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { deleteOrder } from '../actions';
 import { Order as OrderType } from '@types';
@@ -72,39 +72,53 @@ export function Order({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuItem>
-              <button onClick={() => showDetails(order)}>Ver detalles</button>
+              <div className="flex gap-1 text-blue-600 items-center justify-center">
+                <Eye size={15} />
+                <button onClick={() => showDetails(order)}>Ver detalles</button>
+              </div>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <button onClick={() => uploadImages(order)}>
-                Subir imágenes
-              </button>
+              <div className="flex gap-1 text-blue-600 items-center justify-center">
+                <Upload size={15} />
+                <button onClick={() => uploadImages(order)}>
+                  Subir imágenes
+                </button>
+              </div>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <button
-                onClick={() => {
-                  editOrder(order);
-                }}
-              >
-                Editar
-              </button>
+              <div className="flex gap-1 text-blue-600 items-center justify-center">
+                <Pen size={'15'} />
+                <button
+                  onClick={() => {
+                    editOrder(order);
+                  }}
+                >
+                  Editar
+                </button>
+              </div>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <button
-                onClick={async () => {
-                  try {
-                    await deleteOrder(order.id);
+              <div className="flex gap-1 text-red-600 items-center justify-center">
+                <Trash size={'15'} />
+                <button
+                  onClick={async () => {
+                    try {
+                      await deleteOrder(order.id);
 
-                    setOrders((orders) =>
-                      orders.filter((o) => o.id !== order.id)
-                    );
-                  } catch (error) {
-                    console.error('Error al eliminar el pedido:', error);
-                    alert('No se pudo eliminar el pedido. Inténtalo de nuevo.');
-                  }
-                }}
-              >
-                Eliminar
-              </button>
+                      setOrders((orders) =>
+                        orders.filter((o) => o.id !== order.id)
+                      );
+                    } catch (error) {
+                      console.error('Error al eliminar el pedido:', error);
+                      alert(
+                        'No se pudo eliminar el pedido. Inténtalo de nuevo.'
+                      );
+                    }
+                  }}
+                >
+                  Eliminar
+                </button>
+              </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
