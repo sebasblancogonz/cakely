@@ -300,6 +300,28 @@ export async function updateOrder(order: Order, orderId: number) {
   }
 }
 
+export async function saveImageUrlsForOrder(
+  orderId: number,
+  imageUrls: string[]
+) {
+  try {
+    const result = await db
+      .update(orders)
+      .set({ images: imageUrls })
+      .where(eq(orders.id, orderId));
+
+    if (result.rowCount === 0) {
+      console.error(`Order with ID ${orderId} not found.`);
+      throw new Error('Order not found');
+    }
+
+    console.log(`Successfully saved image URLs for order with ID ${orderId}`);
+  } catch (error) {
+    console.error('Error saving image URLs for order:', error);
+    throw new Error('Failed to save image URLs for order');
+  }
+}
+
 export async function updateCustomer(customer: Customer, customerId: number) {
   const registrationDate =
     customer.registrationDate instanceof Date

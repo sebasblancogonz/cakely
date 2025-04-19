@@ -20,7 +20,6 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
     );
     setPreviews(objectUrls);
 
-    // Limpia los object URLs cuando se desmonta el componente o cambian los archivos
     return () => {
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
     };
@@ -32,6 +31,7 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
       setFiles(selectedFiles);
     }
   };
+
   const handleUpload = async () => {
     if (!files) return;
 
@@ -49,15 +49,17 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
 
     const urls = data.uploaded.map((img: any) => img.url);
     setImageUrls((prev) => [...prev, ...urls]);
+    storeImageURLs(urls);
     setFiles(null);
   };
 
-  const handleSubmit = async () => {
+  const storeImageURLs = async (urls: string[]) => {
     try {
+      console.log(imageUrls);
       const response = await fetch('/api/store-urls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: imageUrls, orderId })
+        body: JSON.stringify({ urls, orderId })
       });
 
       if (response.ok) {
@@ -123,13 +125,6 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
               </li>
             ))}
           </ul>
-
-          <button
-            onClick={handleSubmit}
-            className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            Guardar URLs
-          </button>
         </div>
       )}
     </div>
