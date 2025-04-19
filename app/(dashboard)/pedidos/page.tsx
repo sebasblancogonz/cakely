@@ -42,9 +42,9 @@ export default function OrdersPage(props: {
   };
 
   const uploadImages = (order: Order) => {
+    setOrderToEdit(order);
     setIsModalOpen(true);
     setIsUploadingImage(true);
-    setOrderToEdit(order);
   };
 
   useEffect(() => {
