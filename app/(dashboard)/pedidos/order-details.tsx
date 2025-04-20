@@ -2,8 +2,13 @@
 
 import { useState } from 'react';
 import { Order } from '@types';
-import DetailsTable from '../common/DetailsTable';
-import Lightbox from 'yet-another-react-lightbox';
+import DetailsTable from '../common/DetailsTable.jsx';
+import dynamic from 'next/dynamic'; // 👈 necesario
+
+const Lightbox = dynamic(() => import('yet-another-react-lightbox'), {
+  ssr: false
+});
+
 import 'yet-another-react-lightbox/styles.css';
 
 const OrderDetails = ({ order }: { order: Order }) => {
