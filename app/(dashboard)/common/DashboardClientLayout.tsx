@@ -1,35 +1,49 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react'; // Import useState
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, PanelLeft, Settings, ShoppingCart, Users2 } from 'lucide-react';
+import {
+  Home,
+  // LineChart, // No longer used directly here?
+  Package2,
+  PanelLeft,
+  Settings,
+  ShoppingCart,
+  Users2,
+  ChevronLeft, // Import chevron icons
+  ChevronRight // Import chevron icons
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger
+  TooltipTrigger,
+  TooltipProvider // Needed for Tooltips
 } from '@/components/ui/tooltip';
 import { Analytics } from '@vercel/analytics/react';
-import Providers from '../providers';
-import { NavItem } from '../nav-item';
-import { SearchInput } from '../search';
+import Image from 'next/image';
+import { cn } from '@/lib/utils'; // Import cn utility if you use it
 import DashboardBreadcrumb, {
   BreadcrumbTrailItem
-} from '../common/DashboardBreadcrumb';
-import Image from 'next/image';
+} from './DashboardBreadcrumb';
+import Providers from '../providers';
+import { SearchInput } from '../search';
+import { NavItem } from '../nav-item';
 
-interface DashboardLayoutProps {
+interface DashboardClientLayoutProps {
   children: React.ReactNode;
   userComponent: React.ReactNode;
 }
 
-export default function DashboardLayout({
+export default function DashboardClientLayout({
   children,
   userComponent
-}: DashboardLayoutProps) {
+}: DashboardClientLayoutProps) {
   const pathname = usePathname();
+  // State to manage sidebar expansion
+  const [isNavExpanded, setIsNavExpanded] = useState(false); // Default collapsed
 
   const breadcrumbTrail = useMemo((): BreadcrumbTrailItem[] => {
     const segments = pathname.split('/').filter(Boolean);
@@ -38,18 +52,14 @@ export default function DashboardLayout({
       clientes: 'Clientes',
       analytics: 'Analytics'
     };
-
     const trail: BreadcrumbTrailItem[] = [{ label: 'Dashboard', href: '/' }];
-
     let currentPath = '';
     segments.forEach((segment, index) => {
       currentPath += `/${segment}`;
       const isLast = index === segments.length - 1;
-
       let label =
         segmentLabels[segment] ||
         segment.charAt(0).toUpperCase() + segment.slice(1);
-
       if (
         segment === 'editar' &&
         segments[index - 1] === 'pedidos' &&
@@ -61,7 +71,6 @@ export default function DashboardLayout({
       } else if (/^\d+$/.test(segment) && segments[index - 1] === 'clientes') {
         label = `Cliente #${segment}`;
       }
-
       if (isLast) {
         trail.push({ label });
       } else {
@@ -70,38 +79,68 @@ export default function DashboardLayout({
         }
       }
     });
-
     return trail;
   }, [pathname]);
 
   return (
-    <Providers>
-      <main className="flex min-h-screen w-full flex-col bg-muted/40">
-        <DesktopNav />
-        <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-            <MobileNav />
-            <DashboardBreadcrumb trail={breadcrumbTrail} />
-            <SearchInput />
-            {userComponent}
-          </header>
-          <main className="grid flex-1 items-start gap-2 p-4 sm:px-6 sm:py-0 md:gap-4 bg-muted/40">
-            {children}
-          </main>
-        </div>
-        <Analytics />
-      </main>
-    </Providers>
+    // Wrap with TooltipProvider for NavItem tooltips
+    <TooltipProvider>
+      <Providers>
+        <main className="flex min-h-screen w-full flex-col bg-muted/40">
+          {/* Pass state and toggle function to DesktopNav */}
+          <DesktopNav
+            isExpanded={isNavExpanded}
+            onToggle={() => setIsNavExpanded(!isNavExpanded)}
+          />
+          {/* Adjust padding based on nav state */}
+          <div
+            className={cn(
+              'flex flex-col sm:gap-4 sm:py-4 transition-all duration-300 ease-in-out',
+              isNavExpanded ? 'sm:pl-64' : 'sm:pl-14' // Adjust pl-[width]
+            )}
+          >
+            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+              {/* MobileNav might need access to toggle state if it appears on larger screens? Assuming not for now. */}
+              <MobileNav />
+              <DashboardBreadcrumb trail={breadcrumbTrail} />
+              <SearchInput />
+              {userComponent}
+            </header>
+            <main className="grid flex-1 items-start gap-2 p-4 sm:px-6 sm:py-0 md:gap-4 bg-muted/40">
+              {children}
+            </main>
+          </div>
+          <Analytics />
+        </main>
+      </Providers>
+    </TooltipProvider>
   );
 }
 
-function DesktopNav() {
+// --- DesktopNav Modified ---
+interface DesktopNavProps {
+  isExpanded: boolean;
+  onToggle: () => void;
+}
+
+function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
+    // Apply conditional width and transition
+    <aside
+      className={cn(
+        'fixed inset-y-0 left-0 z-10 hidden flex-col border-r bg-background sm:flex transition-all duration-300 ease-in-out',
+        isExpanded ? 'w-52' : 'w-14' // Change width
+      )}
+    >
+      {/* Main navigation links */}
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
           href="#"
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+          // Adjust link styles if needed when expanded
+          className={cn(
+            'group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base',
+            isExpanded && 'self-start ml-3 mb-2' // Example adjustment when expanded
+          )}
         >
           <Image
             src="/logo small-01.webp"
@@ -110,40 +149,70 @@ function DesktopNav() {
             height={32}
             className="rounded-full"
           />
-          <span className="sr-only">Aura Bakery</span>
         </Link>
 
-        <NavItem href="/" label="Dashboard">
+        {/* Pass isExpanded to NavItem */}
+        <NavItem href="/" label="Dashboard" isExpanded={isExpanded}>
           <Home className="h-5 w-5" />
         </NavItem>
-
-        <NavItem href="/pedidos" label="Pedidos">
+        <NavItem href="/pedidos" label="Pedidos" isExpanded={isExpanded}>
           <ShoppingCart className="h-5 w-5" />
         </NavItem>
-
-        <NavItem href="/clientes" label="Clientes">
+        <NavItem href="/clientes" label="Clientes" isExpanded={isExpanded}>
           <Users2 className="h-5 w-5" />
         </NavItem>
+        {/* Add more NavItems here, passing isExpanded */}
       </nav>
+
+      {/* Bottom navigation items (Settings, Toggle) */}
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+        {/* Settings Item - Adjust Tooltip based on state */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Link
-              href="#"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+              href="#" // Link to actual settings page
+              className={cn(
+                'flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground',
+                isExpanded
+                  ? 'w-full justify-start px-2.5 py-1.5'
+                  : 'h-9 w-9 md:h-8 md:w-8' // Adjust size/padding
+              )}
             >
               <Settings className="h-5 w-5" />
-              <span className="sr-only">Ajustes</span>
+              <span className={cn('ml-2', !isExpanded && 'sr-only')}>
+                Ajustes
+              </span>
             </Link>
           </TooltipTrigger>
-          <TooltipContent side="right">Ajustes</TooltipContent>
+          {/* Show tooltip only when collapsed */}
+          {!isExpanded && <TooltipContent side="right">Ajustes</TooltipContent>}
         </Tooltip>
+
+        {/* --- Toggle Button --- */}
+        <Button
+          onClick={onToggle}
+          variant="ghost"
+          size="icon"
+          className={cn(
+            'rounded-full h-8 w-8 mt-2 border', // Basic styling
+            isExpanded && 'self-end mr-2' // Example positioning when expanded
+          )}
+          aria-label={isExpanded ? 'Collapse navigation' : 'Expand navigation'}
+        >
+          {isExpanded ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </Button>
       </nav>
     </aside>
   );
 }
 
+// --- MobileNav (sin cambios, asume que no necesita estado de expansión) ---
 function MobileNav() {
+  // ... (código de MobileNav sin cambios) ...
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -174,8 +243,7 @@ function MobileNav() {
               href="/"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
-              <Home className="h-5 w-5" />
-              Dashboard
+              <Home className="h-5 w-5" /> Dashboard
             </Link>
           </SheetTrigger>
           <SheetTrigger asChild>
@@ -183,8 +251,7 @@ function MobileNav() {
               href="/pedidos"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
-              <ShoppingCart className="h-5 w-5" />
-              Pedidos
+              <ShoppingCart className="h-5 w-5" /> Pedidos
             </Link>
           </SheetTrigger>
           <SheetTrigger asChild>
@@ -192,8 +259,7 @@ function MobileNav() {
               href="/clientes"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
-              <Users2 className="h-5 w-5" />
-              Clientes
+              <Users2 className="h-5 w-5" /> Clientes
             </Link>
           </SheetTrigger>
           <SheetTrigger asChild>
@@ -201,8 +267,7 @@ function MobileNav() {
               href="#"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
-              <Settings className="h-5 w-5" />
-              Ajustes
+              <Settings className="h-5 w-5" /> Ajustes
             </Link>
           </SheetTrigger>
         </nav>
