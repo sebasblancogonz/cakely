@@ -10,28 +10,24 @@ import {
 import { Eye, MoreHorizontal, Pen, Trash, Upload } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { deleteOrder } from '../actions';
-import { Order as OrderType } from '@types';
+import { OrderStatus, Order as OrderType } from '@types';
+import { Status } from '../common/StatusCell';
 
 export function Order({
   order,
   setOrders,
   showDetails,
   editOrder,
-  uploadImages
+  uploadImages,
+  handleUpdateStatus
 }: {
   order: OrderType;
   setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
   showDetails: (order: OrderType) => void;
   editOrder: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
+  handleUpdateStatus: (orderId: number, newStatus: OrderStatus) => void;
 }) {
-  const statusTranslations: Record<string, string> = {
-    pendiente: 'bg-pending text-pending-text',
-    preparando: 'bg-wip text-wip-text',
-    listo: 'bg-ready text-ready-text',
-    entregado: 'bg-delivered  text-delivered-text'
-  };
-
   return (
     <TableRow>
       <TableCell className="font-medium">{order.customerName}</TableCell>
@@ -40,19 +36,11 @@ export function Order({
       </TableCell>
       <TableCell>{order.description}</TableCell>
       <TableCell>
-        <Badge
-          variant="outline"
-          className={`capitalize ${
-            statusTranslations[
-              order.orderStatus
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLocaleLowerCase()
-            ]
-          }`}
-        >
-          {order.orderStatus}
-        </Badge>
+        <Status
+          orderId={order.id!}
+          currentStatus={order.orderStatus}
+          onStatusChange={handleUpdateStatus}
+        />
       </TableCell>
       <TableCell className="hidden md:table-cell">{`${order.amount}€`}</TableCell>
       <TableCell className="hidden md:table-cell">

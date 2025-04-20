@@ -7,7 +7,10 @@ export async function PATCH(req: NextRequest) {
   const orderId = Number(pathname.split('/').pop());
 
   if (!orderId) {
-    return NextResponse.json({ message: 'Order ID is required' }, { status: 400 });
+    return NextResponse.json(
+      { message: 'Order ID is required' },
+      { status: 400 }
+    );
   }
 
   const order: Order = await req.json();
@@ -15,10 +18,13 @@ export async function PATCH(req: NextRequest) {
   console.log('Received order:', order);
 
   try {
-    await updateOrder(order, orderId);
-    return NextResponse.json({ message: 'Order updated successfully' });
+    const res = await updateOrder(order, orderId);
+    return NextResponse.json(res);
   } catch (error) {
     console.error('Error updating order:', error);
-    return NextResponse.json({ message: 'Failed to update order' }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Failed to update order' },
+      { status: 500 }
+    );
   }
 }

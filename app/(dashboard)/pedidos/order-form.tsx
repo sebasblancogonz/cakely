@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Order, OrderImage } from '@types';
-import { PaymentMethod, OrderStatus, ProductType, PaymentStatus } from '@types';
+import {
+  Order,
+  OrderImage,
+  ProductType,
+  PaymentMethod,
+  OrderStatus,
+  PaymentStatus
+} from '@types';
 
 const productTypeOptions = [
   { value: ProductType.Tarta, label: 'Tarta' },
@@ -31,132 +37,115 @@ const OrderForm = ({
   setIsCreating: (value: boolean) => void;
   orderToEdit: Order | null;
 }) => {
+  const [imageUrls, setImageUrls] = useState<OrderImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<OrderImage[]>([]);
-  const [imageUrls, setImageUrls] = useState<OrderImage[]>(
-    orderToEdit?.images || []
-  );
+
+  useEffect(() => {
+    if (orderToEdit?.images) {
+      setImageUrls(orderToEdit.images);
+    } else {
+      setImageUrls([]);
+    }
+    setImagesToDelete([]);
+  }, [orderToEdit]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const order = buildOrder(formData, orderToEdit);
-    orderToEdit ? updateOrder(order) : saveOrder(order);
+    const orderData = buildOrder(formData, orderToEdit, imageUrls);
+    orderToEdit ? updateOrder(orderData) : saveOrder(orderData);
   };
 
   const getFormValue = <T,>(
     formData: FormData,
     key: string,
-    defaultValue: T
+    defaultValue: T,
+    transform?: (value: FormDataEntryValue) => T
   ): T => {
-    return (formData.get(key) as T) ?? defaultValue;
+    const value = formData.get(key);
+    if (value === null || value === undefined || value === '') {
+      return defaultValue;
+    }
+    return transform ? transform(value) : (value as T);
   };
 
   const buildOrder = (
     formData: FormData,
-    existingOrder: Order | null
+    existingOrder: Order | null,
+    currentImages: OrderImage[]
   ): Order => {
-    if (existingOrder) {
-      const updatedOrder: Partial<Order> = {};
-      let hasChanges = false;
+    const customerName = getFormValue(formData, 'customerName', '');
+    const customerContact = getFormValue(formData, 'customerContact', '');
+    const description = getFormValue(formData, 'description', '');
+    const deliveryDate = getFormValue(
+      formData,
+      'deliveryDate',
+      new Date(),
+      (v) => new Date()
+    );
+    const productType = getFormValue(
+      formData,
+      'productType',
+      ProductType.Otros,
+      (v) => v as ProductType
+    );
+    const quantity = getFormValue(
+      formData,
+      'quantity',
+      1,
+      (v) => parseInt(v.toString(), 10) || 1
+    );
+    const sizeOrWeight = getFormValue(formData, 'sizeOrWeight', '');
+    const flavor = getFormValue(formData, 'flavor', '');
+    const allergyInformation = getFormValue(formData, 'allergyInformation', '');
+    const paymentMethod = getFormValue(
+      formData,
+      'paymentMethod',
+      PaymentMethod.Efectivo,
+      (v) => v as PaymentMethod
+    );
+    const notes = getFormValue(formData, 'notes', '');
+    const amount = getFormValue(
+      formData,
+      'amount',
+      0,
+      (v) => parseFloat(v.toString()) || 0
+    );
+    const totalPrice = amount;
 
-      const fieldTransformers: Record<
-        Exclude<
-          keyof Order,
-          | 'images'
-          | 'orderHistory'
-          | 'id'
-          | 'orderDate'
-          | 'orderStatus'
-          | 'paymentStatus'
-          | 'customizationDetails'
-        >,
-        (value: FormDataEntryValue) => any
-      > = {
-        customerName: (v) => v.toString(),
-        customerContact: (v) => v.toString(),
-        description: (v) => v.toString(),
-        deliveryDate: (v) => new Date(v.toString()),
-        productType: (v) => v as ProductType,
-        quantity: (v) => parseInt(v.toString(), 10),
-        sizeOrWeight: (v) => v.toString(),
-        flavor: (v) => v.toString(),
-        allergyInformation: (v) => v.toString(),
-        paymentMethod: (v) => v as PaymentMethod,
-        notes: (v) => v.toString(),
-        amount: (v) => parseFloat(v.toString()),
-        totalPrice: (v) => parseFloat(v.toString())
-      };
-
-      for (const field in fieldTransformers) {
-        const key = field as keyof typeof fieldTransformers;
-        const formValue = formData.get(field);
-
-        if (formValue !== null) {
-          const transformedValue = fieldTransformers[key](formValue);
-          const originalValue = existingOrder[key];
-
-          let valueChanged = false;
-          if (
-            originalValue instanceof Date &&
-            transformedValue instanceof Date
-          ) {
-            valueChanged =
-              originalValue.getTime() !== transformedValue.getTime();
-          } else {
-            valueChanged = transformedValue !== originalValue;
-          }
-
-          if (valueChanged) {
-            updatedOrder[key] = transformedValue;
-            hasChanges = true;
-          }
-        }
-      }
-
-      const originalImages = existingOrder.images || [];
-      if (
-        imageUrls.length !== originalImages.length ||
-        JSON.stringify(imageUrls) !== JSON.stringify(originalImages)
-      ) {
-        updatedOrder.images = imageUrls;
-        hasChanges = true;
-        console.log('Image changes detected. New image array:', imageUrls);
-      } else {
-        console.log('No image changes detected.');
-      }
-
-      return hasChanges ? { ...existingOrder, ...updatedOrder } : existingOrder;
-    }
-
-    const newAmount = parseFloat(getFormValue(formData, 'amount', '0'));
-    return {
-      id: undefined,
-      orderDate: new Date(),
-      orderStatus: OrderStatus.pending,
-      paymentStatus: PaymentStatus.Pendiente,
-      customizationDetails: '',
-      orderHistory: [],
-      customerName: getFormValue(formData, 'customerName', ''),
-      customerContact: getFormValue(formData, 'customerContact', ''),
-      description: getFormValue(formData, 'description', ''),
-      deliveryDate: new Date(
-        getFormValue(formData, 'deliveryDate', new Date().toISOString())
-      ),
-      productType: getFormValue(formData, 'productType', ProductType.Otros),
-      quantity: parseInt(getFormValue(formData, 'quantity', '1'), 10),
-      sizeOrWeight: getFormValue(formData, 'sizeOrWeight', ''),
-      flavor: getFormValue(formData, 'flavor', ''),
-      allergyInformation: getFormValue(formData, 'allergyInformation', ''),
-      paymentMethod: getFormValue(
-        formData,
-        'paymentMethod',
-        PaymentMethod.Efectivo
-      ),
-      notes: getFormValue(formData, 'notes', ''),
-      amount: newAmount,
-      totalPrice: newAmount,
-      images: imageUrls
+    const orderDataFromForm: Partial<Order> = {
+      customerName,
+      customerContact,
+      description,
+      deliveryDate,
+      productType,
+      quantity,
+      sizeOrWeight,
+      flavor,
+      allergyInformation,
+      paymentMethod,
+      notes,
+      amount,
+      totalPrice,
+      images: currentImages
     };
+
+    if (existingOrder) {
+      return {
+        ...existingOrder,
+        ...orderDataFromForm
+      };
+    } else {
+      return {
+        id: undefined,
+        orderDate: new Date(),
+        orderStatus: OrderStatus.pending,
+        paymentStatus: PaymentStatus.Pendiente,
+        customizationDetails: '',
+        orderHistory: [],
+        ...orderDataFromForm
+      } as Order;
+    }
   };
 
   const closeModal = () => {
@@ -166,33 +155,65 @@ const OrderForm = ({
   };
 
   const saveOrder = async (order: Order) => {
-    const res = await fetch('/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(order)
-    });
-    if (res.ok) {
-      setOrders((prev) => [...prev, order]);
-      closeModal();
+    console.log('Guardando nuevo pedido:', order);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order)
+      });
+      if (res.ok) {
+        const savedOrder = await res.json();
+        setOrders((prev) => [...prev, savedOrder]);
+        closeModal();
+      } else {
+        console.error('Error al guardar:', await res.text());
+      }
+    } catch (error) {
+      console.error('Error de red al guardar:', error);
     }
   };
 
   const updateOrder = async (order: Order) => {
-    const res = await fetch(`/api/orders/${order.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(order)
-    });
-    if (res.ok) {
-      if (imagesToDelete.length > 0) {
-        fetch('/api/images', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(imagesToDelete)
-        });
+    console.log('Actualizando pedido:', order);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order)
+      });
+
+      if (res.ok) {
+        const updatedOrder = await res.json();
+
+        if (imagesToDelete.length > 0) {
+          console.log('Borrando imágenes:', imagesToDelete);
+          try {
+            const deleteRes = await fetch('/api/images', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(imagesToDelete.map((img) => img.id))
+            });
+            if (!deleteRes.ok) {
+              console.error(
+                'Error al borrar imágenes:',
+                await deleteRes.text()
+              );
+            }
+          } catch (deleteError) {
+            console.error('Error de red al borrar imágenes:', deleteError);
+          }
+        }
+
+        setOrders((prev) =>
+          prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+        );
+        closeModal();
+      } else {
+        console.error('Error al actualizar:', await res.text());
       }
-      setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
-      closeModal();
+    } catch (error) {
+      console.error('Error de red al actualizar:', error);
     }
   };
 
@@ -233,29 +254,20 @@ const OrderForm = ({
       type: 'text',
       placeholder: 'Tamaño o peso del encargo'
     },
-    {
-      label: 'Sabor',
-      name: 'flavor',
-      type: 'text',
-      placeholder: 'Sabor'
-    },
+    { label: 'Sabor', name: 'flavor', type: 'text', placeholder: 'Sabor' },
     {
       label: 'Información alergias',
       name: 'allergyInformation',
       type: 'textarea',
       placeholder: 'Alergias del cliente'
     },
-    {
-      label: 'Notas',
-      name: 'notes',
-      type: 'textarea',
-      placeholder: 'Notas'
-    },
+    { label: 'Notas', name: 'notes', type: 'textarea', placeholder: 'Notas' },
     {
       label: 'Importe',
       name: 'amount',
       type: 'number',
-      placeholder: 'Importe a cobrar'
+      placeholder: 'Importe a cobrar',
+      step: '0.01'
     }
   ];
 
@@ -264,15 +276,33 @@ const OrderForm = ({
       <h2 className="text-lg font-semibold leading-none tracking-tight mb-4">
         {orderToEdit ? 'Editar Pedido' : 'Nuevo Pedido'}
       </h2>
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        {fields.map((field) =>
-          field.type === 'textarea' ? (
+      <form
+        className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
+        onSubmit={handleSubmit}
+      >
+        {fields.map((field) => {
+          let defaultValue: string | number | Date | undefined = orderToEdit?.[
+            field.name as keyof Order
+          ] as any;
+          let formattedDefaultValue: string | number | undefined = undefined;
+
+          if (defaultValue !== undefined && defaultValue !== null) {
+            if (field.type === 'date' && defaultValue instanceof Date) {
+              formattedDefaultValue = defaultValue.toISOString().split('T')[0];
+            } else if (typeof defaultValue === 'number') {
+              formattedDefaultValue = defaultValue;
+            } else {
+              formattedDefaultValue = defaultValue.toString();
+            }
+          }
+
+          return field.type === 'textarea' ? (
             <TextAreaField
               key={field.name}
               label={field.label}
               placeholder={field.placeholder}
               name={field.name}
-              defaultValue={orderToEdit?.[field.name as keyof Order] as string}
+              defaultValue={formattedDefaultValue?.toString()}
             />
           ) : (
             <InputField
@@ -281,12 +311,11 @@ const OrderForm = ({
               name={field.name}
               type={field.type}
               placeholder={field.placeholder}
-              defaultValue={orderToEdit?.[
-                field.name as keyof Order
-              ]?.toString()}
+              defaultValue={formattedDefaultValue?.toString()}
+              step={field.type === 'number' ? field.step || '1' : undefined}
             />
-          )
-        )}
+          );
+        })}
 
         <SelectField
           label="Tipo de producto"
@@ -302,28 +331,36 @@ const OrderForm = ({
           defaultValue={orderToEdit?.paymentMethod}
         />
 
-        {orderToEdit && imageUrls.length > 0 && (
+        {orderToEdit && (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-              Imágenes del pedido
+              Imágenes del pedido (Editar)
             </label>
+            {imageUrls.length === 0 && (
+              <p className="text-xs text-gray-500">
+                No hay imágenes asociadas.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {imageUrls.map((img, index) => (
-                <div key={index} className="relative w-24 h-24">
+                <div key={img.id || index} className="relative w-24 h-24">
                   <img
                     src={img.url}
                     alt={`Imagen ${index + 1}`}
-                    className="w-full h-full object-cover rounded-md"
+                    className="w-full h-full object-cover rounded-md border"
                   />
                   <button
                     type="button"
                     onClick={() => {
-                      setImagesToDelete([...imagesToDelete, img]);
-                      setImageUrls((prev) => {
-                        return prev.filter((_, i) => i !== index);
-                      });
+                      if (img.id) {
+                        setImagesToDelete([...imagesToDelete, img]);
+                      }
+                      setImageUrls((prev) =>
+                        prev.filter((_, i) => i !== index)
+                      );
                     }}
-                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600"
+                    className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-0 w-5 h-5 flex items-center justify-center text-xs hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                    aria-label="Eliminar imagen"
                   >
                     ×
                   </button>
@@ -333,12 +370,12 @@ const OrderForm = ({
           </div>
         )}
 
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-4 sticky bottom-0 bg-white pb-1">
           <Button type="button" variant="outline" onClick={closeModal}>
             Cancelar
           </Button>
           <Button type="submit" className="ml-2">
-            Guardar
+            {orderToEdit ? 'Actualizar Pedido' : 'Guardar Pedido'}
           </Button>
         </div>
       </form>
@@ -351,21 +388,27 @@ const InputField = ({
   name,
   type = 'text',
   placeholder,
-  defaultValue
+  defaultValue,
+  step
 }: {
   label: string;
   name: string;
   type?: string;
   placeholder?: string;
-  defaultValue?: string;
+  defaultValue?: string | number;
+  step?: string;
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      {label}
+    </label>
     <input
+      id={name}
       name={name}
       type={type}
       defaultValue={defaultValue}
       placeholder={placeholder}
+      step={step}
       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
     />
   </div>
@@ -383,11 +426,15 @@ const TextAreaField = ({
   defaultValue?: string;
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      {label}
+    </label>
     <textarea
+      id={name}
       name={name}
       placeholder={placeholder}
       defaultValue={defaultValue}
+      rows={3}
       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
     />
   </div>
@@ -405,11 +452,14 @@ const SelectField = ({
   defaultValue?: string;
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
+    <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+      {label}
+    </label>
     <select
+      id={name}
       name={name}
       defaultValue={defaultValue}
-      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+      className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>

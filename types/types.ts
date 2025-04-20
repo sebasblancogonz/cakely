@@ -76,3 +76,10 @@ interface BreadcrumbItem {
 export interface DashboardBreadcrumbProps {
   items: BreadcrumbItem[];
 }
+
+export const ORDER_STATUSES = [
+  'Pendiente',
+  'Preparando',
+  'Listo',
+  'Entregado'
+] as const;

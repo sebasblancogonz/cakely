@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrdersTable } from './orders-table';
-import { Order } from '@types';
+import { Order, OrderStatus } from '@types';
 import Modal from '../common/Modal';
 import OrderForm from './order-form';
 import OrderDetails from './order-details';
@@ -89,6 +89,66 @@ export default function OrdersPage(props: {
         return true;
     }
   });
+
+  const handleUpdateStatus = async (
+    orderId: number,
+    newStatus: OrderStatus
+  ) => {
+    console.log(
+      `OrdersPage: Attempting to update order ${orderId} to status: ${newStatus}`
+    );
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ orderStatus: newStatus })
+      });
+
+      if (!response.ok) {
+        console.error('API error updating status:', response.statusText);
+        alert(`Error updating status: ${response.statusText}`);
+        return;
+      }
+
+      const updatedOrderFromServer = await response.json();
+      let finalUpdatedOrder: Order | null = null;
+
+      if (
+        Array.isArray(updatedOrderFromServer) &&
+        updatedOrderFromServer.length > 0
+      ) {
+        finalUpdatedOrder = updatedOrderFromServer[0];
+      } else if (
+        typeof updatedOrderFromServer === 'object' &&
+        updatedOrderFromServer !== null &&
+        updatedOrderFromServer.id === orderId
+      ) {
+        finalUpdatedOrder = updatedOrderFromServer;
+      }
+
+      if (finalUpdatedOrder) {
+        console.log(
+          'OrdersPage: Status updated on server, updating local state with:',
+          finalUpdatedOrder
+        );
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? finalUpdatedOrder! : o))
+        );
+      } else {
+        console.error(
+          'The PATCH API response did not contain the expected Order object after updating the status.'
+        );
+        alert(
+          'Failed to update status correctly, API response was unexpected.'
+        );
+      }
+    } catch (error) {
+      console.error('Network error updating status:', error);
+      alert('Network error while trying to update status.');
+    }
+  };
 
   const downloadCSV = () => {
     if (orders.length === 0) {
@@ -249,6 +309,7 @@ export default function OrdersPage(props: {
             orders={filteredOrders}
             offset={offset ?? 0}
             totalOrders={filteredOrders.length}
+            handleUpdateStatus={handleUpdateStatus}
           />
         </TabsContent>
       )}

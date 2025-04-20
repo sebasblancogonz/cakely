@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { neon } from '@neondatabase/serverless';
+import { z } from 'zod';
 import { drizzle } from 'drizzle-orm/neon-http';
 import {
   pgTable,
@@ -78,6 +79,28 @@ export const orders = pgTable('orders', {
   orderHistory: jsonb('order_history'),
   images: jsonb('images')
 });
+
+const UpdateOrderSchema = z
+  .object({
+    description: z.string().optional(),
+    customerName: z.string().min(1).optional(), // Ejemplo: requiere nombre si se envía
+    customerContact: z.string().optional(),
+    orderDate: z.coerce.date().optional(), // coerce convierte string/number a Date
+    amount: z.coerce.number().positive().optional(), // coerce convierte string a number
+    deliveryDate: z.coerce.date().optional(),
+    orderStatus: z.nativeEnum(OrderStatus).optional(),
+    productType: z.nativeEnum(ProductType).optional(),
+    customizationDetails: z.string().optional(),
+    quantity: z.coerce.number().int().positive().optional(),
+    sizeOrWeight: z.string().optional(),
+    flavor: z.string().optional(),
+    allergyInformation: z.string().optional(),
+    totalPrice: z.coerce.number().positive().optional(),
+    paymentStatus: z.nativeEnum(PaymentStatus).optional(),
+    paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+    notes: z.string().optional()
+  })
+  .partial();
 
 const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
@@ -260,44 +283,48 @@ export async function saveOrder(order: Order): Promise<number> {
   }
 }
 
-export async function updateOrder(order: Order, orderId: number) {
-  const orderDate =
-    order.orderDate instanceof Date
-      ? order.orderDate
-      : new Date(order.orderDate);
+export async function updateOrder(orderInput: Partial<Order>, orderId: number) {
+  const validationResult = UpdateOrderSchema.safeParse(orderInput);
+  if (!validationResult.success) {
+    console.error('Validation failed:', validationResult.error.errors);
+    throw new Error('Invalid input data for updating order');
+  }
+  const validatedData = validationResult.data;
 
-  const deliveryDate =
-    order.deliveryDate instanceof Date
-      ? order.deliveryDate
-      : new Date(order.deliveryDate);
+  const dataToSet: Record<string, any> = { ...validatedData };
+  if (dataToSet.amount !== undefined) {
+    dataToSet.amount = dataToSet.amount.toString();
+  }
+  if (dataToSet.totalPrice !== undefined) {
+    dataToSet.totalPrice = dataToSet.totalPrice.toString();
+  }
 
-  const orderToUpdate = {
-    description: order.description,
-    customerName: order.customerName,
-    customerContact: order.customerContact,
-    orderDate: orderDate,
-    amount: order.amount.toString(),
-    deliveryDate: deliveryDate,
-    orderStatus: order.orderStatus,
-    productType: order.productType,
-    customizationDetails: order.customizationDetails,
-    quantity: order.quantity,
-    sizeOrWeight: order.sizeOrWeight,
-    flavor: order.flavor,
-    allergyInformation: order.allergyInformation,
-    totalPrice: order.totalPrice.toString(),
-    paymentStatus: order.paymentStatus,
-    paymentMethod: order.paymentMethod,
-    notes: order.notes,
-    orderHistory: order.orderHistory,
-    images: order.images
-  };
+  delete dataToSet.id;
+  delete dataToSet.orderHistory;
+  delete dataToSet.images;
+
+  if (Object.keys(dataToSet).length === 0) {
+    console.warn(
+      'Update attempt with no valid fields to update for order:',
+      orderId
+    );
+    throw new Error('No valid fields provided for update');
+  }
 
   try {
-    await db.update(orders).set(orderToUpdate).where(eq(orders.id, orderId));
+    const updatedResult = await db
+      .update(orders)
+      .set(dataToSet)
+      .where(eq(orders.id, orderId))
+      .returning();
+
+    if (!updatedResult || updatedResult.length === 0) {
+      throw new Error(`Order with ID ${orderId} not found.`);
+    }
+    return updatedResult[0];
   } catch (error) {
-    console.error('Error updating order:', error);
-    throw new Error('Failed to update order');
+    console.error('Error updating order in DB:', error);
+    throw new Error('Failed to update order in database');
   }
 }
 

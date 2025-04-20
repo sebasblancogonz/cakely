@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Order } from './order';
-import { Order as OrderType } from '@types';
+import { OrderStatus, Order as OrderType } from '@types';
 import { JSX } from 'react';
 
 const ORDERS_PER_PAGE = 5;
@@ -31,6 +31,7 @@ interface OrdersTableProps {
   editOrder: (order: OrderType) => void;
   showDetails: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
+  handleUpdateStatus: (orderId: number, newStatus: OrderStatus) => void;
 }
 
 export function OrdersTable({
@@ -40,7 +41,8 @@ export function OrdersTable({
   setOrders,
   editOrder,
   showDetails,
-  uploadImages
+  uploadImages,
+  handleUpdateStatus
 }: OrdersTableProps): JSX.Element {
   const router = useRouter();
 
@@ -104,6 +106,7 @@ export function OrdersTable({
                 setOrders={setOrders}
                 editOrder={editOrder}
                 uploadImages={uploadImages}
+                handleUpdateStatus={handleUpdateStatus}
               />
             ))}
           </TableBody>
