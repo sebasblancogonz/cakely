@@ -18,6 +18,7 @@
     "paths": {
       "@/components/*": ["components/*"],
       "@/lib/*": ["lib/*"],
+      "@/*": ["./*"],
       "@types": ["types/types.ts"]
     },
     "plugins": [
@@ -31,7 +32,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "lib/auth.mts"
+    "lib/auth.ts"
   ],
   "exclude": ["node_modules"]
 }
