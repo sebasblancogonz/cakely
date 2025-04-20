@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Order } from '@types';
-import DetailsTable from '../common/DetailsTable.jsx';
-import dynamic from 'next/dynamic'; // 👈 necesario
+import DetailsTable from '../common/DetailsTable';
+import dynamic from 'next/dynamic';
 
 const Lightbox = dynamic(() => import('yet-another-react-lightbox'), {
   ssr: false
