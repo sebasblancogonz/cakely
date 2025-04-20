@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { signIn } from '@/lib/auth';
+import { signIn } from '@/lib/auth.mjs';
 
 export default function LoginPage() {
   return (
