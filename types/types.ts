@@ -55,12 +55,17 @@ export interface Order {
   paymentMethod: PaymentMethod;
   notes: string;
   orderHistory: OrderHistory[];
-  images: string[];
+  images: OrderImage[];
 }
 
 export interface OrderHistory {
   status: OrderStatus;
   timestamp: Date;
+}
+
+export interface OrderImage {
+  id: string;
+  url: string;
 }
 
 interface BreadcrumbItem {

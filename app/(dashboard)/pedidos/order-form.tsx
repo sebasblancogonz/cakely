@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Order, OrderHistory } from '@types';
+import { Order, OrderImage } from '@types';
 import { PaymentMethod, OrderStatus, ProductType, PaymentStatus } from '@types';
 
 const productTypeOptions = [
@@ -31,7 +31,8 @@ const OrderForm = ({
   setIsCreating: (value: boolean) => void;
   orderToEdit: Order | null;
 }) => {
-  const [imageUrls, setImageUrls] = useState<string[]>(
+  const [imagesToDelete, setImagesToDelete] = useState<OrderImage[]>([]);
+  const [imageUrls, setImageUrls] = useState<OrderImage[]>(
     orderToEdit?.images || []
   );
 
@@ -183,6 +184,13 @@ const OrderForm = ({
       body: JSON.stringify(order)
     });
     if (res.ok) {
+      if (imagesToDelete.length > 0) {
+        fetch('/api/images', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(imagesToDelete)
+        });
+      }
       setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
       closeModal();
     }
@@ -300,21 +308,20 @@ const OrderForm = ({
               Imágenes del pedido
             </label>
             <div className="flex flex-wrap gap-2">
-              {imageUrls.map((url, index) => (
+              {imageUrls.map((img, index) => (
                 <div key={index} className="relative w-24 h-24">
                   <img
-                    src={url}
+                    src={img.url}
                     alt={`Imagen ${index + 1}`}
                     className="w-full h-full object-cover rounded-md"
                   />
                   <button
                     type="button"
                     onClick={() => {
-                      console.log(imageUrls);
+                      setImagesToDelete([...imagesToDelete, img]);
                       setImageUrls((prev) => {
                         return prev.filter((_, i) => i !== index);
                       });
-                      console.log(imageUrls);
                     }}
                     className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600"
                   >

@@ -76,7 +76,7 @@ export const orders = pgTable('orders', {
   paymentMethod: paymentMethodEnum('payment_method').notNull(),
   notes: text('notes'),
   orderHistory: jsonb('order_history'),
-  images: text('images').array()
+  images: jsonb('images')
 });
 
 const customers = pgTable('customers', {
@@ -289,7 +289,8 @@ export async function updateOrder(order: Order, orderId: number) {
     paymentStatus: order.paymentStatus,
     paymentMethod: order.paymentMethod,
     notes: order.notes,
-    orderHistory: order.orderHistory
+    orderHistory: order.orderHistory,
+    images: order.images
   };
 
   try {

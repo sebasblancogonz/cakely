@@ -24,7 +24,8 @@ CREATE TABLE orders (
     payment_method payment_method NOT NULL,
 
     notes TEXT,
-    order_history JSONB
+    order_history JSONB,
+    images JSONB DEFAULT '[]'::jsonb
 );
 
 -- Índices para búsquedas comunes
@@ -51,7 +52,8 @@ INSERT INTO orders (
     payment_status, 
     payment_method, 
     notes, 
-    order_history
+    order_history,
+    images
 )
 VALUES
 ('Ana Gómez', 
@@ -71,7 +73,8 @@ VALUES
  'Pendiente', 
  'Tarjeta', 
  'Entregar antes de las 14:00', 
- '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-15T09:00:00"}]}'
+ '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-15T09:00:00"}]}',
+ '[{"id": "img1", "url": "https://example.com/images/ana1.jpg"}]'
 ),
 ('Luis Fernández', 
  'luis.fernandez@example.com', 
@@ -90,7 +93,8 @@ VALUES
  'Pagado', 
  'Bizum', 
  'Confirmar antes de la entrega', 
- '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-12T10:30:00"}, {"status": "Preparando", "timestamp": "2025-01-14T15:00:00"}]}'
+ '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-12T10:30:00"}, {"status": "Preparando", "timestamp": "2025-01-14T15:00:00"}]}',
+ '[{"id": "img1", "url": "https://example.com/images/luis1.jpg"}, {"id": "img2", "url": "https://example.com/images/luis2.jpg"}]'
 ),
 ('Carla Ruiz', 
  'carla.ruiz@example.com', 
@@ -109,7 +113,8 @@ VALUES
  'Pagado', 
  'Efectivo', 
  'Entrega en cajas individuales', 
- '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-10T08:45:00"}, {"status": "Preparando", "timestamp": "2025-01-12T12:00:00"}, {"status": "Listo", "timestamp": "2025-01-14T18:00:00"}]}'
+ '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-10T08:45:00"}, {"status": "Preparando", "timestamp": "2025-01-12T12:00:00"}, {"status": "Listo", "timestamp": "2025-01-14T18:00:00"}]}',
+ '[]'
 ),
 ('Diego Martínez', 
  'diego.martinez@example.com', 
@@ -128,7 +133,8 @@ VALUES
  'Pagado', 
  'Transferencia', 
  'Entregado en caja decorativa', 
- '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-18T14:00:00"}, {"status": "Preparando", "timestamp": "2025-01-20T10:00:00"}, {"status": "Listo", "timestamp": "2025-01-24T15:00:00"}, {"status": "Entregado", "timestamp": "2025-01-25T13:00:00"}]}'
+ '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-18T14:00:00"}, {"status": "Preparando", "timestamp": "2025-01-20T10:00:00"}, {"status": "Listo", "timestamp": "2025-01-24T15:00:00"}, {"status": "Entregado", "timestamp": "2025-01-25T13:00:00"}]}',
+ '[{"id": "img1", "url": "https://example.com/images/diego1.jpg"}]'
 ),
 ('Laura Sánchez', 
  'laura.sanchez@example.com', 
@@ -147,5 +153,6 @@ VALUES
  'Pendiente', 
  'Tarjeta', 
  'Confirmar diseño antes de continuar', 
- '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-14T16:00:00"}, {"status": "Preparando", "timestamp": "2025-01-16T09:00:00"}]}'
+ '{"status_changes": [{"status": "Pendiente", "timestamp": "2025-01-14T16:00:00"}, {"status": "Preparando", "timestamp": "2025-01-16T09:00:00"}]}',
+ '[{"id": "img1", "url": "https://example.com/images/laura1.jpg"}, {"id": "img2", "url": "https://example.com/images/laura2.jpg"}]'
 );

@@ -75,10 +75,10 @@ const OrderDetails = ({ order }: { order: Order }) => {
       value:
         Array.isArray(order.images) && order.images.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {order.images.map((imgUrl, index) => (
+            {order.images.map((img, index) => (
               <img
                 key={index}
-                src={imgUrl}
+                src={img.url}
                 alt={`Imagen ${index + 1}`}
                 className="w-24 h-24 object-cover rounded-md border cursor-pointer"
                 onClick={() => handleImageClick(index)}
@@ -103,7 +103,7 @@ const OrderDetails = ({ order }: { order: Order }) => {
         open={lightboxOpen}
         close={() => setLightboxOpen(false)}
         index={selectedIndex}
-        slides={order.images.map((src) => ({ src }))}
+        slides={order.images.map((img) => ({ src: img.url }))}
         styles={{
           container: {
             backgroundColor: 'rgba(0, 0, 0, 0.5)' // 20% opacidad
