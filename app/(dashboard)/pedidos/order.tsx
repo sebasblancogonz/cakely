@@ -60,13 +60,13 @@ export function Order({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuItem>
-              <div className="flex gap-1 text-blue-600 items-center justify-center">
+              <div className="flex gap-1 items-center justify-center">
                 <Eye size={15} />
                 <button onClick={() => showDetails(order)}>Ver detalles</button>
               </div>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <div className="flex gap-1 text-blue-600 items-center justify-center">
+              <div className="flex gap-1 items-center justify-center">
                 <Upload size={15} />
                 <button onClick={() => uploadImages(order)}>
                   Subir imágenes

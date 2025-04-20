@@ -1,8 +1,5 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 
 import {
   Breadcrumb,
@@ -13,34 +10,42 @@ import {
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
 
-import { DashboardBreadcrumbProps } from '@types';
+export interface BreadcrumbTrailItem {
+  label: string;
+  href?: string;
+}
 
-function DashboardBreadcrumb({ items }: DashboardBreadcrumbProps) {
-  const pathname = usePathname();
-  const pathSegments = pathname.split('/').filter(Boolean);
+interface DashboardBreadcrumbProps {
+  trail: BreadcrumbTrailItem[];
+}
 
-  const filteredItems = items.filter((item) =>
-    pathSegments.includes(item.href.split('/').filter(Boolean).pop()!)
-  );
+function DashboardBreadcrumb({ trail }: DashboardBreadcrumbProps) {
+  // Si no hay ruta, no renderizar nada o un estado por defecto
+  if (!trail || trail.length === 0) {
+    return null; // O un breadcrumb base si siempre quieres mostrar "Inicio"
+  }
 
   return (
     <Breadcrumb className="hidden md:flex">
       <BreadcrumbList>
-        {filteredItems.map((item, index) => (
-          <React.Fragment key={index}>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href={item.href}>{item.label}</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            {index < filteredItems.length - 1 && <BreadcrumbSeparator />}
-          </React.Fragment>
-        ))}
-        <BreadcrumbItem>
-          <BreadcrumbPage>
-            {filteredItems[filteredItems.length - 1]?.label || 'Página actual'}
-          </BreadcrumbPage>
-        </BreadcrumbItem>
+        {trail.map((item, index) => {
+          const isLastItem = index === trail.length - 1;
+
+          return (
+            <React.Fragment key={item.href || item.label}>
+              <BreadcrumbItem>
+                {!isLastItem && item.href ? (
+                  <BreadcrumbLink asChild>
+                    <Link href={item.href}>{item.label}</Link>
+                  </BreadcrumbLink>
+                ) : (
+                  <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                )}
+              </BreadcrumbItem>
+              {!isLastItem && <BreadcrumbSeparator />}
+            </React.Fragment>
+          );
+        })}
       </BreadcrumbList>
     </Breadcrumb>
   );

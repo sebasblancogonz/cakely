@@ -83,10 +83,10 @@ export const orders = pgTable('orders', {
 const UpdateOrderSchema = z
   .object({
     description: z.string().optional(),
-    customerName: z.string().min(1).optional(), // Ejemplo: requiere nombre si se envía
+    customerName: z.string().min(1).optional(),
     customerContact: z.string().optional(),
-    orderDate: z.coerce.date().optional(), // coerce convierte string/number a Date
-    amount: z.coerce.number().positive().optional(), // coerce convierte string a number
+    orderDate: z.coerce.date().optional(),
+    amount: z.number().positive().optional(),
     deliveryDate: z.coerce.date().optional(),
     orderStatus: z.nativeEnum(OrderStatus).optional(),
     productType: z.nativeEnum(ProductType).optional(),
@@ -154,7 +154,7 @@ function mapOrders(orderData: any[]): Order[] {
   return orderData.map((order) => ({
     ...order,
     orderDate: new Date(order.orderDate),
-    amount: Number(order.amount)
+    amount: Number(order.amount).toFixed(2)
   }));
 }
 
@@ -293,10 +293,10 @@ export async function updateOrder(orderInput: Partial<Order>, orderId: number) {
 
   const dataToSet: Record<string, any> = { ...validatedData };
   if (dataToSet.amount !== undefined) {
-    dataToSet.amount = dataToSet.amount.toString();
+    dataToSet.amount = dataToSet.amount;
   }
   if (dataToSet.totalPrice !== undefined) {
-    dataToSet.totalPrice = dataToSet.totalPrice.toString();
+    dataToSet.totalPrice = dataToSet.totalPrice;
   }
 
   delete dataToSet.id;
