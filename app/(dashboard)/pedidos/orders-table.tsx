@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Order } from './order';
 import { OrderStatus, Order as OrderType } from '@types';
@@ -31,7 +31,7 @@ interface OrdersTableProps {
   editOrder: (order: OrderType) => void;
   showDetails: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
-  handleUpdateStatus: (orderId: number, newStatus: OrderStatus) => void;
+  onStatusChange: (orderId: number, newStatus: OrderStatus) => Promise<void>; // Renamed from handleUpdateStatus
 }
 
 export function OrdersTable({
@@ -42,15 +42,30 @@ export function OrdersTable({
   editOrder,
   showDetails,
   uploadImages,
-  handleUpdateStatus
+  onStatusChange // Renamed from handleUpdateStatus
 }: OrdersTableProps): JSX.Element {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const prevPage = () => router.back();
-  const nextPage = () =>
-    router.push(`/pedidos?offset=${offset}`, { scroll: false });
+  const prevPage = () => {
+    const params = new URLSearchParams(searchParams);
+    const newOffset = Math.max(0, offset - ORDERS_PER_PAGE);
+    params.set('offset', newOffset.toString());
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const nextPage = () => {
+    const params = new URLSearchParams(searchParams);
+    const newOffset = offset + ORDERS_PER_PAGE;
+    params.set('offset', newOffset.toString());
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const renderPaginationInfo = (): JSX.Element => {
+    if (totalOrders === 0) {
+      return <>No hay pedidos</>;
+    }
     if (totalOrders === 1) {
       return (
         <>
@@ -59,12 +74,14 @@ export function OrdersTable({
       );
     }
 
+    const start = Math.min(offset + 1, totalOrders);
+    const end = Math.min(offset + ORDERS_PER_PAGE, totalOrders);
+
     return (
       <>
         Mostrando{' '}
         <strong>
-          {Math.max(1, offset + 1)}-
-          {Math.min(offset + orders.length, totalOrders)}
+          {start}-{end}
         </strong>{' '}
         de <strong>{totalOrders}</strong> pedidos
       </>
@@ -98,46 +115,53 @@ export function OrdersTable({
         <Table>
           {renderTableHeaders()}
           <TableBody>
-            {orders.map((order) => (
-              <Order
-                key={order.id}
-                order={order}
-                showDetails={showDetails}
-                setOrders={setOrders}
-                editOrder={editOrder}
-                uploadImages={uploadImages}
-                handleUpdateStatus={handleUpdateStatus}
-              />
-            ))}
+            {orders && orders.length > 0 ? (
+              orders.map((order) => (
+                <Order
+                  key={order.id}
+                  order={order}
+                  showDetails={showDetails}
+                  setOrders={setOrders}
+                  editOrder={editOrder}
+                  uploadImages={uploadImages}
+                  onStatusChange={onStatusChange}
+                />
+              ))
+            ) : (
+              <TableRow>
+                <TableHead colSpan={8} className="text-center h-24">
+                  No hay pedidos disponibles
+                </TableHead>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>
       <CardFooter>
-        <form className="flex items-center w-full justify-between">
+        <div className="flex items-center w-full justify-between">
           <div className="text-xs text-muted-foreground">
             {renderPaginationInfo()}
           </div>
           <div className="flex">
             <Button
-              formAction={prevPage}
+              onClick={prevPage}
               variant="ghost"
               size="sm"
-              type="submit"
               disabled={offset === 0}
             >
               Anterior
             </Button>
             <Button
-              formAction={nextPage}
+              onClick={nextPage}
               variant="ghost"
               size="sm"
-              type="submit"
+              className="ml-2"
               disabled={offset + ORDERS_PER_PAGE >= totalOrders}
             >
               Siguiente
             </Button>
           </div>
-        </form>
+        </div>
       </CardFooter>
     </Card>
   );

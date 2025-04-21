@@ -46,7 +46,9 @@ export default function CustomersPage() {
 
       setCustomers(data.customers);
       setOffset(offsetParam);
-      setTotalCustomers(data.totalCustomers || data.customers.length);
+      setTotalCustomers(
+        data.totalCustomers || (data.customers ? data.customers.length : 0)
+      );
     }
 
     fetchCustomers();

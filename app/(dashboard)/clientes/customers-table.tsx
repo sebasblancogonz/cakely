@@ -106,7 +106,7 @@ export function CustomersTable({
         <Table>
           {renderTableHeaders()}
           <TableBody>
-            {customers.length > 0 ? (
+            {customers && customers.length > 0 ? (
               customers.map((customer) => (
                 <Customer
                   showDetails={showDetails}

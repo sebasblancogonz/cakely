@@ -237,7 +237,9 @@ export async function deleteOrderById(id: number) {
   await db.delete(orders).where(eq(orders.id, id));
 }
 
-export async function saveOrder(order: Order): Promise<number> {
+export async function saveOrder(
+  order: Order
+): Promise<typeof orders.$inferInsert> {
   const deliveryDate =
     order.deliveryDate instanceof Date
       ? order.deliveryDate
@@ -272,11 +274,8 @@ export async function saveOrder(order: Order): Promise<number> {
 
   try {
     console.log('Inserting order:', orderToSave);
-    const result = await db
-      .insert(orders)
-      .values(orderToSave)
-      .returning({ id: orders.id });
-    return result[0]?.id ?? 0;
+    const result = await db.insert(orders).values(orderToSave).returning();
+    return result[0];
   } catch (error) {
     console.error('Error saving order:', error);
     throw new Error('Failed to save order');

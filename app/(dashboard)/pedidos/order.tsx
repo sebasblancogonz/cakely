@@ -19,14 +19,14 @@ export function Order({
   showDetails,
   editOrder,
   uploadImages,
-  handleUpdateStatus
+  onStatusChange
 }: {
   order: OrderType;
   setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
   showDetails: (order: OrderType) => void;
   editOrder: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
-  handleUpdateStatus: (orderId: number, newStatus: OrderStatus) => void;
+  onStatusChange: (orderId: number, newStatus: OrderStatus) => void;
 }) {
   return (
     <TableRow>
@@ -39,7 +39,7 @@ export function Order({
         <Status
           orderId={order.id!}
           currentStatus={order.orderStatus}
-          onStatusChange={handleUpdateStatus}
+          onStatusChange={onStatusChange}
         />
       </TableCell>
       <TableCell className="hidden md:table-cell">{`${order.amount}€`}</TableCell>

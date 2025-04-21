@@ -41,36 +41,47 @@ export default function StatisticsPage() {
     );
   }
 
-  const filteredOrders = orders.filter((order) => {
-    const orderDate = new Date(order.orderDate);
-    const start = startDate ? new Date(startDate) : new Date('1900-01-01');
-    const end = endDate ? new Date(endDate) : new Date();
-    return orderDate >= start && orderDate <= end;
-  });
+  const filteredOrders =
+    orders &&
+    orders.filter((order) => {
+      const orderDate = new Date(order.orderDate);
+      const start = startDate ? new Date(startDate) : new Date('1900-01-01');
+      const end = endDate ? new Date(endDate) : new Date();
+      return orderDate >= start && orderDate <= end;
+    });
 
   const orderStatusData = Object.values(OrderStatus).map((status) => ({
     name: status,
-    value: filteredOrders.filter((order) => order.orderStatus === status).length
+    value:
+      filteredOrders &&
+      filteredOrders.filter((order) => order.orderStatus === status).length
   }));
 
   const productTypeData = Object.values(ProductType).map((type) => ({
     name: type,
-    value: filteredOrders.filter((order) => order.productType === type).length
+    value:
+      filteredOrders &&
+      filteredOrders.filter((order) => order.productType === type).length
   }));
 
   const paymentMethodData = Object.values(PaymentMethod).map((method) => ({
     name: method,
-    value: filteredOrders.filter((order) => order.paymentMethod === method)
-      .length
+    value:
+      filteredOrders &&
+      filteredOrders.filter((order) => order.paymentMethod === method).length
   }));
 
-  const totalRevenue = filteredOrders.reduce(
-    (sum, order) => sum + (Number(order.totalPrice) || 0),
-    0
-  );
-  const pendingPayments = filteredOrders
-    .filter((order) => order.paymentStatus === 'Pendiente')
-    .reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
+  const totalRevenue =
+    filteredOrders &&
+    filteredOrders.reduce(
+      (sum, order) => sum + (Number(order.totalPrice) || 0),
+      0
+    );
+  const pendingPayments =
+    filteredOrders &&
+    filteredOrders
+      .filter((order) => order.paymentStatus === 'Pendiente')
+      .reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
 
   return (
     <div className="p-4">
@@ -159,11 +170,11 @@ export default function StatisticsPage() {
       <div className="mt-6 p-4 border rounded-lg shadow-md">
         <h2 className="text-lg font-semibold">Ingresos Totales</h2>
         <p className="text-2xl font-bold text-green-600">
-          €{totalRevenue.toFixed(2)}
+          €{totalRevenue && totalRevenue.toFixed(2)}
         </p>
         <h2 className="text-lg font-semibold mt-4">Pagos Pendientes</h2>
         <p className="text-2xl font-bold text-red-600">
-          €{pendingPayments.toFixed(2)}
+          €{pendingPayments && pendingPayments.toFixed(2)}
         </p>
       </div>
     </div>
