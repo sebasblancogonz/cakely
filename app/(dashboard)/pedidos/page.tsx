@@ -239,11 +239,11 @@ export default function OrdersPage() {
       >
         <div className="flex items-center justify-center flex-col gap-4 xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row ">
           <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="in_progress">Processing</TabsTrigger>
-            <TabsTrigger value="ready">Ready</TabsTrigger>
-            <TabsTrigger value="delivered">Delivered</TabsTrigger>
+            <TabsTrigger value="all">Todo</TabsTrigger>
+            <TabsTrigger value="pending">Pendiente</TabsTrigger>
+            <TabsTrigger value="in_progress">En preparación</TabsTrigger>
+            <TabsTrigger value="ready">Listo</TabsTrigger>
+            <TabsTrigger value="delivered">Entregado</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
             <Button
@@ -254,7 +254,7 @@ export default function OrdersPage() {
             >
               <File className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Export Page
+                Exportar
               </span>
             </Button>
             <Button
@@ -271,7 +271,7 @@ export default function OrdersPage() {
             >
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                New Order
+                Nuevo pedido
               </span>
             </Button>
           </div>
