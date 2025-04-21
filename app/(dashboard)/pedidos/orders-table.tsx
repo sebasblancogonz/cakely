@@ -1,3 +1,5 @@
+// OrdersTable.tsx
+
 'use client';
 
 import {
@@ -19,48 +21,55 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Order } from './order';
 import { OrderStatus, Order as OrderType } from '@types';
-import { JSX } from 'react';
+import { JSX, useCallback } from 'react'; // Import useCallback
 
-const ORDERS_PER_PAGE = 5;
+// Removed ORDERS_PER_PAGE constant
 
 interface OrdersTableProps {
   orders: OrderType[];
   offset: number;
+  limit: number; // Changed from ORDERS_PER_PAGE/hardcoded value
   totalOrders: number;
   setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
   editOrder: (order: OrderType) => void;
   showDetails: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
-  onStatusChange: (orderId: number, newStatus: OrderStatus) => Promise<void>; // Renamed from handleUpdateStatus
+  onStatusChange: (orderId: number, newStatus: OrderStatus) => Promise<void>;
 }
 
 export function OrdersTable({
   orders,
   offset,
+  limit, // Receive limit as a prop
   totalOrders,
   setOrders,
   editOrder,
   showDetails,
   uploadImages,
-  onStatusChange // Renamed from handleUpdateStatus
+  onStatusChange
 }: OrdersTableProps): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const prevPage = () => {
-    const params = new URLSearchParams(searchParams);
-    const newOffset = Math.max(0, offset - ORDERS_PER_PAGE);
-    params.set('offset', newOffset.toString());
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  };
+  const navigate = useCallback(
+    (newOffset: number) => {
+      const params = new URLSearchParams(searchParams);
+      params.set('offset', newOffset.toString());
+      params.set('limit', limit.toString()); // Preserve current limit
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, limit, router, pathname]
+  ); // Add dependencies
 
-  const nextPage = () => {
-    const params = new URLSearchParams(searchParams);
-    const newOffset = offset + ORDERS_PER_PAGE;
-    params.set('offset', newOffset.toString());
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  };
+  const prevPage = useCallback(() => {
+    navigate(Math.max(0, offset - limit));
+  }, [navigate, offset, limit]);
+
+  const nextPage = useCallback(() => {
+    // Calculate offset for the *start* of the next page
+    navigate(offset + limit);
+  }, [navigate, offset, limit]);
 
   const renderPaginationInfo = (): JSX.Element => {
     if (totalOrders === 0) {
@@ -75,7 +84,8 @@ export function OrdersTable({
     }
 
     const start = Math.min(offset + 1, totalOrders);
-    const end = Math.min(offset + ORDERS_PER_PAGE, totalOrders);
+    // Use limit prop here
+    const end = Math.min(offset + limit, totalOrders);
 
     return (
       <>
@@ -145,7 +155,7 @@ export function OrdersTable({
           <div className="flex">
             <Button
               onClick={prevPage}
-              variant="ghost"
+              variant="outline"
               size="sm"
               disabled={offset === 0}
             >
@@ -153,10 +163,11 @@ export function OrdersTable({
             </Button>
             <Button
               onClick={nextPage}
-              variant="ghost"
+              variant="outline"
               size="sm"
               className="ml-2"
-              disabled={offset + ORDERS_PER_PAGE >= totalOrders}
+              // Use limit prop in disabled logic
+              disabled={offset + limit >= totalOrders}
             >
               Siguiente
             </Button>

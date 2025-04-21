@@ -195,14 +195,18 @@ export async function getCustomers(
 
 export async function getOrders(
   search: string,
-  offset: number
+  offset: number,
+  limit: number
 ): Promise<{
   orders: Order[];
   newOffset: number | null;
   totalOrders: number;
 }> {
   if (search) {
-    const result = await db.select().from(orders).limit(1000);
+    const result = await db
+      .select()
+      .from(orders)
+      .limit(limit && limit);
 
     return { orders: mapOrders(result), newOffset: null, totalOrders: 0 };
   }
@@ -216,11 +220,11 @@ export async function getOrders(
   const newOrdersFromOffset = await db
     .select()
     .from(orders)
-    .limit(5)
+    .limit(limit)
     .offset(offset);
 
   const mappedOrders = mapOrders(newOrdersFromOffset);
-  const newOffset = mappedOrders.length >= 5 ? offset + 5 : null;
+  const newOffset = mappedOrders.length >= limit ? offset + limit : null;
 
   return { orders: mappedOrders, newOffset, totalOrders };
 }
@@ -235,6 +239,26 @@ export async function deleteCustomerById(id: number) {
 
 export async function deleteOrderById(id: number) {
   await db.delete(orders).where(eq(orders.id, id));
+}
+
+export async function saveCustomer(
+  customer: Customer
+): Promise<typeof customers.$inferInsert> {
+  const customerToSave: typeof customers.$inferInsert = {
+    ...customer
+  };
+
+  try {
+    console.log('Inserting customer:', customerToSave);
+    const result = await db
+      .insert(customers)
+      .values(customerToSave)
+      .returning();
+    return result[0];
+  } catch (error) {
+    console.error('Error saving customer:', error);
+    throw new Error('Failed to save customer');
+  }
 }
 
 export async function saveOrder(

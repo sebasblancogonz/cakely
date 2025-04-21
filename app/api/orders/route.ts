@@ -3,14 +3,17 @@ import { getOrders, saveOrder } from '@/lib/db';
 import { Order } from '@types';
 
 export async function GET(req: NextRequest) {
-  const { search = '', offset = '0' } = Object.fromEntries(
-    req.nextUrl.searchParams
-  );
+  const {
+    search = '',
+    offset = '0',
+    limit
+  } = Object.fromEntries(req.nextUrl.searchParams);
 
   try {
     const { orders, newOffset, totalOrders } = await getOrders(
       search as string,
-      Number(offset)
+      Number(offset),
+      Number(limit)
     );
     return NextResponse.json({ orders, newOffset, totalOrders });
   } catch (error) {
