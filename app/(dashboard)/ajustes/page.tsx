@@ -60,7 +60,7 @@ const settingsSchema = z.object({
 type SettingsFormData = z.infer<typeof settingsSchema>;
 
 const ingredientSchema = z.object({
-  id: z.number().optional(),
+  id: z.coerce.number().optional(),
   name: z.string().min(1, { message: 'Nombre requerido' }),
   unit: z.string().min(1, { message: 'Unidad requerida' }),
   pricePerUnit: z.coerce.number().min(0, { message: 'Precio debe ser >= 0' }),
@@ -94,7 +94,8 @@ function IngredientForm({
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-    reset
+    reset,
+    getValues
   } = useForm<IngredientFormData>({
     resolver: zodResolver(ingredientSchema),
     defaultValues: {
@@ -108,14 +109,38 @@ function IngredientForm({
     }
   });
 
+  const testZodSchema = () => {
+    const currentFormData = getValues();
+    console.log('Probando Zod directamente con:', currentFormData);
+    try {
+      ingredientSchema.parse(currentFormData);
+      console.log('VALIDACIÓN ZOD DIRECTA: ÉXITO');
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        // ¡Este es el error detallado de Zod!
+        console.error('VALIDACIÓN ZOD DIRECTA: FALLÓ:', error.format());
+      } else {
+        console.error('VALIDACIÓN ZOD DIRECTA: ERROR DESCONOCIDO:', error);
+      }
+    }
+  };
+
+  const onValidationErrors = (errors: any) => {
+    console.error('ERRORES DE VALIDACIÓN DEL FORMULARIO:', errors);
+  };
+
   const onSubmit = async (data: IngredientFormData) => {
+    // ... tu lógica onSubmit existente ...
+    console.log('IngredientForm onSubmit triggered. Validated Data:', data);
     await onSave(data);
     reset();
     closeDialog();
   };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      onSubmit={handleSubmit(onSubmit, onValidationErrors)}
+      className="space-y-4"
+    >
       <input type="hidden" {...register('id')} />
       <div>
         <Label htmlFor="name">Nombre Ingrediente</Label>
