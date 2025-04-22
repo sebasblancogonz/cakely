@@ -1,70 +1,235 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { File, PlusCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Keep Tabs import if needed, otherwise remove
+import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomersTable } from './customers-table';
 import { Customer } from '@types';
 import Modal from '@/components/common/Modal';
 import CustomerForm from './customer-form';
 import CustomerDetails from './customer-details';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
+
+const DEFAULT_PAGE_SIZE = 5;
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 export default function CustomersPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+
   const search = searchParams.get('q') || '';
   const offsetParam = Number(searchParams.get('offset')) || 0;
+  const limitParam = Number(searchParams.get('limit')) || DEFAULT_PAGE_SIZE;
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [offset, setOffset] = useState(offsetParam);
+  const [pageSize, setPageSize] = useState(limitParam);
   const [totalCustomers, setTotalCustomers] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentSearch, setCurrentSearch] = useState(search);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
   const [customerToShow, setCustomerToShow] = useState<Customer | null>(null);
 
-  const editCustomer = (customer: Customer) => {
+  const editCustomer = useCallback((customer: Customer) => {
     setCustomerToEdit(customer);
     setIsModalOpen(true);
     setIsEditing(true);
-  };
+    setIsCreating(false);
+    setCustomerToShow(null);
+  }, []);
 
-  const showDetails = (customer: Customer) => {
+  const showDetails = useCallback((customer: Customer) => {
     setCustomerToShow(customer);
     setIsModalOpen(true);
     setIsEditing(false);
-  };
+    setIsCreating(false);
+    setCustomerToEdit(null);
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setCustomerToEdit(null);
+    setIsModalOpen(false);
+    setIsEditing(false);
+    setIsCreating(false);
+    setCustomerToShow(null);
+  }, []);
 
   useEffect(() => {
-    async function fetchCustomers() {
-      const response = await fetch(
-        `/api/customers?search=${search}&offset=${offsetParam}`
-      );
-      const data = await response.json();
+    setOffset(offsetParam);
+    setPageSize(limitParam);
+    setCurrentSearch(search);
 
-      setCustomers(data.customers);
-      setOffset(offsetParam);
-      setTotalCustomers(
-        data.totalCustomers || (data.customers ? data.customers.length : 0)
-      );
+    async function fetchCustomers() {
+      setIsLoading(true);
+      const params = new URLSearchParams({
+        search: search,
+        offset: offsetParam.toString(),
+        limit: limitParam.toString()
+      });
+
+      try {
+        const response = await fetch(`/api/customers?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setCustomers(data.customers || []);
+        // Ensure totalCustomers comes from API, remove fallback to length
+        setTotalCustomers(data.totalCustomers || 0);
+      } catch (error) {
+        console.error('Failed to fetch customers:', error);
+        setCustomers([]);
+        setTotalCustomers(0);
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     fetchCustomers();
-  }, [search, offsetParam]);
+  }, [search, offsetParam, limitParam]); // Depend on URL params
+
+  const updateQueryParams = useCallback(
+    (newParams: Record<string, string | number>) => {
+      const params = new URLSearchParams(searchParams);
+      let resetOffset = false;
+      Object.entries(newParams).forEach(([key, value]) => {
+        if (key !== 'offset' && params.get(key) !== String(value)) {
+          resetOffset = true;
+        }
+        if (value !== undefined && value !== null && String(value) !== '') {
+          params.set(key, String(value));
+        } else {
+          params.delete(key);
+        }
+      });
+      if (resetOffset || !('offset' in newParams)) {
+        params.set('offset', '0');
+      }
+      if (!params.has('limit')) {
+        params.set('limit', String(pageSize)); // Use state value as default if missing
+      }
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router, pathname, pageSize]
+  );
+
+  const handlePageSizeChange = useCallback(
+    (value: string) => {
+      updateQueryParams({ limit: value });
+    },
+    [updateQueryParams]
+  );
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    updateQueryParams({ q: currentSearch });
+  };
+
+  // Placeholder for CSV download - adapt headers/data for customers
+  const downloadCSV = () => {
+    if (customers.length === 0) {
+      alert('No customers on the current page to export.');
+      return;
+    }
+    const headers = [
+      'Name',
+      'Email',
+      'Phone',
+      'Notes' /* Add other customer headers */
+    ];
+    const csvRows = [
+      headers.join(','),
+      ...customers.map((customer) =>
+        [
+          customer.name,
+          customer.email,
+          customer.phone,
+          customer.notes /* Map other values */
+        ]
+          .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
+          .join(',')
+      )
+    ].join('\n');
+    const blob = new Blob(['\ufeff' + csvRows], {
+      type: 'text/csv;charset=utf-8;'
+    });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'customers_page.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
-    <Tabs
-      defaultValue="all"
-      className="flex flex-col gap-4 mt-auto overflow-hidden"
-    >
-      <div className="flex items-center justify-center flex-col gap-4 xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row">
-        <TabsList>
-          <TabsTrigger value="all">Todos</TabsTrigger>
-        </TabsList>
+    <div className="p-4 md:p-6 flex flex-col gap-4 mt-auto overflow-hidden">
+      <form onSubmit={handleSearchSubmit} className="relative w-full md:w-1/3">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Buscar clientes por nombre, email, teléfono..."
+          className="pl-8 w-full"
+          value={currentSearch}
+          onChange={(e) => setCurrentSearch(e.target.value)}
+        />
+      </form>
+
+      <div className="flex items-center justify-center flex-col gap-4 xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row mb-4">
+        <div></div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-8 gap-1">
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Clientes por página:
+            </span>
+            <Select
+              value={pageSize.toString()}
+              onValueChange={handlePageSizeChange}
+            >
+              <SelectTrigger className="h-8 w-[70px] text-xs">
+                <SelectValue placeholder={pageSize} />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <SelectItem
+                    key={size}
+                    value={size.toString()}
+                    className="text-xs"
+                  >
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={downloadCSV}
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1"
+          >
             <File className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Exportar
@@ -74,7 +239,10 @@ export default function CustomersPage() {
             size="sm"
             className="h-8 gap-1"
             onClick={() => {
+              setCustomerToEdit(null);
               setIsCreating(true);
+              setIsEditing(false);
+              setCustomerToShow(null);
               setIsModalOpen(true);
             }}
           >
@@ -86,27 +254,37 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <TabsContent value="all" className="w-[80%] xs:w-full">
+      {isLoading ? (
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-1/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              {[...Array(pageSize)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Skeleton className="h-8 w-full" />
+          </CardFooter>
+        </Card>
+      ) : (
         <CustomersTable
           customers={customers}
           setCustomers={setCustomers}
           editCustomer={editCustomer}
           showDetails={showDetails}
           offset={offset}
+          limit={pageSize}
           totalCustomers={totalCustomers}
         />
-      </TabsContent>
+      )}
 
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setCustomerToEdit(null);
-          setIsModalOpen(false);
-          setIsEditing(false);
-          setIsCreating(false);
-          setCustomerToShow(null);
-        }}
-      >
+      <Modal isOpen={isModalOpen} onClose={closeModal}>
         {isEditing || isCreating ? (
           <CustomerForm
             setIsModalOpen={setIsModalOpen}
@@ -115,10 +293,10 @@ export default function CustomersPage() {
             setIsCreating={setIsCreating}
             customerToEdit={isEditing ? customerToEdit : null}
           />
-        ) : (
-          <CustomerDetails customer={customerToShow!} />
-        )}
+        ) : customerToShow ? (
+          <CustomerDetails customer={customerToShow} />
+        ) : null}
       </Modal>
-    </Tabs>
+    </div>
   );
 }

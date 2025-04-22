@@ -291,7 +291,7 @@ export default function OrdersPage() {
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
-          placeholder="Search orders..."
+          placeholder="Buscar pedidos..."
           className="pl-8 w-full"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}

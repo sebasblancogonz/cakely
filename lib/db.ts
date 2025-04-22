@@ -13,7 +13,7 @@ import {
   serial,
   jsonb
 } from 'drizzle-orm/pg-core';
-import { and, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
 import {
   Customer,
   Order,
@@ -46,16 +46,6 @@ export const productTypeEnum = pgEnum(
   'product_type',
   Object.values(ProductType) as [string]
 );
-
-export const products = pgTable('products', {
-  id: serial('id').primaryKey(),
-  imageUrl: text('image_url').notNull(),
-  name: text('name').notNull(),
-  status: statusEnum('status').notNull(),
-  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
-  stock: integer('stock').notNull(),
-  availableAt: timestamp('available_at').notNull()
-});
 
 export const orders = pgTable('orders', {
   id: serial('order_id').primaryKey(),
@@ -111,42 +101,61 @@ const customers = pgTable('customers', {
   notes: text('notes')
 });
 
-export type SelectProduct = typeof products.$inferSelect;
 export type SelectOrder = typeof orders.$inferSelect;
 export type SelectCustomer = typeof customers.$inferSelect;
 
-export async function getProducts(
-  search: string,
-  offset: number
-): Promise<{
-  products: SelectProduct[];
+interface GetCustomersResult {
+  customers: SelectCustomer[];
   newOffset: number | null;
-  totalProducts: number;
-}> {
-  if (search) {
-    return {
-      products: await db
-        .select()
-        .from(products)
-        .where(ilike(products.name, `%${search}%`))
-        .limit(1000),
-      newOffset: null,
-      totalProducts: 0
-    };
+  totalCustomers: number;
+}
+
+export async function getCustomers(
+  search = '',
+  offset = 0,
+  limit = 5
+): Promise<GetCustomersResult> {
+  let searchCondition: SQL | undefined;
+  const trimmedSearch = search?.trim();
+  if (trimmedSearch) {
+    const searchTerm = `%${trimmedSearch}%`;
+    searchCondition = or(
+      ilike(customers.name, searchTerm),
+      ilike(customers.email, searchTerm),
+      ilike(customers.phone, searchTerm),
+      ilike(customers.notes, searchTerm)
+    );
   }
 
-  if (offset === null) {
-    return { products: [], newOffset: null, totalProducts: 0 };
+  let countQueryBuilder = db
+    .select({ count: count() })
+    .from(customers)
+    .$dynamic();
+  if (searchCondition) {
+    countQueryBuilder = countQueryBuilder.where(searchCondition);
   }
 
-  let totalProducts = await db.select({ count: count() }).from(products);
-  let moreProducts = await db.select().from(products).limit(5).offset(offset);
-  let newOffset = moreProducts.length >= 5 ? offset + 5 : null;
+  const totalResult = await countQueryBuilder;
+  const totalCustomers = totalResult[0]?.count ?? 0;
+
+  let dataQueryBuilder = db.select().from(customers).$dynamic();
+  if (searchCondition) {
+    dataQueryBuilder = dataQueryBuilder.where(searchCondition);
+  }
+
+  dataQueryBuilder = dataQueryBuilder.orderBy(asc(customers.name));
+  dataQueryBuilder = dataQueryBuilder.limit(limit).offset(offset);
+
+  const results = await dataQueryBuilder;
+
+  const fetchedCustomers: SelectCustomer[] = results as SelectCustomer[];
+
+  const newOffset = offset + limit < totalCustomers ? offset + limit : null;
 
   return {
-    products: moreProducts,
+    customers: fetchedCustomers,
     newOffset,
-    totalProducts: totalProducts[0].count
+    totalCustomers
   };
 }
 
@@ -156,48 +165,6 @@ function mapOrders(orderData: any[]): Order[] {
     orderDate: new Date(order.orderDate),
     amount: Number(order.amount).toFixed(2)
   }));
-}
-
-export async function getCustomers(
-  search: string,
-  offset: number
-): Promise<{
-  customers: SelectCustomer[];
-  newOffset: number | null;
-  totalCustomers: number;
-}> {
-  if (search) {
-    return {
-      customers: await db
-        .select()
-        .from(customers)
-        .where(ilike(customers.name, `%${search}%`))
-        .limit(1000),
-      newOffset: null,
-      totalCustomers: 0
-    };
-  }
-
-  if (offset === null) {
-    return { customers: [], newOffset: null, totalCustomers: 0 };
-  }
-
-  let totalCustomers = await db.select({ count: count() }).from(customers);
-  let moreCustomers = await db.select().from(customers).limit(5).offset(offset);
-  let newOffset = moreCustomers.length >= 5 ? offset + 5 : null;
-
-  return {
-    customers: moreCustomers,
-    newOffset,
-    totalCustomers: totalCustomers[0].count
-  };
-}
-
-interface GetOrdersParams {
-  search?: string | null;
-  offset?: number;
-  limit?: number;
-  status?: string | null;
 }
 
 interface GetOrdersResult {
@@ -273,10 +240,6 @@ export async function getOrders(
     newOffset,
     totalOrders
   };
-}
-
-export async function deleteProductById(id: number) {
-  await db.delete(products).where(eq(products.id, id));
 }
 
 export async function deleteCustomerById(id: number) {

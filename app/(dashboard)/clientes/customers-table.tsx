@@ -15,17 +15,18 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'; // Import hooks
 import { Button } from '@/components/ui/button';
 import { Customer } from './customer';
 import { Customer as CustomerType } from '@types';
-import { JSX } from 'react';
+import { JSX, useCallback } from 'react'; // Import useCallback
 
-const CUSTOMERS_PER_PAGE = 5;
+// Removed CUSTOMERS_PER_PAGE constant
 
 interface CustomersTableProps {
   customers: CustomerType[];
   offset: number;
+  limit: number; // Added limit prop
   totalCustomers: number;
   setCustomers: React.Dispatch<React.SetStateAction<CustomerType[]>>;
   editCustomer: (customer: CustomerType) => void;
@@ -35,30 +36,38 @@ interface CustomersTableProps {
 export function CustomersTable({
   customers,
   offset,
+  limit, // Use limit prop
   totalCustomers,
   setCustomers,
   editCustomer,
   showDetails
 }: CustomersTableProps): JSX.Element {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const prevPage = () =>
-    router.push(
-      `/clientes?offset=${Math.max(0, offset - CUSTOMERS_PER_PAGE)}`,
-      { scroll: false }
-    );
+  const navigate = useCallback(
+    (newOffset: number) => {
+      const params = new URLSearchParams(searchParams);
+      params.set('offset', newOffset.toString());
+      params.set('limit', limit.toString());
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, limit, router, pathname]
+  );
 
-  const nextPage = () =>
-    router.push(
-      `/clientes?offset=${Math.min(offset + CUSTOMERS_PER_PAGE, totalCustomers)}`,
-      { scroll: false }
-    );
+  const prevPage = useCallback(() => {
+    navigate(Math.max(0, offset - limit));
+  }, [navigate, offset, limit]);
+
+  const nextPage = useCallback(() => {
+    navigate(offset + limit);
+  }, [navigate, offset, limit]);
 
   const renderPaginationInfo = (): JSX.Element => {
     if (totalCustomers === 0) {
       return <>No hay clientes</>;
     }
-
     if (totalCustomers === 1) {
       return (
         <>
@@ -66,10 +75,8 @@ export function CustomersTable({
         </>
       );
     }
-
-    const start = Math.min(offset + 1, totalCustomers); // Asegurar que start no supere totalCustomers
-    const end = Math.min(offset + CUSTOMERS_PER_PAGE, totalCustomers); // Último cliente en la página actual
-
+    const start = Math.min(offset + 1, totalCustomers);
+    const end = Math.min(offset + limit, totalCustomers);
     return (
       <>
         Mostrando{' '}
@@ -96,6 +103,8 @@ export function CustomersTable({
     </TableHeader>
   );
 
+  const visibleColumnCount = 6;
+
   return (
     <Card>
       <CardHeader>
@@ -118,7 +127,10 @@ export function CustomersTable({
               ))
             ) : (
               <TableRow>
-                <TableHead colSpan={6} className="text-center">
+                <TableHead
+                  colSpan={visibleColumnCount}
+                  className="text-center h-24"
+                >
                   No hay clientes disponibles
                 </TableHead>
               </TableRow>
@@ -127,31 +139,30 @@ export function CustomersTable({
         </Table>
       </CardContent>
       <CardFooter>
-        <form className="flex items-center w-full justify-between">
+        <div className="flex items-center w-full justify-between">
           <div className="text-xs text-muted-foreground">
             {renderPaginationInfo()}
           </div>
           <div className="flex">
             <Button
-              formAction={prevPage}
-              variant="ghost"
+              onClick={prevPage}
+              variant="outline"
               size="sm"
-              type="submit"
               disabled={offset === 0}
             >
               Anterior
             </Button>
             <Button
-              formAction={nextPage}
-              variant="ghost"
+              onClick={nextPage}
+              variant="outline"
               size="sm"
-              type="submit"
-              disabled={offset + CUSTOMERS_PER_PAGE >= totalCustomers}
+              className="ml-2"
+              disabled={offset + limit >= totalCustomers}
             >
               Siguiente
             </Button>
           </div>
-        </form>
+        </div>
       </CardFooter>
     </Card>
   );
