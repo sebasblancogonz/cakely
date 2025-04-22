@@ -1,14 +1,15 @@
+// app/api/ingredient-prices/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ingredientPrices } from '@/lib/db';
 import { UpdateIngredientPriceSchema } from '@/lib/validators/ingredients';
 import { eq } from 'drizzle-orm';
 
-interface RouteParams {
-  params: { id: string };
-}
-
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(
+  request: Request,
+  context: { params: { id: string } }
+) {
+  const { params } = context;
   try {
     const id = parseInt(params.id, 10);
     if (isNaN(id)) {
@@ -37,7 +38,11 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: Request, { params }: RouteParams) {
+export async function PUT(
+  request: Request,
+  context: { params: { id: string } }
+) {
+  const { params } = context;
   try {
     const id = parseInt(params.id, 10);
     if (isNaN(id)) {
@@ -63,7 +68,6 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    // --- CORRECCIÓN AQUÍ ---
     const dataToSet: Record<string, string | Date | undefined> = {};
     for (const [key, value] of Object.entries(validation.data)) {
       if (value !== undefined) {
@@ -108,7 +112,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(
+  request: Request,
+  context: { params: { id: string } }
+) {
+  const { params } = context;
   try {
     const id = parseInt(params.id, 10);
     if (isNaN(id)) {
