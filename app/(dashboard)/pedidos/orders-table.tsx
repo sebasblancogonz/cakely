@@ -155,7 +155,7 @@ export function OrdersTable({
           <div className="flex">
             <Button
               onClick={prevPage}
-              variant="outline"
+              variant="ghost"
               size="sm"
               disabled={offset === 0}
             >
@@ -163,7 +163,7 @@ export function OrdersTable({
             </Button>
             <Button
               onClick={nextPage}
-              variant="outline"
+              variant="ghost"
               size="sm"
               className="ml-2"
               // Use limit prop in disabled logic

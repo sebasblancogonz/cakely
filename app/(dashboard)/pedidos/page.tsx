@@ -20,9 +20,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue
-} from '@/components/ui/select'; // Import Select for page size
+} from '@/components/ui/select';
 
-// Default page size if not specified in URL
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
@@ -39,7 +38,7 @@ export default function OrdersPage() {
   const [selectedTab, setSelectedTab] = useState(initialTab);
   const [orders, setOrders] = useState<Order[]>([]);
   const [offset, setOffset] = useState(offsetParam);
-  const [pageSize, setPageSize] = useState(limitParam); // State for page size
+  const [pageSize, setPageSize] = useState(limitParam);
   const [totalOrders, setTotalOrders] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -88,14 +87,14 @@ export default function OrdersPage() {
 
   useEffect(() => {
     setOffset(offsetParam);
-    setPageSize(limitParam); // Sync state with URL param on load/change
+    setPageSize(limitParam);
 
     async function fetchOrders() {
       setIsLoading(true);
       const params = new URLSearchParams({
         search: search,
         offset: offsetParam.toString(),
-        limit: limitParam.toString(), // Use limitParam from URL
+        limit: limitParam.toString(),
         status: selectedTab === 'all' ? '' : selectedTab
       });
 
@@ -117,7 +116,6 @@ export default function OrdersPage() {
     }
 
     fetchOrders();
-    // Depend on limitParam from URL as well
   }, [search, offsetParam, limitParam, selectedTab]);
 
   const handleUpdateStatus = useCallback(
@@ -170,39 +168,69 @@ export default function OrdersPage() {
       }
     },
     []
-  ); // Empty dependency array if it doesn't depend on component state/props directly
+  );
 
-  const downloadCSV = useCallback(() => {
+  const downloadCSV = () => {
     if (orders.length === 0) {
-      alert('No orders on the current page to export.');
+      alert('No hay pedidos para exportar.');
       return;
     }
+
     const headers = [
-      'Customer Name',
-      /* ... other headers ... */ 'Notes',
-      'Order History'
+      'Nombre del cliente',
+      'Contacto del cliente',
+      'Descripción',
+      'Cantidad',
+      'Tipo de producto',
+      'Fecha de entrega',
+      'Estado del pedido',
+      'Fecha del pedido',
+      'Detalles de personalización',
+      'Cantidad',
+      'Tamaño o peso',
+      'Sabor',
+      'Información de alergias',
+      'Precio total',
+      'Estado de pago',
+      'Método de pago',
+      'Notas'
     ];
+
     const csvRows = [
-      headers.join(','),
+      headers.join(','), // Encabezados
       ...orders.map((order) =>
         [
           order.customerName,
-          /* ... other values ... */ JSON.stringify(order.orderHistory)
+          order.customerContact,
+          order.description,
+          order.amount,
+          order.productType,
+          order.deliveryDate.toString(),
+          order.orderStatus,
+          order.orderDate.toString(),
+          order.customizationDetails,
+          order.quantity,
+          order.sizeOrWeight,
+          order.flavor,
+          order.allergyInformation,
+          order.totalPrice,
+          order.paymentStatus,
+          order.paymentMethod,
+          order.notes
         ]
-          .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`) // Escapar comillas
           .join(',')
       )
     ].join('\n');
-    const blob = new Blob(['\ufeff' + csvRows], {
-      type: 'text/csv;charset=utf-8;'
-    });
+
+    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'orders_page.csv');
+    link.setAttribute('download', 'pedidos.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }, [orders]); // Depend on orders
+  };
 
   const handleTabChange = useCallback(
     (value: string) => {
@@ -210,24 +238,23 @@ export default function OrdersPage() {
       const params = new URLSearchParams(searchParams);
       params.set('status', value);
       params.set('offset', '0');
-      params.set('limit', pageSize.toString()); // Keep current page size
+      params.set('limit', pageSize.toString());
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [searchParams, pageSize, router, pathname]
-  ); // Include dependencies
+  );
 
   const handlePageSizeChange = useCallback(
     (value: string) => {
       const newSize = Number(value);
-      setPageSize(newSize); // Update state
+      setPageSize(newSize);
       const params = new URLSearchParams(searchParams);
       params.set('limit', newSize.toString());
-      params.set('offset', '0'); // Reset offset
+      params.set('offset', '0');
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [searchParams, router, pathname]
-  ); // Include dependencies
-
+  );
   return (
     <div className="flex flex-col gap-4 mt-auto overflow-hidden">
       <Tabs
@@ -239,7 +266,7 @@ export default function OrdersPage() {
           <TabsList>
             <TabsTrigger value="all">Todo</TabsTrigger>
             <TabsTrigger value="pending">Pendiente</TabsTrigger>
-            <TabsTrigger value="in_progress">En preparación</TabsTrigger>
+            <TabsTrigger value="processing">En preparación</TabsTrigger>
             <TabsTrigger value="ready">Listo</TabsTrigger>
             <TabsTrigger value="delivered">Entregado</TabsTrigger>
           </TabsList>

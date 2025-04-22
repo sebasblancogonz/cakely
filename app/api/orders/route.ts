@@ -4,16 +4,18 @@ import { Order } from '@types';
 
 export async function GET(req: NextRequest) {
   const {
-    search = '',
+    search,
     offset = '0',
-    limit
+    limit,
+    status
   } = Object.fromEntries(req.nextUrl.searchParams);
 
   try {
     const { orders, newOffset, totalOrders } = await getOrders(
       search as string,
       Number(offset),
-      Number(limit)
+      Number(limit),
+      status
     );
     return NextResponse.json({ orders, newOffset, totalOrders });
   } catch (error) {

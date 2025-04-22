@@ -1,18 +1,17 @@
 'use client';
 
-import React, { useState, useMemo } from 'react'; // Import useState
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Home,
-  // LineChart, // No longer used directly here?
-  Package2,
   PanelLeft,
   Settings,
   ShoppingCart,
   Users2,
-  ChevronLeft, // Import chevron icons
-  ChevronRight // Import chevron icons
+  ChevronLeft,
+  ChevronRight,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -20,11 +19,11 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  TooltipProvider // Needed for Tooltips
+  TooltipProvider
 } from '@/components/ui/tooltip';
 import { Analytics } from '@vercel/analytics/react';
 import Image from 'next/image';
-import { cn } from '@/lib/utils'; // Import cn utility if you use it
+import { cn } from '@/lib/utils';
 import DashboardBreadcrumb, {
   BreadcrumbTrailItem
 } from './DashboardBreadcrumb';
@@ -42,8 +41,7 @@ export default function DashboardClientLayout({
   userComponent
 }: DashboardClientLayoutProps) {
   const pathname = usePathname();
-  // State to manage sidebar expansion
-  const [isNavExpanded, setIsNavExpanded] = useState(false); // Default collapsed
+  const [isNavExpanded, setIsNavExpanded] = useState(false);
 
   const breadcrumbTrail = useMemo((): BreadcrumbTrailItem[] => {
     const segments = pathname.split('/').filter(Boolean);
@@ -83,24 +81,20 @@ export default function DashboardClientLayout({
   }, [pathname]);
 
   return (
-    // Wrap with TooltipProvider for NavItem tooltips
     <TooltipProvider>
       <Providers>
         <main className="flex min-h-screen w-full flex-col bg-muted/40">
-          {/* Pass state and toggle function to DesktopNav */}
           <DesktopNav
             isExpanded={isNavExpanded}
             onToggle={() => setIsNavExpanded(!isNavExpanded)}
           />
-          {/* Adjust padding based on nav state */}
           <div
             className={cn(
               'flex flex-col sm:gap-4 sm:py-4 transition-all duration-300 ease-in-out',
-              isNavExpanded ? 'sm:pl-64' : 'sm:pl-14' // Adjust pl-[width]
+              isNavExpanded ? 'sm:pl-64' : 'sm:pl-14'
             )}
           >
             <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-              {/* MobileNav might need access to toggle state if it appears on larger screens? Assuming not for now. */}
               <MobileNav />
               <DashboardBreadcrumb trail={breadcrumbTrail} />
               <SearchInput />
@@ -117,7 +111,6 @@ export default function DashboardClientLayout({
   );
 }
 
-// --- DesktopNav Modified ---
 interface DesktopNavProps {
   isExpanded: boolean;
   onToggle: () => void;
@@ -125,21 +118,18 @@ interface DesktopNavProps {
 
 function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
   return (
-    // Apply conditional width and transition
     <aside
       className={cn(
         'fixed inset-y-0 left-0 z-10 hidden flex-col border-r bg-background sm:flex transition-all duration-300 ease-in-out',
-        isExpanded ? 'w-52' : 'w-14' // Change width
+        isExpanded ? 'w-52' : 'w-14'
       )}
     >
-      {/* Main navigation links */}
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
           href="#"
-          // Adjust link styles if needed when expanded
           className={cn(
             'group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base',
-            isExpanded && 'self-start ml-3 mb-2' // Example adjustment when expanded
+            isExpanded && 'self-start ml-3 mb-2'
           )}
         >
           <Image
@@ -151,7 +141,6 @@ function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
           />
         </Link>
 
-        {/* Pass isExpanded to NavItem */}
         <NavItem href="/" label="Dashboard" isExpanded={isExpanded}>
           <Home className="h-5 w-5" />
         </NavItem>
@@ -161,21 +150,21 @@ function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
         <NavItem href="/clientes" label="Clientes" isExpanded={isExpanded}>
           <Users2 className="h-5 w-5" />
         </NavItem>
-        {/* Add more NavItems here, passing isExpanded */}
+        <NavItem href="/calendario" label="Calendario" isExpanded={isExpanded}>
+          <Calendar className="h-5 w-5" />
+        </NavItem>
       </nav>
 
-      {/* Bottom navigation items (Settings, Toggle) */}
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-        {/* Settings Item - Adjust Tooltip based on state */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Link
-              href="#" // Link to actual settings page
+              href="#"
               className={cn(
                 'flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground',
                 isExpanded
                   ? 'w-full justify-start px-2.5 py-1.5'
-                  : 'h-9 w-9 md:h-8 md:w-8' // Adjust size/padding
+                  : 'h-9 w-9 md:h-8 md:w-8'
               )}
             >
               <Settings className="h-5 w-5" />
@@ -184,18 +173,16 @@ function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
               </span>
             </Link>
           </TooltipTrigger>
-          {/* Show tooltip only when collapsed */}
           {!isExpanded && <TooltipContent side="right">Ajustes</TooltipContent>}
         </Tooltip>
 
-        {/* --- Toggle Button --- */}
         <Button
           onClick={onToggle}
           variant="ghost"
           size="icon"
           className={cn(
-            'rounded-full h-8 w-8 mt-2 border', // Basic styling
-            isExpanded && 'self-end mr-2' // Example positioning when expanded
+            'rounded-full h-8 w-8 mt-2 border',
+            isExpanded && 'self-end mr-2'
           )}
           aria-label={isExpanded ? 'Collapse navigation' : 'Expand navigation'}
         >
@@ -210,9 +197,7 @@ function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
   );
 }
 
-// --- MobileNav (sin cambios, asume que no necesita estado de expansión) ---
 function MobileNav() {
-  // ... (código de MobileNav sin cambios) ...
   return (
     <Sheet>
       <SheetTrigger asChild>
