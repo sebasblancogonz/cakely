@@ -11,7 +11,8 @@ import {
   Users2,
   ChevronLeft,
   ChevronRight,
-  Calendar
+  Calendar,
+  Calculator
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -153,13 +154,20 @@ function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
         <NavItem href="/calendario" label="Calendario" isExpanded={isExpanded}>
           <Calendar className="h-5 w-5" />
         </NavItem>
+        <NavItem
+          href="/presupuesto"
+          label="Presupuesto"
+          isExpanded={isExpanded}
+        >
+          <Calculator className="h-5 w-5" />
+        </NavItem>
       </nav>
 
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <Tooltip>
           <TooltipTrigger asChild>
             <Link
-              href="#"
+              href="/ajustes"
               className={cn(
                 'flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground',
                 isExpanded
@@ -257,7 +265,15 @@ function MobileNav() {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="#"
+              href="/presupuesto"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Calculator className="h-5 w-5" /> Presupuesto
+            </Link>
+          </SheetTrigger>
+          <SheetTrigger asChild>
+            <Link
+              href="/ajustes"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Settings className="h-5 w-5" /> Ajustes

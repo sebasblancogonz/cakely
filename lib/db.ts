@@ -1,5 +1,3 @@
-import 'server-only';
-
 import { neon } from '@neondatabase/serverless';
 import { z } from 'zod';
 import { drizzle } from 'drizzle-orm/neon-http';
@@ -11,7 +9,9 @@ import {
   timestamp,
   pgEnum,
   serial,
-  jsonb
+  jsonb,
+  varchar,
+  uniqueIndex
 } from 'drizzle-orm/pg-core';
 import { and, asc, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
 import {
@@ -70,6 +70,74 @@ export const orders = pgTable('orders', {
   images: jsonb('images')
 });
 
+export const businessSettings = pgTable('business_settings', {
+  id: serial('id').primaryKey(),
+  laborRateHourly: numeric('labor_rate_hourly', { precision: 10, scale: 2 })
+    .notNull()
+    .default('15.00'),
+  profitMarginPercent: numeric('profit_margin_percent', {
+    precision: 5,
+    scale: 2
+  })
+    .notNull()
+    .default('30.00'),
+  ivaPercent: numeric('iva_percent', { precision: 5, scale: 2 })
+    .notNull()
+    .default('10.00'),
+  rentMonthly: numeric('rent_monthly', { precision: 10, scale: 2 }).default(
+    '0.00'
+  ),
+  electricityPriceKwh: numeric('electricity_price_kwh', {
+    precision: 10,
+    scale: 4
+  }).default('0.1500'),
+  gasPriceUnit: numeric('gas_price_unit', { precision: 10, scale: 4 }).default(
+    '0.0600'
+  ),
+  waterPriceUnit: numeric('water_price_unit', {
+    precision: 10,
+    scale: 4
+  }).default('2.0000'),
+  otherMonthlyOverhead: numeric('other_monthly_overhead', {
+    precision: 10,
+    scale: 2
+  }).default('50.00'),
+  overheadMarkupPercent: numeric('overhead_markup_percent', {
+    precision: 5,
+    scale: 2
+  }).default('20.00'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+export const ingredientPrices = pgTable(
+  'ingredient_prices',
+  {
+    id: serial('id').primaryKey(),
+    name: varchar('name', { length: 255 }).notNull().unique(),
+    unit: varchar('unit', { length: 50 }).notNull(),
+    pricePerUnit: numeric('price_per_unit', {
+      precision: 10,
+      scale: 4
+    }).notNull(),
+    supplier: varchar('supplier', { length: 255 }),
+    updatedAt: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => {
+    return {
+      nameIdx: uniqueIndex('ingredient_name_idx').on(table.name)
+    };
+  }
+);
+
+export const customers = pgTable('customers', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone').notNull(),
+  registrationDate: timestamp('registration_date').notNull(),
+  notes: text('notes')
+});
+
 const UpdateOrderSchema = z
   .object({
     description: z.string().optional(),
@@ -92,17 +160,12 @@ const UpdateOrderSchema = z
   })
   .partial();
 
-const customers = pgTable('customers', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull(),
-  phone: text('phone').notNull(),
-  registrationDate: timestamp('registration_date').notNull(),
-  notes: text('notes')
-});
-
 export type SelectOrder = typeof orders.$inferSelect;
 export type SelectCustomer = typeof customers.$inferSelect;
+export type Setting = typeof businessSettings.$inferSelect;
+export type NewSetting = typeof businessSettings.$inferInsert;
+export type IngredientPrice = typeof ingredientPrices.$inferSelect;
+export type NewIngredientPrice = typeof ingredientPrices.$inferInsert;
 
 interface GetCustomersResult {
   customers: SelectCustomer[];

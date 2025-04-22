@@ -26,6 +26,18 @@ export enum PaymentMethod {
   Bizum = 'Bizum'
 }
 
+export interface QuoteBreakdown {
+  cogsIngredients: number;
+  cogsPackaging: number;
+  directLaborCost: number;
+  allocatedOverhead: number;
+  totalCost: number;
+  profitAmount: number;
+  basePrice: number;
+  ivaAmount: number;
+  finalPrice: number;
+}
+
 export interface Customer {
   id: number | undefined;
   name: string;
