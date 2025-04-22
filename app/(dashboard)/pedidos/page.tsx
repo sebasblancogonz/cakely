@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react'; // Added useCallback
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { File, PlusCircle } from 'lucide-react';
+import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrdersTable } from './orders-table';
 import { Order, OrderStatus } from '@types';
@@ -21,6 +21,14 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader
+} from '@/components/ui/card';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -30,15 +38,15 @@ export default function OrdersPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const search = searchParams.get('q') || '';
-  const offsetParam = Number(searchParams.get('offset')) || 0;
-  const limitParam = Number(searchParams.get('limit')) || DEFAULT_PAGE_SIZE;
-  const initialTab = searchParams.get('status') || 'all';
+  const query = searchParams.get('q') || '';
+  const offset = Number(searchParams.get('offset')) || 0;
+  const limit = Number(searchParams.get('limit')) || DEFAULT_PAGE_SIZE;
+  const status = searchParams.get('status') || 'all';
 
-  const [selectedTab, setSelectedTab] = useState(initialTab);
+  const [selectedTabValue, setSelectedTabValue] = useState(status);
+  const [pageSizeValue, setPageSizeValue] = useState(limit);
+  const [searchInput, setSearchInput] = useState(query);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [offset, setOffset] = useState(offsetParam);
-  const [pageSize, setPageSize] = useState(limitParam);
   const [totalOrders, setTotalOrders] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -86,16 +94,17 @@ export default function OrdersPage() {
   }, []);
 
   useEffect(() => {
-    setOffset(offsetParam);
-    setPageSize(limitParam);
+    setSelectedTabValue(status);
+    setPageSizeValue(limit);
+    setSearchInput(query);
 
     async function fetchOrders() {
       setIsLoading(true);
       const params = new URLSearchParams({
-        search: search,
-        offset: offsetParam.toString(),
-        limit: limitParam.toString(),
-        status: selectedTab === 'all' ? '' : selectedTab
+        search: query,
+        offset: offset.toString(),
+        limit: limit.toString(),
+        status: status === 'all' ? '' : status
       });
 
       try {
@@ -114,9 +123,8 @@ export default function OrdersPage() {
         setIsLoading(false);
       }
     }
-
     fetchOrders();
-  }, [search, offsetParam, limitParam, selectedTab]);
+  }, [query, offset, limit, status]);
 
   const handleUpdateStatus = useCallback(
     async (orderId: number, newStatus: OrderStatus) => {
@@ -132,10 +140,8 @@ export default function OrdersPage() {
         if (!response.ok) {
           throw new Error(response.statusText);
         }
-
         const updatedOrderFromServer = await response.json();
         let finalUpdatedOrder: Order | null = null;
-
         if (
           Array.isArray(updatedOrderFromServer) &&
           updatedOrderFromServer.length > 0
@@ -148,7 +154,6 @@ export default function OrdersPage() {
         ) {
           finalUpdatedOrder = updatedOrderFromServer;
         }
-
         if (finalUpdatedOrder) {
           console.log(
             'OrdersPage: Status updated on server, updating local state with:',
@@ -167,12 +172,14 @@ export default function OrdersPage() {
         );
       }
     },
-    []
+    [] // Asumiendo que setOrders tiene referencia estable
   );
 
-  const downloadCSV = () => {
-    if (orders.length === 0) {
-      alert('No hay pedidos para exportar.');
+  // --- downloadCSV (sin cambios, pero depende de 'orders' local) ---
+  const downloadCSV = useCallback(() => {
+    const dataToExport = orders;
+    if (dataToExport.length === 0) {
+      alert('No orders on the current page to export.');
       return;
     }
 
@@ -222,47 +229,81 @@ export default function OrdersPage() {
           .join(',')
       )
     ].join('\n');
-
-    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff' + csvRows], {
+      type: 'text/csv;charset=utf-8;'
+    });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'pedidos.csv');
+    link.setAttribute('download', 'orders_page.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, [orders]);
+
+  // --- Handlers solo actualizan la URL ---
+  const updateQueryParams = useCallback(
+    (newParams: Record<string, string | number>) => {
+      const params = new URLSearchParams(searchParams);
+      let resetOffset = false;
+      Object.entries(newParams).forEach(([key, value]) => {
+        if (key !== 'offset' && params.get(key) !== String(value)) {
+          resetOffset = true; // Reset offset if filters change
+        }
+        if (value !== undefined && value !== null && String(value) !== '') {
+          params.set(key, String(value));
+        } else {
+          params.delete(key);
+        }
+      });
+      if (resetOffset || !('offset' in newParams)) {
+        params.set('offset', '0');
+      }
+      if (!params.has('limit')) {
+        params.set('limit', String(pageSizeValue)); // Use state for default limit if not present
+      }
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router, pathname, pageSizeValue]
+  );
 
   const handleTabChange = useCallback(
     (value: string) => {
-      setSelectedTab(value);
-      const params = new URLSearchParams(searchParams);
-      params.set('status', value);
-      params.set('offset', '0');
-      params.set('limit', pageSize.toString());
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      updateQueryParams({ status: value });
     },
-    [searchParams, pageSize, router, pathname]
+    [updateQueryParams]
   );
 
   const handlePageSizeChange = useCallback(
     (value: string) => {
-      const newSize = Number(value);
-      setPageSize(newSize);
-      const params = new URLSearchParams(searchParams);
-      params.set('limit', newSize.toString());
-      params.set('offset', '0');
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      updateQueryParams({ limit: value });
     },
-    [searchParams, router, pathname]
+    [updateQueryParams]
   );
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    updateQueryParams({ q: searchInput });
+  };
+
   return (
-    <div className="flex flex-col gap-4 mt-auto overflow-hidden">
+    <div className="p-4 md:p-6 flex flex-col gap-4 mt-auto overflow-hidden">
+      <form onSubmit={handleSearchSubmit} className="relative w-full md:w-1/3">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search orders..."
+          className="pl-8 w-full"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+      </form>
+
       <Tabs
-        value={selectedTab}
+        value={selectedTabValue}
         onValueChange={handleTabChange}
         className="overflow-hidden"
       >
-        <div className="flex items-center justify-center flex-col gap-4 xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row ">
+        <div className="flex items-center justify-center flex-col gap-4 xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row mb-4">
           <TabsList>
             <TabsTrigger value="all">Todo</TabsTrigger>
             <TabsTrigger value="pending">Pendiente</TabsTrigger>
@@ -272,15 +313,15 @@ export default function OrdersPage() {
           </TabsList>
           <div className="flex items-center gap-2">
             <div className="flex items-center space-x-2">
-              <span className="text-xs text-muted-foreground">
-                Elementos por página:
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                Items por página:
               </span>
               <Select
-                value={pageSize.toString()}
+                value={pageSizeValue.toString()}
                 onValueChange={handlePageSizeChange}
               >
                 <SelectTrigger className="h-8 w-[70px] text-xs">
-                  <SelectValue placeholder={pageSize} />
+                  <SelectValue placeholder={pageSizeValue} />
                 </SelectTrigger>
                 <SelectContent>
                   {PAGE_SIZE_OPTIONS.map((size) => (
@@ -327,12 +368,25 @@ export default function OrdersPage() {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <p>Loading...</p>
-          </div>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-1/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                {[...Array(pageSizeValue)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Skeleton className="h-8 w-full" />
+            </CardFooter>
+          </Card>
         ) : (
-          // Removed orders.length === 0 check here, handled by table
-          <TabsContent value={selectedTab} className="xs:w-full mt-4">
+          <TabsContent value={selectedTabValue} className="xs:w-full mt-0">
             <OrdersTable
               setOrders={setOrders}
               editOrder={editOrder}
@@ -341,9 +395,16 @@ export default function OrdersPage() {
               onStatusChange={handleUpdateStatus}
               orders={orders}
               offset={offset}
-              limit={pageSize} // Pass pageSize as limit
+              limit={limit}
               totalOrders={totalOrders}
             />
+            {orders.length === 0 && !isLoading && (
+              <div className="flex justify-center items-center h-64 text-center">
+                <p className="text-lg text-muted-foreground">
+                  No orders found matching your criteria.
+                </p>
+              </div>
+            )}
           </TabsContent>
         )}
       </Tabs>

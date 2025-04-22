@@ -13,7 +13,7 @@ import {
   serial,
   jsonb
 } from 'drizzle-orm/pg-core';
-import { count, eq, ilike, SQL } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
 import {
   Customer,
   Order,
@@ -193,6 +193,13 @@ export async function getCustomers(
   };
 }
 
+interface GetOrdersParams {
+  search?: string | null;
+  offset?: number;
+  limit?: number;
+  status?: string | null;
+}
+
 interface GetOrdersResult {
   orders: Order[];
   newOffset: number | null;
@@ -200,67 +207,72 @@ interface GetOrdersResult {
 }
 
 export async function getOrders(
-  search: string, // Funcionalidad de búsqueda NO implementada aquí
-  offset: number,
-  limit: number,
-  status: string | null // Recibe la CLAVE del estado: 'pending', 'processing', etc., o 'all'/null
+  search: string = '',
+  offset: number = 0,
+  limit: number = 5,
+  status: string | null = null
 ): Promise<GetOrdersResult> {
-  // --- Lógica de búsqueda ('search') eliminada por ser incorrecta ---
-  // --- Necesitaría reimplementarse correctamente si se requiere ---
-
   let statusCondition: SQL | undefined;
-  const statusKey = status?.trim().toLowerCase(); // Obtiene la clave en minúscula
+  const statusKey = status?.trim().toLowerCase();
 
-  // Traduce la clave ('pending') al valor del enum ('Pendiente') si es válida
   if (statusKey && statusKey !== 'all') {
-    // Verifica si la clave recibida es una clave válida en nuestro enum OrderStatus
     if (statusKey in OrderStatus) {
-      // Obtiene el VALOR del enum correspondiente a esa CLAVE
       const statusValue = OrderStatus[statusKey as keyof typeof OrderStatus];
-      // Crea la condición de Drizzle usando el VALOR del enum
       statusCondition = eq(orders.orderStatus, statusValue);
     } else {
-      // Si la clave recibida no es válida, podrías loggear un warning
-      // y no aplicar ningún filtro de estado (o devolver error 400)
       console.warn(
         `Invalid status key received: ${statusKey}. No status filter applied.`
       );
-      statusCondition = undefined;
     }
   }
 
-  // Construye y ejecuta la consulta de CONTEO total (aplicando filtro de estado si existe)
-  let countQuery = db.select({ count: count() }).from(orders).$dynamic();
-  if (statusCondition) {
-    countQuery = countQuery.where(statusCondition);
+  let searchCondition: SQL | undefined;
+  const trimmedSearch = search?.trim();
+  if (trimmedSearch) {
+    const searchTerm = `%${trimmedSearch}%`;
+    searchCondition = or(
+      ilike(orders.customerName, searchTerm),
+      ilike(orders.customerContact, searchTerm),
+      ilike(orders.description, searchTerm),
+      sql`${orders.productType}::text ilike ${searchTerm}`,
+      ilike(orders.flavor, searchTerm),
+      ilike(orders.notes, searchTerm),
+      ilike(orders.allergyInformation, searchTerm)
+    );
   }
-  // TODO: Aplicar filtro 'search' aquí también si se implementa
-  const totalResult = await countQuery;
+
+  let whereCondition: SQL | undefined;
+  if (statusCondition && searchCondition) {
+    whereCondition = and(statusCondition, searchCondition);
+  } else {
+    whereCondition = statusCondition ?? searchCondition;
+  }
+
+  let countQueryBuilder = db.select({ count: count() }).from(orders).$dynamic();
+  if (whereCondition) {
+    countQueryBuilder = countQueryBuilder.where(whereCondition);
+  }
+
+  const totalResult = await countQueryBuilder;
   const totalOrders = totalResult[0]?.count ?? 0;
 
-  // Construye y ejecuta la consulta de DATOS (aplicando filtro de estado y paginación)
-  let dataQuery = db.select().from(orders).$dynamic();
-  if (statusCondition) {
-    dataQuery = dataQuery.where(statusCondition);
+  let dataQueryBuilder = db.select().from(orders).$dynamic();
+  if (whereCondition) {
+    dataQueryBuilder = dataQueryBuilder.where(whereCondition);
   }
-  // TODO: Aplicar filtro 'search' aquí también si se implementa
-  // TODO: Añadir un .orderBy() consistente aquí
 
-  dataQuery = dataQuery.limit(limit).offset(offset);
+  dataQueryBuilder = dataQueryBuilder.orderBy(desc(orders.orderDate));
+  dataQueryBuilder = dataQueryBuilder.limit(limit).offset(offset);
 
-  const newOrdersFromOffset = await dataQuery;
+  const results = await dataQueryBuilder;
+  const mappedOrders = mapOrders(results);
+  const newOffset = offset + limit < totalOrders ? offset + limit : null;
 
-  // Mapea resultados
-  const mappedOrders = mapOrders(newOrdersFromOffset);
-
-  // Calcula siguiente offset
-  const newOffset =
-    mappedOrders.length === limit && offset + limit < totalOrders
-      ? offset + limit
-      : null;
-
-  // Devuelve resultado
-  return { orders: mappedOrders, newOffset, totalOrders };
+  return {
+    orders: mappedOrders,
+    newOffset,
+    totalOrders
+  };
 }
 
 export async function deleteProductById(id: number) {
