@@ -7,7 +7,7 @@ import { File, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomersTable } from './customers-table';
 import { Customer } from '@types';
-import Modal from '../common/Modal';
+import Modal from '@/components/common/Modal';
 import CustomerForm from './customer-form';
 import CustomerDetails from './customer-details';
 

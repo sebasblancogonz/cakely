@@ -27,9 +27,9 @@ import { cn } from '@/lib/utils';
 import DashboardBreadcrumb, {
   BreadcrumbTrailItem
 } from './DashboardBreadcrumb';
-import Providers from '../providers';
-import { SearchInput } from '../search';
-import { NavItem } from '../nav-item';
+import Providers from '../../app/(dashboard)/providers';
+import { SearchInput } from '../../app/(dashboard)/search';
+import { NavItem } from '../../app/(dashboard)/nav-item';
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -245,6 +245,14 @@ function MobileNav() {
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Users2 className="h-5 w-5" /> Clientes
+            </Link>
+          </SheetTrigger>
+          <SheetTrigger asChild>
+            <Link
+              href="/calendario"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Calendar className="h-5 w-5" /> Calendario
             </Link>
           </SheetTrigger>
           <SheetTrigger asChild>

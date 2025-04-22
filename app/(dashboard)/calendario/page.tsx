@@ -23,7 +23,7 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import Modal from '../common/Modal';
+import Modal from '@/components/common/Modal';
 import OrderDetails from '@/app/(dashboard)/pedidos/order-details';
 import { cn } from '@/lib/utils';
 
@@ -137,7 +137,7 @@ export default function WeeklyCalendarPage() {
     setIsModalOpen(false);
   }, []);
 
-  const weekDisplayFormat = `dd MMM yyyy`;
+  const weekDisplayFormat = `dd MMM yy`; // Ajustado para posible mejor lectura
   const weekRangeString = `${format(weekStart, weekDisplayFormat, { locale: es })} - ${format(weekEnd, weekDisplayFormat, { locale: es })}`;
 
   return (
@@ -171,25 +171,37 @@ export default function WeeklyCalendarPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="grid grid-cols-7 gap-1 border-t border-l">
-              {[...Array(7 * 4)].map((_, i) => (
-                <div key={i} className="border-r border-b p-2 min-h-[100px]">
-                  <Skeleton className={cn('h-4 w-1/2 mb-2', i < 7 && 'h-5')} />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-1 border-t">
+              {' '}
+              {/* Ajustado borde */}
+              {[...Array(7)].map(
+                (
+                  _,
+                  i // Skeleton para 7 días
+                ) => (
+                  <div key={i} className="border-b p-2 min-h-[100px]">
+                    <Skeleton className={cn('h-5 w-1/2 mb-2')} />
+                    <Skeleton className="h-10 w-full mb-1" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                )
+              )}
             </div>
           ) : (
-            <div className="grid grid-cols-7 border-t border-l">
+            // --- CAMBIO PRINCIPAL AQUÍ ---
+            // grid-cols-1 por defecto (móvil), md:grid-cols-7 para pantallas medianas y más grandes
+            // Se quitan bordes laterales y se deja solo superior en contenedor e inferior en celdas
+            <div className="grid grid-cols-1 md:grid-cols-7 border-t">
               {daysInWeek.map((day) => {
                 const dayStr = format(day, 'yyyy-MM-dd');
                 const ordersForDay = ordersByDay[dayStr] || [];
                 const isCurrentDay = isToday(day);
 
                 return (
+                  // Aplicar borde derecho solo en pantallas md+ y no en el último elemento
                   <div
                     key={dayStr}
-                    className="border-r border-b p-2 min-h-[120px] flex flex-col"
+                    className="border-b p-2 min-h-[120px] flex flex-col md:border-r md:last:border-r-0"
                   >
                     <div
                       className={cn(
@@ -197,14 +209,15 @@ export default function WeeklyCalendarPage() {
                         isCurrentDay && 'font-bold text-blue-600'
                       )}
                     >
-                      <span className="hidden sm:inline">
+                      {/* Mostrar siempre nombre corto del día */}
+                      <span className="inline">
                         {format(day, 'eee', { locale: es })}
                       </span>
                       <span className="ml-1">
                         {format(day, 'd', { locale: es })}
                       </span>
                     </div>
-                    <div className="flex-grow overflow-y-auto space-y-1">
+                    <div className="flex-grow overflow-y-auto space-y-1 py-1">
                       {ordersForDay.length > 0 ? (
                         ordersForDay.map((order) => (
                           <CalendarOrderCard

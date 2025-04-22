@@ -7,13 +7,13 @@ import { File, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrdersTable } from './orders-table';
 import { Order, OrderStatus } from '@types';
-import Modal from '../common/Modal';
+import Modal from '@/components/common/Modal';
 import OrderForm from './order-form';
 import OrderDetails from './order-details';
-import UploadImage from '../common/MultiUpload';
+import UploadImage from '@/components/common/MultiUpload';
 import { Analytics } from '@vercel/analytics/react';
 import { cn } from '@/lib/utils';
-import { BreadcrumbTrailItem } from '../common/DashboardBreadcrumb';
+import { BreadcrumbTrailItem } from '@/components/common/DashboardBreadcrumb';
 import {
   Select,
   SelectContent,

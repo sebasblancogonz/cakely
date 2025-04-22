@@ -1,5 +1,5 @@
 import { Customer } from '@types';
-import DetailsTable from '../common/DetailsTable';
+import DetailsTable from '@/components/common/DetailsTable';
 
 const CustomerDetails = ({ customer }: { customer: Customer }) => {
   const customerDetails = [

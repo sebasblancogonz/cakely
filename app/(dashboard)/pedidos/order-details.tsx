@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Order } from '@types';
-import DetailsTable from '../common/DetailsTable';
+import DetailsTable from '@/components/common/DetailsTable';
 import dynamic from 'next/dynamic';
 
 const Lightbox = dynamic(() => import('yet-another-react-lightbox'), {

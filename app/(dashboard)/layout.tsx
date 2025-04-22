@@ -1,6 +1,6 @@
 import React from 'react';
 import { User } from './user';
-import DashboardLayout from './common/DashboardClientLayout';
+import DashboardLayout from '@/components/common/DashboardClientLayout';
 
 export default async function LayoutForDashboardPages({
   children

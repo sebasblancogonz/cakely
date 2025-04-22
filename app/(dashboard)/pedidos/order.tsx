@@ -11,7 +11,7 @@ import { Eye, MoreHorizontal, Pen, Trash, Upload } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { deleteOrder } from '../actions';
 import { OrderStatus, Order as OrderType } from '@types';
-import { Status } from '../common/StatusCell';
+import { Status } from '@/components/common/StatusCell';
 
 export function Order({
   order,
