@@ -1,17 +1,14 @@
-// app/api/ingredient-prices/[id]/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ingredientPrices } from '@/lib/db';
 import { UpdateIngredientPriceSchema } from '@/lib/validators/ingredients';
 import { eq } from 'drizzle-orm';
 
-export async function GET(
-  request: Request,
-  context: { params: { id: string } }
-) {
-  const { params } = context;
+export async function GET(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const id = Number(pathname.split('/').pop());
+
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid ingredient ID' },
@@ -30,7 +27,7 @@ export async function GET(
     }
     return NextResponse.json(ingredient[0]);
   } catch (error) {
-    console.error(`API Error fetching ingredient ${params.id}:`, error);
+    console.error(`API Error fetching ingredient ${id}:`, error);
     return NextResponse.json(
       { message: 'Failed to fetch ingredient' },
       { status: 500 }
@@ -38,13 +35,11 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: Request,
-  context: { params: { id: string } }
-) {
-  const { params } = context;
+export async function PUT(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const id = Number(pathname.split('/').pop());
+
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid ingredient ID' },
@@ -52,7 +47,7 @@ export async function PUT(
       );
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const validation = UpdateIngredientPriceSchema.safeParse(body);
 
     if (!validation.success) {
@@ -95,7 +90,7 @@ export async function PUT(
 
     return NextResponse.json(updatedIngredient[0]);
   } catch (error: any) {
-    console.error(`API Error updating ingredient ${params.id}:`, error);
+    console.error(`API Error updating ingredient ${id}:`, error);
     if (
       error.code === '23505' &&
       error.constraint === 'ingredient_prices_name_key'
@@ -112,13 +107,11 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  context: { params: { id: string } }
-) {
-  const { params } = context;
+export async function DELETE(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const id = Number(pathname.split('/').pop());
+
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid ingredient ID' },
@@ -140,7 +133,7 @@ export async function DELETE(
       id: deletedIngredient[0].deletedId
     });
   } catch (error) {
-    console.error(`API Error deleting ingredient ${params.id}:`, error);
+    console.error(`API Error deleting ingredient ${id}:`, error);
     return NextResponse.json(
       { message: 'Failed to delete ingredient' },
       { status: 500 }

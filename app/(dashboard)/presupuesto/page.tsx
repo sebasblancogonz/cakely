@@ -33,6 +33,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IngredientPrice, Setting } from '@/lib/db';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
 
 const quoteSchema = z.object({
   productType: z.nativeEnum(ProductType),
@@ -128,6 +131,8 @@ export default function QuotesPage() {
             'No se pudieron cargar los ajustes o ingredientes necesarios.',
           variant: 'destructive'
         });
+        setSettings({});
+        setIngredientPrices([]);
       } finally {
         setLoadingData(false);
       }
@@ -135,22 +140,30 @@ export default function QuotesPage() {
     loadPrerequisites();
   }, [toast]);
 
+  const essentialSettingsMissing = useMemo(() => {
+    if (loadingData) return true;
+    const requiredSettingsKeys: (keyof Setting)[] = [
+      'laborRateHourly',
+      'profitMarginPercent',
+      'ivaPercent',
+      'overheadMarkupPercent'
+    ];
+    const hasMissingSetting = requiredSettingsKeys.some(
+      (key) => settings[key] === undefined || settings[key] === null
+    );
+    const hasNoIngredients = ingredientPrices.length === 0;
+    return hasMissingSetting || hasNoIngredients;
+  }, [loadingData, settings, ingredientPrices]);
+
   const calculateQuote = useCallback(
     (data: QuoteFormData): QuoteBreakdown | null => {
       setIsCalculating(true);
-      console.log('Calculating quote for:', data);
-      console.log('Using settings:', settings);
-      console.log('Using ingredients:', ingredientPrices);
+      setQuoteResult(null);
 
-      if (
-        loadingData ||
-        !settings ||
-        Object.keys(settings).length === 0 ||
-        ingredientPrices.length === 0
-      ) {
+      if (essentialSettingsMissing) {
         toast({
           title: 'Error',
-          description: 'Faltan datos de configuración o ingredientes.',
+          description: 'Faltan ajustes esenciales o precios de ingredientes.',
           variant: 'destructive'
         });
         setIsCalculating(false);
@@ -163,23 +176,8 @@ export default function QuotesPage() {
         ivaPercent,
         overheadMarkupPercent
       } = settings;
-      if (
-        laborRateHourly === undefined ||
-        profitMarginPercent === undefined ||
-        ivaPercent === undefined ||
-        overheadMarkupPercent === undefined
-      ) {
-        toast({
-          title: 'Error',
-          description:
-            'Faltan ajustes clave (coste hora, margen, IVA, overhead %).',
-          variant: 'destructive'
-        });
-        setIsCalculating(false);
-        return null;
-      }
-
       const recipe = recipes[data.productType];
+
       if (!recipe) {
         toast({
           title: 'Error',
@@ -194,11 +192,10 @@ export default function QuotesPage() {
       let missingIngredients: string[] = [];
       for (const item of recipe.ingredients) {
         const priceInfo = ingredientPrices.find((p) => p.name === item.name);
-        if (!priceInfo) {
+        if (!priceInfo || priceInfo.pricePerUnit === null) {
           missingIngredients.push(item.name);
           continue;
         }
-        // !! Add unit conversion logic here if needed !!
         cogsIngredients += item.quantity * Number(priceInfo.pricePerUnit);
       }
 
@@ -214,15 +211,17 @@ export default function QuotesPage() {
       const estimatedHours =
         recipe.baseLaborHours *
         (decorationLaborMultiplier[data.decorationComplexity] || 1.0);
-      const directLaborCost = estimatedHours * Number(laborRateHourly);
+      const directLaborCost = estimatedHours * Number(laborRateHourly!);
       const directCosts = cogsIngredients + cogsPackaging + directLaborCost;
       const allocatedOverhead =
-        directCosts * (Number(overheadMarkupPercent) / 100);
+        directCosts * (Number(overheadMarkupPercent!) / 100);
       const totalCost = directCosts + allocatedOverhead;
-      const marginDecimal = Number(profitMarginPercent) / 100;
+      const marginDecimal = Number(profitMarginPercent!) / 100;
       const basePrice =
-        marginDecimal < 1 ? totalCost / (1 - marginDecimal) : totalCost;
-      const ivaDecimal = Number(ivaPercent) / 100;
+        marginDecimal < 1 && marginDecimal >= 0
+          ? totalCost / (1 - marginDecimal)
+          : totalCost;
+      const ivaDecimal = Number(ivaPercent!) / 100;
       const ivaAmount = basePrice * ivaDecimal;
       const finalPrice = basePrice + ivaAmount;
 
@@ -242,8 +241,8 @@ export default function QuotesPage() {
       setIsCalculating(false);
       return result;
     },
-    [settings, ingredientPrices, loadingData, toast]
-  ); // Add dependencies
+    [settings, ingredientPrices, loadingData, toast, essentialSettingsMissing]
+  );
 
   const onSubmit = (data: QuoteFormData) => {
     const result = calculateQuote(data);
@@ -276,6 +275,25 @@ export default function QuotesPage() {
     <div className="p-4 md:p-6 space-y-6">
       <h1 className="text-2xl font-bold">Generador de Presupuestos</h1>
 
+      {essentialSettingsMissing && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Faltan Ajustes Esenciales</AlertTitle>
+          <AlertDescription>
+            No se pueden calcular presupuestos porque faltan ajustes clave
+            (coste por hora, margen, % overhead, IVA) o precios de ingredientes.
+            Por favor, configúralos en la página de{' '}
+            <Link
+              href="/ajustes"
+              className="font-semibold underline hover:text-destructive-foreground/80"
+            >
+              Ajustes
+            </Link>
+            .
+          </AlertDescription>
+        </Alert>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
@@ -295,6 +313,7 @@ export default function QuotesPage() {
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    disabled={essentialSettingsMissing}
                   >
                     <SelectTrigger id="productType">
                       <SelectValue placeholder="Selecciona tipo..." />
@@ -322,6 +341,7 @@ export default function QuotesPage() {
                 type="number"
                 step="1"
                 {...register('quantity')}
+                disabled={essentialSettingsMissing}
               />
               {errors.quantity && (
                 <p className="text-xs text-red-600 mt-1">
@@ -333,7 +353,11 @@ export default function QuotesPage() {
               <Label htmlFor="sizeOrWeight">
                 Tamaño/Peso (ej: 20cm, 1.5kg)
               </Label>
-              <Input id="sizeOrWeight" {...register('sizeOrWeight')} />
+              <Input
+                id="sizeOrWeight"
+                {...register('sizeOrWeight')}
+                disabled={essentialSettingsMissing}
+              />
               {errors.sizeOrWeight && (
                 <p className="text-xs text-red-600 mt-1">
                   {errors.sizeOrWeight.message}
@@ -342,7 +366,11 @@ export default function QuotesPage() {
             </div>
             <div>
               <Label htmlFor="flavor">Sabor/Relleno</Label>
-              <Input id="flavor" {...register('flavor')} />
+              <Input
+                id="flavor"
+                {...register('flavor')}
+                disabled={essentialSettingsMissing}
+              />
               {errors.flavor && (
                 <p className="text-xs text-red-600 mt-1">
                   {errors.flavor.message}
@@ -360,6 +388,7 @@ export default function QuotesPage() {
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    disabled={essentialSettingsMissing}
                   >
                     <SelectTrigger id="decorationComplexity">
                       <SelectValue placeholder="Selecciona complejidad..." />
@@ -380,7 +409,11 @@ export default function QuotesPage() {
             </div>
             <div className="md:col-span-2">
               <Label htmlFor="details">Detalles Adicionales</Label>
-              <Textarea id="details" {...register('details')} />
+              <Textarea
+                id="details"
+                {...register('details')}
+                disabled={essentialSettingsMissing}
+              />
               {errors.details && (
                 <p className="text-xs text-red-600 mt-1">
                   {errors.details.message}
@@ -389,14 +422,17 @@ export default function QuotesPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={isCalculating}>
+            <Button
+              type="submit"
+              disabled={isCalculating || essentialSettingsMissing}
+            >
               {isCalculating ? 'Calculando...' : 'Calcular Presupuesto'}
             </Button>
           </CardFooter>
         </Card>
       </form>
 
-      {quoteResult && (
+      {quoteResult && !essentialSettingsMissing && (
         <Card>
           <CardHeader>
             <CardTitle>Presupuesto Estimado</CardTitle>
