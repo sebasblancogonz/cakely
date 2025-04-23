@@ -312,7 +312,7 @@ export default function OrdersPage() {
           <div className="flex items-center gap-2">
             <div className="flex items-center space-x-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                Items por página:
+                Pedidos por página:
               </span>
               <Select
                 value={pageSizeValue.toString()}
