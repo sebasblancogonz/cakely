@@ -1,27 +1,26 @@
 import {
-  Setting as DbSetting,
-  IngredientPrice as DbIngredientPrice,
-  Recipe as DbRecipe,
-  RecipeIngredient as DbRecipeIngredient
+  Setting as SelectSetting,
+  IngredientPrice as SelectIngredientPrice,
+  Recipe as SelectRecipe,
+  RecipeIngredient as SelectRecipeIngredient,
+  SelectOrder as DbSelectOrder,
+  SelectCustomer as DbSelectCustomer
 } from '@/lib/db';
 
-export type Setting = DbSetting;
-export type IngredientPrice = DbIngredientPrice;
-export type Recipe = DbRecipe;
-export type RecipeIngredient = DbRecipeIngredient;
+export type Setting = SelectSetting;
+export type IngredientPrice = SelectIngredientPrice;
+export type Recipe = SelectRecipe;
+export type RecipeIngredient = SelectRecipeIngredient;
 
-export type RecipeWithIngredients = DbRecipe & {
-  recipeIngredients: (DbRecipeIngredient & {
-    ingredient: DbIngredientPrice;
-  })[];
+export type Customer = DbSelectCustomer & {
+  orders?: Order[];
 };
 
-export interface RecipeIngredientFormItem {
-  ingredientId: number;
-  name: string;
-  quantity: number;
-  unit: string;
-}
+export type Order = DbSelectOrder & {
+  customer?: Customer;
+  orderHistory?: OrderHistoryEntry[];
+  images?: OrderImage[];
+};
 
 export enum OrderStatus {
   pending = 'Pendiente',
@@ -41,14 +40,29 @@ export enum ProductType {
 export enum PaymentStatus {
   Pendiente = 'Pendiente',
   Pagado = 'Pagado',
-  Cancelado = 'Cancelado'
+  Cancelado = 'Cancelado',
+  Parcial = 'Parcial',
+  Reembolsado = 'Reembolsado'
 }
 
 export enum PaymentMethod {
   Efectivo = 'Efectivo',
   Tarjeta = 'Tarjeta',
-  'Transferencia' = 'Transferencia',
+  Transferencia = 'Transferencia',
   Bizum = 'Bizum'
+}
+
+export type RecipeWithIngredients = Recipe & {
+  recipeIngredients: (RecipeIngredient & {
+    ingredient: IngredientPrice;
+  })[];
+};
+
+export interface RecipeIngredientFormItem {
+  ingredientId: number;
+  name: string;
+  quantity: number;
+  unit: string;
 }
 
 export interface QuoteBreakdown {
@@ -63,60 +77,22 @@ export interface QuoteBreakdown {
   finalPrice: number;
 }
 
-export interface Customer {
-  id: number | undefined;
-  name: string;
-  email: string;
-  phone: string;
-  registrationDate: Date;
-  notes: string;
-}
-
-export interface Order {
-  id: number | undefined;
-  description: string;
-  customerName: string;
-  customerContact: string;
-  amount: number;
-  orderDate: Date;
-  deliveryDate: Date;
-  orderStatus: OrderStatus;
-  productType: ProductType;
-  customizationDetails: string;
-  quantity: number;
-  sizeOrWeight: string;
-  flavor: string;
-  allergyInformation: string;
-  totalPrice: number;
-  paymentStatus: PaymentStatus;
-  paymentMethod: PaymentMethod;
-  notes: string;
-  orderHistory: OrderHistory[];
-  images: OrderImage[];
-}
-
-export interface OrderHistory {
+export interface OrderHistoryEntry {
   status: OrderStatus;
-  timestamp: Date;
+  timestamp: string | Date;
+  notes?: string;
 }
 
 export interface OrderImage {
   id: string;
   url: string;
+  thumbnailUrl?: string;
 }
 
 interface BreadcrumbItem {
   href: string;
   label: string;
 }
-
 export interface DashboardBreadcrumbProps {
   items: BreadcrumbItem[];
 }
-
-export const ORDER_STATUSES = [
-  'Pendiente',
-  'Preparando',
-  'Listo',
-  'Entregado'
-] as const;

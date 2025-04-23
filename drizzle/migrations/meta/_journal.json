@@ -22,6 +22,13 @@
       "when": 1745390961286,
       "tag": "0002_fuzzy_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1745436502921,
+      "tag": "0003_fancy_tattoo",
+      "breakpoints": true
     }
   ]
 }

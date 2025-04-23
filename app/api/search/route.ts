@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { orders, customers, ingredientPrices } from '@/lib/db';
-import { ilike, or } from 'drizzle-orm';
+import { ilike, or, eq } from 'drizzle-orm';
 
 interface SearchResult {
   id: number;
@@ -25,19 +25,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const orderCondition = or(
-      ilike(orders.customerName, searchTerm),
-      ilike(orders.customerContact, searchTerm),
       ilike(orders.description, searchTerm),
       ilike(orders.notes, searchTerm),
-      ilike(orders.flavor, searchTerm)
+      ilike(orders.flavor, searchTerm),
+      ilike(orders.customizationDetails, searchTerm),
+      ilike(orders.sizeOrWeight, searchTerm)
     );
     const foundOrders = await db
       .select({
         id: orders.id,
         title: orders.description,
-        description: orders.customerName
+        customerName: customers.name
       })
       .from(orders)
+      .leftJoin(customers, eq(orders.customerId, customers.id))
       .where(orderCondition)
       .limit(limitPerType);
 
@@ -46,15 +47,17 @@ export async function GET(request: NextRequest) {
         id: o.id,
         type: 'order' as const,
         title: o.title || `Pedido #${o.id}`,
-        description: o.description || undefined,
-        url: `/pedidos?q=${encodeURIComponent(o.title || String(o.id))}`
+        description: o.customerName || undefined,
+        url: `/pedidos#order-${o.id}`
       }))
     );
 
     const customerCondition = or(
       ilike(customers.name, searchTerm),
       ilike(customers.email, searchTerm),
-      ilike(customers.phone, searchTerm)
+      ilike(customers.phone, searchTerm),
+      ilike(customers.instagramHandle, searchTerm),
+      ilike(customers.notes, searchTerm)
     );
     const foundCustomers = await db
       .select({
@@ -72,7 +75,7 @@ export async function GET(request: NextRequest) {
         type: 'customer' as const,
         title: c.title,
         description: c.description || undefined,
-        url: `/clientes?q=${encodeURIComponent(c.title)}`
+        url: `/clientes#customer-${c.id}`
       }))
     );
 

@@ -1,6 +1,34 @@
-import { Button } from '@/components/ui/button';
+'use client';
+
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Customer } from '@types';
-import { PaymentMethod, ProductType, PaymentStatus } from '@types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
+const customerFormSchema = z.object({
+  name: z.string().trim().min(1, { message: 'El nombre es requerido' }),
+  email: z.string().email({ message: 'Email inválido' }),
+  phone: z.string().trim().min(1, { message: 'El teléfono es requerido' }),
+  instagramHandle: z.string().optional(),
+  notes: z.string().optional()
+});
+
+type CustomerFormData = z.infer<typeof customerFormSchema>;
+
+interface CustomerFormProps {
+  setIsModalOpen: (value: boolean) => void;
+  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  setIsEditing: (value: boolean) => void;
+  setIsCreating: (value: boolean) => void;
+  customerToEdit: Customer | null;
+}
 
 const CustomerForm = ({
   setIsModalOpen,
@@ -8,214 +36,228 @@ const CustomerForm = ({
   setIsEditing,
   setIsCreating,
   customerToEdit
-}: {
-  setIsModalOpen: (value: boolean) => void;
-  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
-  setIsEditing: (value: boolean) => void;
-  setIsCreating: (value: boolean) => void;
-  customerToEdit: Customer | null;
-}) => {
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+}: CustomerFormProps) => {
+  const { toast } = useToast();
+  const isEditingMode = !!customerToEdit;
 
-    const formData = new FormData(e.currentTarget);
-
-    if (customerToEdit) {
-      const customer: Customer = buildCustomer(formData, customerToEdit);
-      updateCustomer(customer);
-    } else {
-      const customer: Customer = buildCustomer(formData, null);
-      saveCustomer(customer);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting }
+  } = useForm<CustomerFormData>({
+    resolver: zodResolver(customerFormSchema),
+    defaultValues: {
+      name: customerToEdit?.name || '',
+      email: customerToEdit?.email || '',
+      phone: customerToEdit?.phone || '',
+      instagramHandle: customerToEdit?.instagramHandle || '',
+      notes: customerToEdit?.notes || ''
     }
+  });
 
-    setIsEditing(false);
-    setIsCreating(false);
-  };
+  useEffect(() => {
+    if (customerToEdit) {
+      reset({
+        name: customerToEdit.name,
+        email: customerToEdit.email,
+        phone: customerToEdit.phone,
+        instagramHandle: customerToEdit.instagramHandle || '',
+        notes: customerToEdit.notes || ''
+      });
+    } else {
+      reset({
+        name: '',
+        email: '',
+        phone: '',
+        instagramHandle: '',
+        notes: ''
+      });
+    }
+  }, [customerToEdit, reset]);
 
-  const getFormValue = <T,>(
-    formData: FormData,
-    key: string,
-    defaultValue: T
-  ): T => {
-    return (formData.get(key) as T) ?? defaultValue;
-  };
+  const onSubmit = async (data: CustomerFormData) => {
+    try {
+      let savedCustomer: Customer;
+      if (isEditingMode) {
+        const customerDataToUpdate: Partial<
+          Omit<Customer, 'id' | 'registrationDate' | 'orders'>
+        > = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          instagramHandle: data.instagramHandle || null,
+          notes: data.notes || null
+        };
 
-  const buildCustomer = (
-    formData: FormData,
-    existingCustomer: Customer | null
-  ): Customer => {
-    if (existingCustomer) {
-      const updatedCustomer: Partial<Customer> = {};
-      let hasChanges = false;
+        const response = await fetch(`/api/customers/${customerToEdit.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(customerDataToUpdate)
+        });
 
-      const fieldTransformers: Record<
-        keyof Customer,
-        (value: FormDataEntryValue) => any
-      > = {
-        id: (value) => value,
-        name: (value) => value.toString(),
-        email: (value) => value.toString(),
-        phone: (value) => value.toString(),
-        registrationDate: (value) => new Date(value.toString()),
-        notes: (value) => value.toString()
-      };
-
-      for (const field in fieldTransformers) {
-        const key = field as keyof Customer;
-        const formValue = formData.get(field);
-
-        if (formValue !== null) {
-          const transformedValue = fieldTransformers[key](formValue);
-
-          if (transformedValue !== existingCustomer[key]) {
-            updatedCustomer[key] = transformedValue;
-            hasChanges = true;
-          }
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to update customer');
         }
+        savedCustomer = {
+          ...customerToEdit,
+          ...data
+        };
+        setCustomers((prevCustomers) =>
+          prevCustomers.map((c) =>
+            c.id === savedCustomer.id ? savedCustomer : c
+          )
+        );
+        toast({
+          title: 'Éxito',
+          description: 'Cliente actualizado correctamente.'
+        });
+      } else {
+        const newCustomerData: Omit<
+          Customer,
+          'id' | 'registrationDate' | 'orders'
+        > = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          instagramHandle: data.instagramHandle || null,
+          notes: data.notes || null
+        };
+        const response = await fetch('/api/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newCustomerData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to create customer');
+        }
+        savedCustomer = await response.json();
+        setCustomers((prevCustomers) => [...prevCustomers, savedCustomer]);
+        toast({ title: 'Éxito', description: 'Cliente creado correctamente.' });
       }
 
-      return hasChanges
-        ? { ...existingCustomer, ...updatedCustomer }
-        : existingCustomer;
+      setIsModalOpen(false);
+      setIsEditing(false);
+      setIsCreating(false);
+    } catch (error) {
+      console.error('Error saving customer:', error);
+      toast({
+        title: 'Error',
+        description: `No se pudo guardar el cliente: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: 'destructive'
+      });
     }
-
-    return {
-      id: undefined,
-      name: getFormValue(formData, 'name', ''),
-      email: getFormValue(formData, 'email', ''),
-      phone: getFormValue(formData, 'phone', ''),
-      notes: getFormValue(formData, 'notes', ''),
-      registrationDate: new Date()
-    };
   };
 
-  async function saveCustomer(customer: Customer) {
-    const response = await fetch('/api/customers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(customer)
-    });
-
-    if (response.ok) {
-      setCustomers((customers) => [...customers, customer]);
-      setIsModalOpen(false);
-    }
-
+  const handleCancel = () => {
+    setIsModalOpen(false);
     setIsEditing(false);
     setIsCreating(false);
-  }
-
-  async function updateCustomer(customer: Customer) {
-    const response = await fetch(`/api/customers/${Number(customer.id)}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(customer)
-    });
-
-    if (response.ok) {
-      setCustomers((customers) =>
-        customers.map((o) => (o.id === customer.id ? customer : o))
-      );
-      setIsModalOpen(false);
-    }
-  }
+    reset(
+      isEditingMode
+        ? {
+            name: customerToEdit?.name || '',
+            email: customerToEdit?.email || '',
+            phone: customerToEdit?.phone || '',
+            instagramHandle: customerToEdit?.instagramHandle || '',
+            notes: customerToEdit?.notes || ''
+          }
+        : { name: '', email: '', phone: '', instagramHandle: '', notes: '' }
+    );
+  };
 
   return (
     <>
       <h2 className="text-lg font-semibold leading-none tracking-tight mb-4">
-        {customerToEdit ? 'Editar Cliente' : 'Nuevo Cliente'}
+        {isEditingMode ? 'Editar Cliente' : 'Nuevo Cliente'}
       </h2>
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <InputField
-          label="Cliente"
-          name="name"
-          placeholder="Nombre del cliente"
-          defaultValue={customerToEdit?.name}
-        />
-        <InputField
-          label="Email del cliente"
-          name="email"
-          placeholder="Email"
-          defaultValue={customerToEdit?.email}
-        />
-        <InputField
-          label="Teléfono del cliente"
-          name="phone"
-          placeholder="Teléfono"
-          defaultValue={customerToEdit?.phone}
-        />
-        <TextAreaField
-          label="Notas"
-          name="notes"
-          placeholder="Notas"
-          defaultValue={customerToEdit?.notes}
-        />
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsModalOpen(false)}
-          >
+      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-1.5">
+          <Label htmlFor="name">Nombre</Label>
+          <Input
+            id="name"
+            placeholder="Nombre completo del cliente"
+            {...register('name')}
+            className={cn(errors.name && 'border-destructive')}
+          />
+          {errors.name && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.name.message}
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="correo@ejemplo.com"
+            {...register('email')}
+            className={cn(errors.email && 'border-destructive')}
+          />
+          {errors.email && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.email.message}
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">Teléfono</Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="Ej: 600112233"
+            {...register('phone')}
+            className={cn(errors.phone && 'border-destructive')}
+          />
+          {errors.phone && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.phone.message}
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="instagramHandle">Instagram (Opcional)</Label>
+          <Input
+            id="instagramHandle"
+            placeholder="@usuario_instagram"
+            {...register('instagramHandle')}
+            className={cn(errors.instagramHandle && 'border-destructive')}
+          />
+          {errors.instagramHandle && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.instagramHandle.message}
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="notes">Notas (Opcional)</Label>
+          <Textarea
+            id="notes"
+            placeholder="Alergias, preferencias, etc."
+            {...register('notes')}
+            className={cn(errors.notes && 'border-destructive')}
+          />
+          {errors.notes && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.notes.message}
+            </p>
+          )}
+        </div>
+        <div className="flex justify-end pt-2">
+          <Button type="button" variant="outline" onClick={handleCancel}>
             Cancelar
           </Button>
-          <Button type="submit" className="ml-2">
-            Guardar
+          <Button type="submit" className="ml-2" disabled={isSubmitting}>
+            {isSubmitting ? 'Guardando...' : 'Guardar'}
           </Button>
         </div>
       </form>
     </>
   );
 };
-
-const InputField = ({
-  label,
-  name,
-  type = 'text',
-  placeholder,
-  defaultValue
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  placeholder?: string;
-  defaultValue?: string;
-}) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
-    <input
-      name={name}
-      type={type}
-      defaultValue={defaultValue}
-      placeholder={placeholder}
-      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-    />
-  </div>
-);
-
-const TextAreaField = ({
-  label,
-  name,
-  placeholder,
-  defaultValue
-}: {
-  label: string;
-  name: string;
-  placeholder?: string;
-  defaultValue?: string;
-}) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700">{label}</label>
-    <textarea
-      name={name}
-      placeholder={placeholder}
-      defaultValue={defaultValue}
-      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-    />
-  </div>
-);
 
 export default CustomerForm;

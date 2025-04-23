@@ -206,12 +206,12 @@ export default function OrdersPage() {
       headers.join(','),
       ...orders.map((order) =>
         [
-          order.customerName,
-          order.customerContact,
+          order.customer!.name,
+          order.customer!.phone,
           order.description,
           order.amount,
           order.productType,
-          order.deliveryDate.toString(),
+          order.deliveryDate!.toString(),
           order.orderStatus,
           order.orderDate.toString(),
           order.customizationDetails,

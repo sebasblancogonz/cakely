@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   TableHead,
   TableRow,
   TableHeader,
   TableBody,
-  Table
+  Table,
+  TableCell
 } from '@/components/ui/table';
 import {
   Card,
@@ -30,6 +31,7 @@ import { Order } from './order';
 import { OrderStatus, Order as OrderType } from '@types';
 import { JSX } from 'react';
 import { Settings2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface OrdersTableProps {
   orders: OrderType[];
@@ -44,39 +46,27 @@ interface OrdersTableProps {
 }
 
 const availableColumns: {
-  id: keyof OrderType | 'actions';
+  id: keyof OrderType | 'actions' | 'customer';
   label: string;
   defaultVisible: boolean;
   canHide: boolean;
   className?: string;
 }[] = [
-  {
-    id: 'customerName',
-    label: 'Cliente',
-    defaultVisible: true,
-    canHide: false
-  },
-  {
-    id: 'customerContact',
-    label: 'Contacto',
-    defaultVisible: true,
-    canHide: true,
-    className: 'hidden lg:table-cell'
-  },
+  { id: 'customer', label: 'Cliente', defaultVisible: true, canHide: false },
   {
     id: 'description',
     label: 'Descripción',
     defaultVisible: true,
     canHide: true
   },
-  { id: 'orderStatus', label: 'Estado', defaultVisible: true, canHide: true },
+  { id: 'orderStatus', label: 'Estado', defaultVisible: true, canHide: false },
   {
-    id: 'amount',
-    label: 'Precio',
+    id: 'totalPrice',
+    label: 'Precio Total',
     defaultVisible: true,
     canHide: true,
     className: 'hidden md:table-cell'
-  },
+  }, // Use totalPrice
   {
     id: 'productType',
     label: 'Producto',
@@ -91,13 +81,20 @@ const availableColumns: {
     canHide: true,
     className: 'hidden md:table-cell'
   },
+  {
+    id: 'deliveryDate',
+    label: 'Fecha Entrega',
+    defaultVisible: false,
+    canHide: true,
+    className: 'hidden lg:table-cell'
+  }, // Default hidden example
   { id: 'actions', label: 'Acciones', defaultVisible: true, canHide: false }
 ];
 
 const getDefaultVisibility = () => {
   const defaultState: Record<string, boolean> = {};
   availableColumns.forEach((col) => {
-    defaultState[col.id] = col.defaultVisible;
+    defaultState[col.id as string] = col.defaultVisible;
   });
   return defaultState;
 };
@@ -139,16 +136,13 @@ export function OrdersTable({
   }, [navigate, offset, limit]);
 
   const renderPaginationInfo = (): JSX.Element => {
-    if (totalOrders === 0) {
-      return <>No hay pedidos</>;
-    }
-    if (totalOrders === 1) {
+    if (totalOrders === 0) return <>No hay pedidos</>;
+    if (totalOrders === 1)
       return (
         <>
           Mostrando <strong>1</strong> pedido
         </>
       );
-    }
     const start = Math.min(offset + 1, totalOrders);
     const end = Math.min(offset + limit, totalOrders);
     return (
@@ -163,15 +157,19 @@ export function OrdersTable({
   };
 
   const visibleColumnCount = useMemo(() => {
-    return availableColumns.filter((col) => columnVisibility[col.id]).length;
+    return availableColumns.filter((col) => columnVisibility[col.id as string])
+      .length;
   }, [columnVisibility]);
 
   const renderTableHeaders = (): JSX.Element => (
     <TableHeader>
       <TableRow>
         {availableColumns.map((column) =>
-          columnVisibility[column.id] ? (
-            <TableHead key={column.id} className={column.className}>
+          columnVisibility[column.id as string] ? (
+            <TableHead
+              key={column.id as string}
+              className={cn(column.className)}
+            >
               {column.id === 'actions' ? (
                 <span className="sr-only">{column.label}</span>
               ) : (
@@ -202,28 +200,24 @@ export function OrdersTable({
             <DropdownMenuLabel>Mostrar/Ocultar Columnas</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {availableColumns.map((column) => {
-              if (!column.canHide && column.id !== 'actions') return null;
-              if (column.id === 'actions' && !column.canHide) return null;
+              if (!column.canHide) return null;
 
-              if (column.canHide) {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={columnVisibility[column.id]}
-                    onCheckedChange={(value) =>
-                      setColumnVisibility((prev) => ({
-                        ...prev,
-                        [column.id]: !!value
-                      }))
-                    }
-                    disabled={!column.canHide}
-                  >
-                    {column.label}
-                  </DropdownMenuCheckboxItem>
-                );
-              }
-              return null;
+              return (
+                <DropdownMenuCheckboxItem
+                  key={column.id as string}
+                  className="capitalize"
+                  checked={columnVisibility[column.id as string]}
+                  onCheckedChange={(value) =>
+                    setColumnVisibility((prev) => ({
+                      ...prev,
+                      [column.id as string]: !!value
+                    }))
+                  }
+                  disabled={!column.canHide}
+                >
+                  {column.label}
+                </DropdownMenuCheckboxItem>
+              );
             })}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -246,13 +240,13 @@ export function OrdersTable({
                 />
               ))
             ) : (
-              <TableRow>
-                <TableHead
+              <TableRow key="no-orders-row">
+                <TableCell
                   colSpan={visibleColumnCount}
                   className="text-center h-24"
                 >
                   No hay pedidos disponibles
-                </TableHead>
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -266,7 +260,7 @@ export function OrdersTable({
           <div className="flex">
             <Button
               onClick={prevPage}
-              variant="ghost"
+              variant="outline"
               size="sm"
               disabled={offset === 0}
             >
@@ -274,7 +268,7 @@ export function OrdersTable({
             </Button>
             <Button
               onClick={nextPage}
-              variant="ghost"
+              variant="outline"
               size="sm"
               className="ml-2"
               disabled={offset + limit >= totalOrders}

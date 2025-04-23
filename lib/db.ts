@@ -1,4 +1,4 @@
-import { neon, Pool } from '@neondatabase/serverless';
+import { Pool } from '@neondatabase/serverless';
 import { z } from 'zod';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import {
@@ -22,52 +22,48 @@ import {
   ilike,
   or,
   relations,
-  sql,
   SQL
 } from 'drizzle-orm';
-import {
-  Customer,
-  Order,
-  OrderStatus,
-  PaymentMethod,
-  PaymentStatus,
-  ProductType
-} from '@types';
-
-if (!process.env.POSTGRES_URL) {
-  throw new Error('DATABASE_URL environment variable is not set.');
-}
-
-export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);
+import { OrderStatus, PaymentMethod, PaymentStatus, ProductType } from '@types';
 
 export const orderStatusEnum = pgEnum(
   'order_status',
-  Object.values(OrderStatus) as [string]
+  Object.values(OrderStatus) as [string, ...string[]]
 );
 
 export const paymentStatusEnum = pgEnum(
   'payment_status',
-  Object.values(PaymentStatus) as [string]
+  Object.values(PaymentStatus) as [string, ...string[]]
 );
 
 export const paymentMethodEnum = pgEnum(
   'payment_method',
-  Object.values(PaymentMethod) as [string]
+  Object.values(PaymentMethod) as [string, ...string[]]
 );
 
 export const productTypeEnum = pgEnum(
   'product_type',
-  Object.values(ProductType) as [string]
+  Object.values(ProductType) as [string, ...string[]]
 );
 
 export const orders = pgTable('orders', {
   id: serial('order_id').primaryKey(),
+  customerId: integer('customer_id')
+    .notNull()
+    .references(() => customers.id, {
+      onDelete: 'set null',
+      onUpdate: 'cascade'
+    }),
   description: text('description').notNull(),
-  customerName: text('customer_name').notNull(),
-  customerContact: text('customer_contact').notNull(),
-  orderDate: timestamp('order_date').notNull(),
+  orderDate: timestamp('order_date', {
+    withTimezone: false,
+    mode: 'date'
+  }).notNull(),
   amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
-  deliveryDate: timestamp('delivery_date'),
+  deliveryDate: timestamp('delivery_date', {
+    withTimezone: false,
+    mode: 'date'
+  }),
   orderStatus: orderStatusEnum('order_status').notNull(),
   productType: productTypeEnum('product_type').notNull(),
   customizationDetails: text('customization_details'),
@@ -79,8 +75,8 @@ export const orders = pgTable('orders', {
   paymentStatus: paymentStatusEnum('payment_status').notNull(),
   paymentMethod: paymentMethodEnum('payment_method').notNull(),
   notes: text('notes'),
-  orderHistory: jsonb('order_history'),
-  images: jsonb('images')
+  orderHistory: jsonb('order_history').default('[]'),
+  images: jsonb('images').default('[]')
 });
 
 export const businessSettings = pgTable('business_settings', {
@@ -136,24 +132,10 @@ export const recipes = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull()
   },
-  (table) => {
-    return {
-      recipeNameIdx: uniqueIndex('recipe_name_idx').on(table.name)
-    };
-  }
+  (table) => ({
+    recipeNameIdx: uniqueIndex('recipe_name_idx').on(table.name)
+  })
 );
-
-export const recipeIngredients = pgTable('recipe_ingredients', {
-  id: serial('id').primaryKey(),
-  recipeId: integer('recipe_id')
-    .notNull()
-    .references(() => recipes.id, { onDelete: 'cascade' }),
-  ingredientId: integer('ingredient_id')
-    .notNull()
-    .references(() => ingredientPrices.id, { onDelete: 'restrict' }),
-  quantity: numeric('quantity', { precision: 10, scale: 3 }).notNull(),
-  unit: varchar('unit', { length: 50 }).notNull()
-});
 
 export const ingredientPrices = pgTable(
   'ingredient_prices',
@@ -168,19 +150,35 @@ export const ingredientPrices = pgTable(
     supplier: varchar('supplier', { length: 255 }),
     updatedAt: timestamp('updated_at').defaultNow().notNull()
   },
-  (table) => {
-    return {
-      nameIdx: uniqueIndex('ingredient_name_idx').on(table.name)
-    };
-  }
+  (table) => ({
+    nameIdx: uniqueIndex('ingredient_name_idx').on(table.name)
+  })
 );
+
+export const recipeIngredients = pgTable('recipe_ingredients', {
+  id: serial('id').primaryKey(),
+  recipeId: integer('recipe_id')
+    .notNull()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  ingredientId: integer('ingredient_id')
+    .notNull()
+    .references(() => ingredientPrices.id, { onDelete: 'restrict' }),
+  quantity: numeric('quantity', { precision: 10, scale: 3 }).notNull(),
+  unit: varchar('unit', { length: 50 }).notNull()
+});
 
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull(),
   phone: text('phone').notNull(),
-  registrationDate: timestamp('registration_date').notNull(),
+  registrationDate: timestamp('registration_date', {
+    withTimezone: false,
+    mode: 'date'
+  })
+    .notNull()
+    .defaultNow(),
+  instagramHandle: varchar('instagram_handle', { length: 100 }),
   notes: text('notes')
 });
 
@@ -209,27 +207,16 @@ export const recipeIngredientsRelations = relations(
   })
 );
 
-const UpdateOrderSchema = z
-  .object({
-    description: z.string().optional(),
-    customerName: z.string().min(1).optional(),
-    customerContact: z.string().optional(),
-    orderDate: z.coerce.date().optional(),
-    amount: z.number().positive().optional(),
-    deliveryDate: z.coerce.date().optional(),
-    orderStatus: z.nativeEnum(OrderStatus).optional(),
-    productType: z.nativeEnum(ProductType).optional(),
-    customizationDetails: z.string().optional(),
-    quantity: z.coerce.number().int().positive().optional(),
-    sizeOrWeight: z.string().optional(),
-    flavor: z.string().optional(),
-    allergyInformation: z.string().optional(),
-    totalPrice: z.coerce.number().positive().optional(),
-    paymentStatus: z.nativeEnum(PaymentStatus).optional(),
-    paymentMethod: z.nativeEnum(PaymentMethod).optional(),
-    notes: z.string().optional()
+export const customersRelations = relations(customers, ({ many }) => ({
+  orders: many(orders)
+}));
+
+export const ordersRelations = relations(orders, ({ one }) => ({
+  customer: one(customers, {
+    fields: [orders.customerId],
+    references: [customers.id]
   })
-  .partial();
+}));
 
 const schema = {
   orders,
@@ -238,10 +225,16 @@ const schema = {
   ingredientPrices,
   recipeIngredients,
   customers,
+  customersRelations,
+  ordersRelations,
   recipesRelations,
   ingredientPricesRelations,
   recipeIngredientsRelations
 };
+
+if (!process.env.POSTGRES_URL) {
+  throw new Error('POSTGRES_URL environment variable is not set.');
+}
 
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 
@@ -258,8 +251,39 @@ export type NewRecipe = typeof recipes.$inferInsert;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type NewRecipeIngredient = typeof recipeIngredients.$inferInsert;
 
+export type Order = SelectOrder & {
+  customer?: SelectCustomer;
+};
+export type Customer = SelectCustomer & {
+  orders?: SelectOrder[];
+};
+
+const UpdateOrderSchema = z
+  .object({
+    customerId: z.coerce.number().int().positive().optional(),
+    description: z.string().optional(),
+    orderDate: z.coerce.date().optional(),
+    amount: z.coerce.number().positive().optional(),
+    deliveryDate: z.coerce.date().optional().nullable(),
+    orderStatus: z.nativeEnum(OrderStatus).optional(),
+    productType: z.nativeEnum(ProductType).optional(),
+    customizationDetails: z.string().optional(),
+    quantity: z.coerce.number().int().positive().optional(),
+    sizeOrWeight: z.string().optional(),
+    flavor: z.string().optional(),
+    allergyInformation: z.string().optional(),
+    totalPrice: z.coerce.number().positive().optional(),
+    paymentStatus: z.nativeEnum(PaymentStatus).optional(),
+    paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+    notes: z.string().optional()
+  })
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Se requiere al menos un campo para actualizar'
+  });
+
 interface GetCustomersResult {
-  customers: SelectCustomer[];
+  customers: Customer[];
   newOffset: number | null;
   totalCustomers: number;
 }
@@ -288,7 +312,6 @@ export async function getCustomers(
   if (searchCondition) {
     countQueryBuilder = countQueryBuilder.where(searchCondition);
   }
-
   const totalResult = await countQueryBuilder;
   const totalCustomers = totalResult[0]?.count ?? 0;
 
@@ -296,14 +319,11 @@ export async function getCustomers(
   if (searchCondition) {
     dataQueryBuilder = dataQueryBuilder.where(searchCondition);
   }
-
   dataQueryBuilder = dataQueryBuilder.orderBy(asc(customers.name));
   dataQueryBuilder = dataQueryBuilder.limit(limit).offset(offset);
-
   const results = await dataQueryBuilder;
 
-  const fetchedCustomers: SelectCustomer[] = results as SelectCustomer[];
-
+  const fetchedCustomers: Customer[] = results as Customer[];
   const newOffset = offset + limit < totalCustomers ? offset + limit : null;
 
   return {
@@ -311,14 +331,6 @@ export async function getCustomers(
     newOffset,
     totalCustomers
   };
-}
-
-function mapOrders(orderData: any[]): Order[] {
-  return orderData.map((order) => ({
-    ...order,
-    orderDate: new Date(order.orderDate),
-    amount: Number(order.amount).toFixed(2)
-  }));
 }
 
 interface GetOrdersResult {
@@ -335,7 +347,6 @@ export async function getOrders(
 ): Promise<GetOrdersResult> {
   let statusCondition: SQL | undefined;
   const statusKey = status?.trim().toLowerCase();
-
   if (statusKey && statusKey !== 'all') {
     if (statusKey in OrderStatus) {
       const statusValue = OrderStatus[statusKey as keyof typeof OrderStatus];
@@ -352,41 +363,67 @@ export async function getOrders(
   if (trimmedSearch) {
     const searchTerm = `%${trimmedSearch}%`;
     searchCondition = or(
-      ilike(orders.customerName, searchTerm),
-      ilike(orders.customerContact, searchTerm),
       ilike(orders.description, searchTerm),
-      sql`${orders.productType}::text ilike ${searchTerm}`,
       ilike(orders.flavor, searchTerm),
       ilike(orders.notes, searchTerm),
-      ilike(orders.allergyInformation, searchTerm)
+      ilike(orders.customizationDetails, searchTerm),
+      ilike(customers.name, searchTerm),
+      ilike(customers.email, searchTerm),
+      ilike(customers.phone, searchTerm),
+      ilike(customers.instagramHandle, searchTerm)
     );
   }
 
-  let whereCondition: SQL | undefined;
-  if (statusCondition && searchCondition) {
-    whereCondition = and(statusCondition, searchCondition);
-  } else {
-    whereCondition = statusCondition ?? searchCondition;
+  const conditions: (SQL | undefined)[] = [];
+  if (statusCondition) conditions.push(statusCondition);
+  if (searchCondition) conditions.push(searchCondition);
+
+  const whereClause =
+    conditions.length > 0
+      ? and(...(conditions.filter((c) => c !== undefined) as SQL[]))
+      : undefined;
+
+  let countQueryBuilder = db
+    .select({ count: count(orders.id) })
+    .from(orders)
+    .$dynamic();
+  const orderOnlyConditions = [statusCondition].filter(
+    (c) => c !== undefined
+  ) as SQL[];
+  if (orderOnlyConditions.length > 0) {
+    countQueryBuilder = countQueryBuilder.where(and(...orderOnlyConditions));
   }
 
-  let countQueryBuilder = db.select({ count: count() }).from(orders).$dynamic();
-  if (whereCondition) {
-    countQueryBuilder = countQueryBuilder.where(whereCondition);
+  let totalOrders = 0;
+  try {
+    const totalResult = await countQueryBuilder;
+    totalOrders = totalResult[0]?.count ?? 0;
+  } catch (e) {
+    console.error('Error executing count query:', e);
   }
 
-  const totalResult = await countQueryBuilder;
-  const totalOrders = totalResult[0]?.count ?? 0;
-
-  let dataQueryBuilder = db.select().from(orders).$dynamic();
-  if (whereCondition) {
-    dataQueryBuilder = dataQueryBuilder.where(whereCondition);
+  let results: SelectOrder[] = [];
+  try {
+    results = await db.query.orders.findMany({
+      orderBy: [desc(orders.orderDate)],
+      limit: limit,
+      offset: offset,
+      where: whereClause,
+      with: {
+        customer: true
+      }
+    });
+  } catch (e) {
+    console.error('Error executing data query:', e);
+    throw new Error('Failed to fetch order data');
   }
 
-  dataQueryBuilder = dataQueryBuilder.orderBy(desc(orders.orderDate));
-  dataQueryBuilder = dataQueryBuilder.limit(limit).offset(offset);
+  const mappedOrders: Order[] = results.map((order) => ({
+    ...order,
+    amount: order.amount,
+    totalPrice: order.totalPrice
+  }));
 
-  const results = await dataQueryBuilder;
-  const mappedOrders = mapOrders(results);
   const newOffset = offset + limit < totalOrders ? offset + limit : null;
 
   return {
@@ -396,118 +433,163 @@ export async function getOrders(
   };
 }
 
-export async function deleteCustomerById(id: number) {
+export async function deleteCustomerById(id: number): Promise<void> {
   await db.delete(customers).where(eq(customers.id, id));
 }
 
-export async function deleteOrderById(id: number) {
+export async function deleteOrderById(id: number): Promise<void> {
   await db.delete(orders).where(eq(orders.id, id));
 }
 
 export async function saveCustomer(
-  customer: Customer
-): Promise<typeof customers.$inferInsert> {
-  const customerToSave: typeof customers.$inferInsert = {
-    ...customer
+  customer: Omit<Customer, 'id' | 'registrationDate' | 'orders'>
+): Promise<Customer> {
+  const customerToSave = {
+    ...customer,
+    registrationDate: new Date()
   };
-
   try {
     console.log('Inserting customer:', customerToSave);
     const result = await db
       .insert(customers)
       .values(customerToSave)
       .returning();
-    return result[0];
+    return result[0] as Customer;
   } catch (error) {
     console.error('Error saving customer:', error);
     throw new Error('Failed to save customer');
   }
 }
 
-export async function saveOrder(
-  order: Order
-): Promise<typeof orders.$inferInsert> {
-  const deliveryDate =
-    order.deliveryDate instanceof Date
-      ? order.deliveryDate
-      : new Date(order.deliveryDate);
+type SaveOrderInput = Omit<
+  Order,
+  'id' | 'customer' | 'orderHistory' | 'images' | 'createdAt' | 'updatedAt'
+> & {
+  customerId: number;
+  orderHistory?: any[];
+  images?: any[];
+};
 
-  const orderDate =
-    order.orderDate instanceof Date
-      ? order.orderDate
-      : new Date(order.orderDate);
-
-  const orderToSave: typeof orders.$inferInsert = {
-    description: order.description,
-    customerName: order.customerName,
-    customerContact: order.customerContact,
-    orderDate: orderDate,
-    amount: order.amount.toString(),
-    deliveryDate: deliveryDate,
-    orderStatus: order.orderStatus,
-    productType: order.productType,
-    customizationDetails: order.customizationDetails,
-    quantity: order.quantity,
-    sizeOrWeight: order.sizeOrWeight,
-    flavor: order.flavor,
-    allergyInformation: order.allergyInformation,
-    totalPrice: order.totalPrice.toString(),
-    paymentStatus: order.paymentStatus,
-    paymentMethod: order.paymentMethod,
-    notes: order.notes,
-    orderHistory: order.orderHistory,
-    images: order.images
+export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
+  const orderToSave = {
+    customerId: orderInput.customerId,
+    description: orderInput.description,
+    orderDate:
+      orderInput.orderDate instanceof Date
+        ? orderInput.orderDate
+        : new Date(orderInput.orderDate),
+    amount: orderInput.amount,
+    deliveryDate: orderInput.deliveryDate
+      ? orderInput.deliveryDate instanceof Date
+        ? orderInput.deliveryDate
+        : new Date(orderInput.deliveryDate)
+      : null,
+    orderStatus: orderInput.orderStatus,
+    productType: orderInput.productType,
+    customizationDetails: orderInput.customizationDetails,
+    quantity: orderInput.quantity,
+    sizeOrWeight: orderInput.sizeOrWeight,
+    flavor: orderInput.flavor,
+    allergyInformation: orderInput.allergyInformation,
+    totalPrice: orderInput.totalPrice,
+    paymentStatus: orderInput.paymentStatus,
+    paymentMethod: orderInput.paymentMethod,
+    notes: orderInput.notes,
+    orderHistory: orderInput.orderHistory ?? [],
+    images: orderInput.images ?? []
   };
 
   try {
     console.log('Inserting order:', orderToSave);
-    const result = await db.insert(orders).values(orderToSave).returning();
-    return result[0];
+    const result = await db
+      .insert(orders)
+      .values(orderToSave)
+      .returning({ insertedId: orders.id });
+
+    if (!result || result.length === 0) {
+      throw new Error('Insert failed, no order ID returned.');
+    }
+    const newOrderId = result[0].insertedId;
+
+    const newOrderWithCustomer = await db.query.orders.findFirst({
+      where: eq(orders.id, newOrderId),
+      with: {
+        customer: true
+      }
+    });
+
+    if (!newOrderWithCustomer) {
+      throw new Error(
+        'Failed to fetch newly created order with customer details.'
+      );
+    }
+
+    return newOrderWithCustomer as Order;
   } catch (error) {
     console.error('Error saving order:', error);
     throw new Error('Failed to save order');
   }
 }
 
-export async function updateOrder(orderInput: Partial<Order>, orderId: number) {
+export async function updateOrder(
+  orderInput: Partial<Omit<Order, 'id' | 'customer'>>,
+  orderId: number
+): Promise<Order> {
   const validationResult = UpdateOrderSchema.safeParse(orderInput);
   if (!validationResult.success) {
-    console.error('Validation failed:', validationResult.error.errors);
-    throw new Error('Invalid input data for updating order');
+    console.error('Validation failed:', validationResult.error.format());
+    throw new Error(
+      `Invalid input data for updating order: ${JSON.stringify(validationResult.error.format())}`
+    );
   }
   const validatedData = validationResult.data;
 
-  const dataToSet: Record<string, any> = { ...validatedData };
-  if (dataToSet.amount !== undefined) {
-    dataToSet.amount = dataToSet.amount;
-  }
-  if (dataToSet.totalPrice !== undefined) {
-    dataToSet.totalPrice = dataToSet.totalPrice;
-  }
-
-  delete dataToSet.id;
-  delete dataToSet.orderHistory;
-  delete dataToSet.images;
-
-  if (Object.keys(dataToSet).length === 0) {
-    console.warn(
-      'Update attempt with no valid fields to update for order:',
-      orderId
-    );
+  if (Object.keys(validatedData).length === 0) {
     throw new Error('No valid fields provided for update');
   }
+
+  const dataToSet: Record<string, any> = {};
+  for (const [key, value] of Object.entries(validatedData)) {
+    if (value !== undefined) {
+      if (key === 'amount' || key === 'totalPrice') {
+        dataToSet[key] = (value as number).toString();
+      } else if (key === 'orderDate' || key === 'deliveryDate') {
+        dataToSet[key] =
+          value === null
+            ? null
+            : value instanceof Date
+              ? value
+              : new Date(value as string | number | Date);
+      } else {
+        dataToSet[key] = value;
+      }
+    }
+  }
+  dataToSet.updatedAt = new Date();
 
   try {
     const updatedResult = await db
       .update(orders)
       .set(dataToSet)
       .where(eq(orders.id, orderId))
-      .returning();
+      .returning({ updatedId: orders.id });
 
     if (!updatedResult || updatedResult.length === 0) {
       throw new Error(`Order with ID ${orderId} not found.`);
     }
-    return updatedResult[0];
+
+    const updatedOrderWithCustomer = await db.query.orders.findFirst({
+      where: eq(orders.id, orderId),
+      with: {
+        customer: true
+      }
+    });
+
+    if (!updatedOrderWithCustomer) {
+      throw new Error('Failed to fetch updated order with customer details.');
+    }
+
+    return updatedOrderWithCustomer as Order;
   } catch (error) {
     console.error('Error updating order in DB:', error);
     throw new Error('Failed to update order in database');
@@ -517,7 +599,7 @@ export async function updateOrder(orderInput: Partial<Order>, orderId: number) {
 export async function saveImageUrlsForOrder(
   orderId: number,
   imageUrls: string[]
-) {
+): Promise<void> {
   try {
     const result = await db
       .update(orders)
@@ -528,7 +610,6 @@ export async function saveImageUrlsForOrder(
       console.error(`Order with ID ${orderId} not found.`);
       throw new Error('Order not found');
     }
-
     console.log(`Successfully saved image URLs for order with ID ${orderId}`);
   } catch (error) {
     console.error('Error saving image URLs for order:', error);
@@ -536,27 +617,16 @@ export async function saveImageUrlsForOrder(
   }
 }
 
-export async function updateCustomer(customer: Customer, customerId: number) {
-  const registrationDate =
-    customer.registrationDate instanceof Date
-      ? customer.registrationDate
-      : new Date(customer.registrationDate);
-
-  const customerToUpdate = {
-    name: customer.name,
-    email: customer.email,
-    phone: customer.phone,
-    registrationDate: registrationDate,
-    notes: customer.notes
-  };
-
-  try {
-    await db
-      .update(customers)
-      .set(customerToUpdate)
-      .where(eq(customers.id, customerId));
-  } catch (error) {
-    console.error('Error updating customer:', error);
-    throw new Error('Failed to update customer');
-  }
+export async function updateCustomer(
+  customerInput: Partial<Omit<Customer, 'id' | 'registrationDate' | 'orders'>>,
+  customerId: number
+): Promise<void> {
+  const dataToSet = { ...customerInput };
+  if (Object.keys(dataToSet).length === 0)
+    throw new Error('No fields provided');
+  const result = await db
+    .update(customers)
+    .set(dataToSet)
+    .where(eq(customers.id, customerId));
+  if (result.rowCount === 0) throw new Error(`Customer not found.`);
 }

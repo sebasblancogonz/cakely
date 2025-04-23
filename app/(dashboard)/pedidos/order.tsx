@@ -1,5 +1,4 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,6 +12,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { deleteOrder } from '../actions';
 import { OrderStatus, Order as OrderType } from '@types';
 import { Status } from '@/components/common/StatusCell';
+import { cn } from '@/lib/utils';
 
 interface OrderProps {
   order: OrderType;
@@ -24,6 +24,40 @@ interface OrderProps {
   columnVisibility: Record<string, boolean>;
 }
 
+const availableColumns: {
+  id: keyof OrderType | 'actions' | 'customerName' | 'customerContact';
+  label: string;
+  className?: string;
+}[] = [
+  { id: 'customer', label: 'Cliente' },
+  { id: 'description', label: 'Descripción' },
+  { id: 'orderStatus', label: 'Estado' },
+  {
+    id: 'totalPrice',
+    label: 'Precio Total',
+    className: 'hidden md:table-cell'
+  },
+  { id: 'productType', label: 'Producto', className: 'hidden md:table-cell' },
+  { id: 'orderDate', label: 'Fecha Pedido', className: 'hidden md:table-cell' },
+  {
+    id: 'deliveryDate',
+    label: 'Fecha Entrega',
+    className: 'hidden lg:table-cell'
+  },
+  { id: 'actions', label: 'Acciones' }
+];
+
+const columnRenderOrder: (keyof OrderType | 'actions' | 'customer')[] = [
+  'customer',
+  'description',
+  'orderStatus',
+  'totalPrice',
+  'productType',
+  'orderDate',
+  'deliveryDate',
+  'actions'
+];
+
 export function Order({
   order,
   setOrders,
@@ -34,9 +68,10 @@ export function Order({
   columnVisibility
 }: OrderProps) {
   const handleDelete = async () => {
+    const customerName = order.customer?.name || `pedido ID ${order.id}`;
     if (
       !confirm(
-        `Are you sure you want to delete the order for ${order.customerName}?`
+        `¿Estás seguro de que quieres eliminar el pedido para ${customerName}?`
       )
     ) {
       return;
@@ -48,27 +83,32 @@ export function Order({
       );
     } catch (error) {
       console.error('Error deleting order:', error);
-      alert('Could not delete the order. Please try again.');
+      alert('No se pudo eliminar el pedido. Inténtalo de nuevo.');
     }
   };
 
   const getFormattedValue = (
-    key: keyof OrderType | 'actions'
+    key: keyof OrderType | 'actions' | 'customer'
   ): React.ReactNode => {
     switch (key) {
+      case 'customer':
+        return order.customer?.name ?? 'N/A';
       case 'orderDate':
-        return order.orderDate
-          ? new Date(order.orderDate).toLocaleDateString('es-ES')
+      case 'deliveryDate':
+        const dateValue = order[key];
+        return dateValue
+          ? new Date(dateValue).toLocaleDateString('es-ES')
           : '-';
       case 'amount':
       case 'totalPrice':
-        const value = Number(order[key]);
-        return isNaN(value) ? '-' : `${value.toFixed(2)}€`;
+        const value = order[key];
+        const numValue = Number(value);
+        return isNaN(numValue) ? '-' : `${numValue.toFixed(2)}€`;
       case 'orderStatus':
         return order.orderStatus ? (
           <Status
             orderId={order.id!}
-            currentStatus={order.orderStatus}
+            currentStatus={order.orderStatus as OrderStatus}
             onStatusChange={onStatusChange}
           />
         ) : (
@@ -77,57 +117,28 @@ export function Order({
       case 'actions':
         return null;
       default:
-        return order[key as keyof OrderType] !== null &&
-          order[key as keyof OrderType] !== undefined
-          ? String(order[key as keyof OrderType])
+        const orderKey = key as keyof OrderType;
+        return order[orderKey] !== null && order[orderKey] !== undefined
+          ? String(order[orderKey])
           : '-';
     }
   };
-
-  const columnRenderOrder: (keyof OrderType | 'actions')[] = [
-    'customerName',
-    'customerContact',
-    'description',
-    'orderStatus',
-    'amount',
-    'productType',
-    'orderDate',
-    'actions'
-  ];
-
-  const availableColumns: {
-    id: keyof OrderType | 'actions';
-    label: string;
-    className?: string;
-  }[] = [
-    { id: 'customerName', label: 'Cliente' },
-    {
-      id: 'customerContact',
-      label: 'Contacto',
-      className: 'hidden lg:table-cell'
-    },
-    { id: 'description', label: 'Descripción' },
-    { id: 'orderStatus', label: 'Estado' },
-    { id: 'amount', label: 'Precio', className: 'hidden md:table-cell' },
-    { id: 'productType', label: 'Producto', className: 'hidden md:table-cell' },
-    {
-      id: 'orderDate',
-      label: 'Fecha Pedido',
-      className: 'hidden md:table-cell'
-    },
-    { id: 'actions', label: 'Acciones' }
-  ];
 
   return (
     <TableRow key={order.id}>
       {columnRenderOrder.map((colId) => {
         const colDef = availableColumns.find((c) => c.id === colId);
         return columnVisibility[colId] ? (
-          <TableCell key={colId} className={colDef?.className}>
+          <TableCell key={colId} className={cn(colDef?.className)}>
             {colId === 'actions' ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button aria-haspopup="true" size="icon" variant="ghost">
+                  <Button
+                    aria-haspopup="true"
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                     <span className="sr-only">Toggle menu</span>
                   </Button>
