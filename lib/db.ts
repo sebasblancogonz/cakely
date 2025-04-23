@@ -1,6 +1,6 @@
-import { neon } from '@neondatabase/serverless';
+import { neon, Pool } from '@neondatabase/serverless';
 import { z } from 'zod';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import {
   pgTable,
   text,
@@ -13,7 +13,18 @@ import {
   varchar,
   uniqueIndex
 } from 'drizzle-orm/pg-core';
-import { and, asc, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  or,
+  relations,
+  sql,
+  SQL
+} from 'drizzle-orm';
 import {
   Customer,
   Order,
@@ -23,7 +34,9 @@ import {
   ProductType
 } from '@types';
 
-export const db = drizzle(neon(process.env.POSTGRES_URL!));
+if (!process.env.POSTGRES_URL) {
+  throw new Error('DATABASE_URL environment variable is not set.');
+}
 
 export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);
 
@@ -109,6 +122,39 @@ export const businessSettings = pgTable('business_settings', {
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
+export const recipes = pgTable(
+  'recipes',
+  {
+    id: serial('id').primaryKey(),
+    name: varchar('name', { length: 255 }).notNull().unique(), // Ej: "Tarta Chocolate 20cm", "Galleta Mantequilla Unidad"
+    productType: varchar('product_type', { length: 100 }).notNull(), // Podrías usar pgEnum si prefieres
+    baseLaborHours: numeric('base_labor_hours', {
+      precision: 10,
+      scale: 3
+    }).notNull(), // Horas para 1 unidad/batch base
+    notes: text('notes'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => {
+    return {
+      recipeNameIdx: uniqueIndex('recipe_name_idx').on(table.name)
+    };
+  }
+);
+
+export const recipeIngredients = pgTable('recipe_ingredients', {
+  id: serial('id').primaryKey(),
+  recipeId: integer('recipe_id')
+    .notNull()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  ingredientId: integer('ingredient_id')
+    .notNull()
+    .references(() => ingredientPrices.id, { onDelete: 'restrict' }), // Restrict deletion if used
+  quantity: numeric('quantity', { precision: 10, scale: 3 }).notNull(), // Cantidad del ingrediente para esta receta
+  unit: varchar('unit', { length: 50 }).notNull() // Unidad usada en ESTA receta (g, ml, unidad...)
+});
+
 export const ingredientPrices = pgTable(
   'ingredient_prices',
   {
@@ -138,6 +184,31 @@ export const customers = pgTable('customers', {
   notes: text('notes')
 });
 
+export const recipesRelations = relations(recipes, ({ many }) => ({
+  recipeIngredients: many(recipeIngredients)
+}));
+
+export const ingredientPricesRelations = relations(
+  ingredientPrices,
+  ({ many }) => ({
+    recipeIngredients: many(recipeIngredients)
+  })
+);
+
+export const recipeIngredientsRelations = relations(
+  recipeIngredients,
+  ({ one }) => ({
+    recipe: one(recipes, {
+      fields: [recipeIngredients.recipeId],
+      references: [recipes.id]
+    }),
+    ingredient: one(ingredientPrices, {
+      fields: [recipeIngredients.ingredientId],
+      references: [ingredientPrices.id]
+    })
+  })
+);
+
 const UpdateOrderSchema = z
   .object({
     description: z.string().optional(),
@@ -160,12 +231,32 @@ const UpdateOrderSchema = z
   })
   .partial();
 
+const schema = {
+  orders,
+  businessSettings,
+  recipes,
+  ingredientPrices,
+  recipeIngredients,
+  customers,
+  recipesRelations,
+  ingredientPricesRelations,
+  recipeIngredientsRelations
+};
+
+const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
+
+export const db = drizzle(pool, { schema });
+
 export type SelectOrder = typeof orders.$inferSelect;
 export type SelectCustomer = typeof customers.$inferSelect;
 export type Setting = typeof businessSettings.$inferSelect;
 export type NewSetting = typeof businessSettings.$inferInsert;
 export type IngredientPrice = typeof ingredientPrices.$inferSelect;
 export type NewIngredientPrice = typeof ingredientPrices.$inferInsert;
+export type Recipe = typeof recipes.$inferSelect;
+export type NewRecipe = typeof recipes.$inferInsert;
+export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
+export type NewRecipeIngredient = typeof recipeIngredients.$inferInsert;
 
 interface GetCustomersResult {
   customers: SelectCustomer[];

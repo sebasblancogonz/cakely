@@ -1,0 +1,1 @@
+ALTER TABLE "recipes" ALTER COLUMN "base_labor_hours" DROP DEFAULT;

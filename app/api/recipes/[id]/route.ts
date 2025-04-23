@@ -1,0 +1,219 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
+import { UpdateRecipeInputSchema } from '@/lib/validators/recipes'; // Ajusta ruta
+import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
+
+interface RouteContext {
+  params: { id: string };
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  const { params } = context;
+  try {
+    const id = parseInt(params.id, 10);
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { message: 'Invalid recipe ID' },
+        { status: 400 }
+      );
+    }
+
+    const recipeDetails = await db.query.recipes.findFirst({
+      where: eq(recipes.id, id),
+      with: {
+        recipeIngredients: {
+          with: {
+            ingredient: true // Carga datos de ingredientPrices
+          }
+        }
+      }
+    });
+
+    if (!recipeDetails) {
+      return NextResponse.json(
+        { message: 'Recipe not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(recipeDetails);
+  } catch (error) {
+    console.error(`API Error fetching recipe ${params.id}:`, error);
+    return NextResponse.json(
+      { message: 'Failed to fetch recipe details' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest, context: RouteContext) {
+  const { params } = context;
+  try {
+    const id = parseInt(params.id, 10);
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { message: 'Invalid recipe ID' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const validation = UpdateRecipeInputSchema.safeParse(body);
+
+    if (!validation.success) {
+      console.error(
+        'API Recipe PUT Validation Error:',
+        validation.error.format()
+      );
+      return NextResponse.json(
+        { message: 'Invalid input data', errors: validation.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { recipeIngredients: ingredientsData, ...recipeData } =
+      validation.data;
+
+    const updatedRecipe = await db.transaction(async (tx) => {
+      // 1. Actualizar datos básicos de la receta (si hay)
+      const dataToUpdateRecipe: Record<string, string | Date | undefined> = {};
+      if (recipeData.name !== undefined)
+        dataToUpdateRecipe.name = recipeData.name;
+      if (recipeData.productType !== undefined)
+        dataToUpdateRecipe.productType = recipeData.productType;
+      if (recipeData.baseLaborHours !== undefined)
+        dataToUpdateRecipe.baseLaborHours =
+          recipeData.baseLaborHours.toString();
+      if (recipeData.notes !== undefined)
+        dataToUpdateRecipe.notes = recipeData.notes;
+
+      let updatedRecipeBase;
+      if (Object.keys(dataToUpdateRecipe).length > 0) {
+        dataToUpdateRecipe.updatedAt = new Date();
+        const updateResult = await tx
+          .update(recipes)
+          .set(dataToUpdateRecipe)
+          .where(eq(recipes.id, id))
+          .returning({ id: recipes.id }); // Devuelve solo ID para confirmar
+        if (updateResult.length === 0) {
+          throw new Error('Recipe not found for update'); // Lanza error para rollback
+        }
+        updatedRecipeBase = updateResult[0];
+      } else {
+        // Si no hay datos de receta, al menos verifica que exista
+        const existing = await tx
+          .select({ id: recipes.id })
+          .from(recipes)
+          .where(eq(recipes.id, id));
+        if (existing.length === 0) throw new Error('Recipe not found');
+        updatedRecipeBase = existing[0];
+      }
+
+      // 2. Actualizar ingredientes (si se proporcionaron en el body)
+      // Estrategia: Borrar existentes y añadir los nuevos
+      if (ingredientsData !== undefined) {
+        await tx
+          .delete(recipeIngredients)
+          .where(eq(recipeIngredients.recipeId, id));
+
+        if (ingredientsData.length > 0) {
+          const ingredientsToInsert = ingredientsData.map((ing) => ({
+            recipeId: id,
+            ingredientId: ing.ingredientId,
+            quantity: ing.quantity.toString(),
+            unit: ing.unit
+          }));
+          await tx.insert(recipeIngredients).values(ingredientsToInsert);
+        }
+      }
+
+      // 3. Devolver la receta completa actualizada (haciendo un query final dentro de la tx)
+      const finalRecipe = await tx.query.recipes.findFirst({
+        where: eq(recipes.id, id),
+        with: {
+          recipeIngredients: { with: { ingredient: true } }
+        }
+      });
+
+      if (!finalRecipe) {
+        // Esto no debería pasar si las operaciones anteriores funcionaron
+        throw new Error('Failed to retrieve updated recipe');
+      }
+
+      return finalRecipe;
+    });
+
+    return NextResponse.json(updatedRecipe);
+  } catch (error: any) {
+    console.error(`API Error updating recipe ${params.id}:`, error);
+    if (error.message?.includes('Recipe not found')) {
+      return NextResponse.json({ message: error.message }, { status: 404 });
+    }
+    if (error.code === '23505' && error.constraint === 'recipes_name_key') {
+      return NextResponse.json(
+        { message: 'A recipe with this name already exists' },
+        { status: 409 }
+      );
+    }
+    if (error.code === '23503') {
+      return NextResponse.json(
+        { message: 'Invalid related data (e.g., ingredient ID)' },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      { message: 'Failed to update recipe', error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const { params } = context;
+  try {
+    const id = parseInt(params.id, 10);
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { message: 'Invalid recipe ID' },
+        { status: 400 }
+      );
+    }
+
+    // Usar transacción es más seguro aunque cascade debería funcionar
+    const deletedRecipe = await db.transaction(async (tx) => {
+      // Opcional: Borrar ingredientes explícitamente si no confías/usas cascade
+      // await tx.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, id));
+
+      // Borrar la receta principal
+      const result = await tx
+        .delete(recipes)
+        .where(eq(recipes.id, id))
+        .returning({ deletedId: recipes.id });
+
+      if (result.length === 0) {
+        // Lanza error para hacer rollback si no se encontró
+        throw new Error('Recipe not found for deletion');
+      }
+      return result[0];
+    });
+
+    return NextResponse.json({
+      message: 'Recipe deleted successfully',
+      id: deletedRecipe.deletedId
+    });
+    // Alternativa: Devolver 204 No Content sin cuerpo
+    // return new NextResponse(null, { status: 204 });
+  } catch (error: any) {
+    console.error(`API Error deleting recipe ${params.id}:`, error);
+    if (error.message?.includes('Recipe not found')) {
+      return NextResponse.json({ message: error.message }, { status: 404 });
+    }
+    // Podrías checkear error de FK (23503) si algo impide borrar
+    return NextResponse.json(
+      { message: 'Failed to delete recipe', error: error.message },
+      { status: 500 }
+    );
+  }
+}

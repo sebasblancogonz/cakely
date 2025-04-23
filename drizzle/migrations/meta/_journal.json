@@ -8,6 +8,20 @@
       "when": 1745329550102,
       "tag": "0000_huge_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1745357471012,
+      "tag": "0001_dazzling_quasar",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1745390961286,
+      "tag": "0002_fuzzy_guardian",
+      "breakpoints": true
     }
   ]
 }

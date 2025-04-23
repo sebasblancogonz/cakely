@@ -1,3 +1,28 @@
+import {
+  Setting as DbSetting,
+  IngredientPrice as DbIngredientPrice,
+  Recipe as DbRecipe,
+  RecipeIngredient as DbRecipeIngredient
+} from '@/lib/db';
+
+export type Setting = DbSetting;
+export type IngredientPrice = DbIngredientPrice;
+export type Recipe = DbRecipe;
+export type RecipeIngredient = DbRecipeIngredient;
+
+export type RecipeWithIngredients = DbRecipe & {
+  recipeIngredients: (DbRecipeIngredient & {
+    ingredient: DbIngredientPrice;
+  })[];
+};
+
+export interface RecipeIngredientFormItem {
+  ingredientId: number;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
 export enum OrderStatus {
   pending = 'Pendiente',
   processing = 'Preparando',

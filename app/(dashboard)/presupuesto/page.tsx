@@ -4,13 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  OrderStatus,
-  ProductType,
-  PaymentMethod,
-  PaymentStatus,
-  QuoteBreakdown
-} from '@types';
+import { RecipeWithIngredients, ProductType, QuoteBreakdown } from '@types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,51 +26,32 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IngredientPrice, Setting } from '@/lib/db';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import {
+  IngredientPrice as DbIngredientPrice,
+  Setting as DbSetting
+} from '@/lib/db';
+
+type Setting = Partial<DbSetting>;
+type IngredientPrice = DbIngredientPrice;
 
 const quoteSchema = z.object({
-  productType: z.nativeEnum(ProductType),
+  recipeId: z.coerce
+    .number()
+    .int()
+    .positive({ message: 'Selecciona una receta' }),
   quantity: z.coerce
     .number()
     .int()
     .positive({ message: 'Cantidad debe ser positiva' }),
   sizeOrWeight: z.string().optional(),
-  flavor: z.string().min(1, { message: 'Sabor requerido' }),
+  flavor: z.string().optional(),
   decorationComplexity: z.enum(['simple', 'media', 'compleja']),
   details: z.string().optional()
 });
 type QuoteFormData = z.infer<typeof quoteSchema>;
-
-interface Recipe {
-  ingredients: { name: string; quantity: number; unit: string }[];
-  baseLaborHours: number;
-}
-const recipes: Record<string, Recipe> = {
-  [ProductType.Tarta]: {
-    ingredients: [
-      { name: 'Harina de Trigo', quantity: 300, unit: 'g' },
-      { name: 'Azúcar Blanco', quantity: 250, unit: 'g' },
-      { name: 'Huevo M', quantity: 4, unit: 'unidad' },
-      { name: 'Mantequilla Sin Sal', quantity: 200, unit: 'g' }
-    ],
-    baseLaborHours: 1.5
-  },
-  [ProductType.Galletas]: {
-    ingredients: [
-      { name: 'Harina de Trigo', quantity: 500, unit: 'g' },
-      { name: 'Azúcar Blanco', quantity: 200, unit: 'g' },
-      { name: 'Huevo M', quantity: 2, unit: 'unidad' },
-      { name: 'Mantequilla Sin Sal', quantity: 250, unit: 'g' }
-    ],
-    baseLaborHours: 1.0
-  },
-  [ProductType.Cupcakes]: { ingredients: [], baseLaborHours: 1.2 },
-  [ProductType.Macarons]: { ingredients: [], baseLaborHours: 2.5 },
-  [ProductType.Otros]: { ingredients: [], baseLaborHours: 0.5 }
-};
 
 const decorationLaborMultiplier: Record<string, number> = {
   simple: 1.0,
@@ -89,6 +64,9 @@ export default function QuotesPage() {
   const [ingredientPrices, setIngredientPrices] = useState<IngredientPrice[]>(
     []
   );
+  const [availableRecipes, setAvailableRecipes] = useState<
+    RecipeWithIngredients[]
+  >([]);
   const [loadingData, setLoadingData] = useState(true);
   const [isCalculating, setIsCalculating] = useState(false);
   const [quoteResult, setQuoteResult] = useState<QuoteBreakdown | null>(null);
@@ -99,13 +77,17 @@ export default function QuotesPage() {
     handleSubmit,
     watch,
     control,
+    setValue,
     formState: { errors }
   } = useForm<QuoteFormData>({
     resolver: zodResolver(quoteSchema),
     defaultValues: {
-      productType: ProductType.Tarta,
+      recipeId: undefined,
       quantity: 1,
-      decorationComplexity: 'simple'
+      flavor: '',
+      decorationComplexity: 'simple',
+      sizeOrWeight: '',
+      details: ''
     }
   });
 
@@ -113,32 +95,42 @@ export default function QuotesPage() {
     async function loadPrerequisites() {
       setLoadingData(true);
       try {
-        const [settingsRes, ingredientsRes] = await Promise.all([
+        const [settingsRes, ingredientsRes, recipesRes] = await Promise.all([
           fetch('/api/settings'),
-          fetch('/api/ingredient-prices')
+          fetch('/api/ingredient-prices'),
+          fetch('/api/recipes?includeIngredients=true')
         ]);
         if (!settingsRes.ok) throw new Error('Failed to fetch settings');
         if (!ingredientsRes.ok) throw new Error('Failed to fetch ingredients');
+        if (!recipesRes.ok) throw new Error('Failed to fetch recipes');
+
         const settingsData = await settingsRes.json();
         const ingredientsData = await ingredientsRes.json();
+        const recipesData: RecipeWithIngredients[] = await recipesRes.json();
+
         setSettings(settingsData || {});
         setIngredientPrices(ingredientsData || []);
+        setAvailableRecipes(recipesData || []);
+
+        if (recipesData && recipesData.length > 0 && !watch('recipeId')) {
+          setValue('recipeId', recipesData[0].id, { shouldValidate: true });
+        }
       } catch (error) {
         console.error('Error loading prerequisites:', error);
         toast({
           title: 'Error',
-          description:
-            'No se pudieron cargar los ajustes o ingredientes necesarios.',
+          description: 'No se pudieron cargar datos esenciales.',
           variant: 'destructive'
         });
         setSettings({});
         setIngredientPrices([]);
+        setAvailableRecipes([]);
       } finally {
         setLoadingData(false);
       }
     }
     loadPrerequisites();
-  }, [toast]);
+  }, [toast, setValue, watch]); // Added watch
 
   const essentialSettingsMissing = useMemo(() => {
     if (loadingData) return true;
@@ -152,8 +144,9 @@ export default function QuotesPage() {
       (key) => settings[key] === undefined || settings[key] === null
     );
     const hasNoIngredients = ingredientPrices.length === 0;
-    return hasMissingSetting || hasNoIngredients;
-  }, [loadingData, settings, ingredientPrices]);
+    const hasNoRecipes = availableRecipes.length === 0;
+    return hasMissingSetting || hasNoIngredients || hasNoRecipes;
+  }, [loadingData, settings, ingredientPrices, availableRecipes]);
 
   const calculateQuote = useCallback(
     (data: QuoteFormData): QuoteBreakdown | null => {
@@ -163,7 +156,25 @@ export default function QuotesPage() {
       if (essentialSettingsMissing) {
         toast({
           title: 'Error',
-          description: 'Faltan ajustes esenciales o precios de ingredientes.',
+          description: 'Faltan ajustes, ingredientes o recetas base.',
+          variant: 'destructive'
+        });
+        setIsCalculating(false);
+        return null;
+      }
+
+      const selectedRecipe = availableRecipes.find(
+        (r) => r.id === data.recipeId
+      );
+
+      if (
+        !selectedRecipe ||
+        !Array.isArray(selectedRecipe.recipeIngredients) ||
+        selectedRecipe.recipeIngredients.length === 0
+      ) {
+        toast({
+          title: 'Error',
+          description: `Receta (ID: ${data.recipeId}) no encontrada o sin ingredientes definidos.`,
           variant: 'destructive'
         });
         setIsCalculating(false);
@@ -176,46 +187,102 @@ export default function QuotesPage() {
         ivaPercent,
         overheadMarkupPercent
       } = settings;
-      const recipe = recipes[data.productType];
-
-      if (!recipe) {
-        toast({
-          title: 'Error',
-          description: `No hay receta base definida para ${data.productType}.`,
-          variant: 'destructive'
-        });
-        setIsCalculating(false);
-        return null;
-      }
 
       let cogsIngredients = 0;
       let missingIngredients: string[] = [];
-      for (const item of recipe.ingredients) {
-        const priceInfo = ingredientPrices.find((p) => p.name === item.name);
+      let conversionErrors: string[] = [];
+
+      for (const item of selectedRecipe.recipeIngredients) {
+        const priceInfo = ingredientPrices.find(
+          (p) => p.id === item.ingredientId
+        );
         if (!priceInfo || priceInfo.pricePerUnit === null) {
-          missingIngredients.push(item.name);
+          missingIngredients.push(
+            item.ingredient?.name || `ID ${item.ingredientId}`
+          );
           continue;
         }
-        cogsIngredients += item.quantity * Number(priceInfo.pricePerUnit);
+
+        const recipeQty = Number(item.quantity);
+        const recipeUnit = item.unit.toLowerCase().trim();
+        const price = Number(priceInfo.pricePerUnit);
+        const priceUnit = priceInfo.unit.toLowerCase().trim();
+        const ingredientName =
+          item.ingredient?.name || `ID ${item.ingredientId}`;
+
+        let conversionFactor = 1;
+        let itemCost = 0;
+
+        if (recipeUnit === priceUnit) {
+          conversionFactor = 1;
+        } else if (recipeUnit === 'g' && priceUnit === 'kg') {
+          conversionFactor = 0.001;
+        } else if (recipeUnit === 'kg' && priceUnit === 'g') {
+          conversionFactor = 1000;
+        } else if (recipeUnit === 'ml' && priceUnit === 'l') {
+          conversionFactor = 0.001;
+        } else if (recipeUnit === 'l' && priceUnit === 'ml') {
+          conversionFactor = 1000;
+        } else if (recipeUnit === 'unidad' && priceUnit === 'docena') {
+          conversionFactor = 1 / 12;
+        } else if (recipeUnit === 'docena' && priceUnit === 'unidad') {
+          conversionFactor = 12;
+        } else {
+          console.error(
+            `Conversión de unidad no soportada para ${ingredientName}: ${recipeUnit} a ${priceUnit}`
+          );
+          conversionErrors.push(
+            `${ingredientName} (${recipeUnit} -> ${priceUnit})`
+          );
+          continue;
+        }
+
+        itemCost = recipeQty * conversionFactor * price;
+        cogsIngredients += itemCost;
+
+        console.log(
+          `>>> Calc Ingredient ${ingredientName}: Qty=${recipeQty}${recipeUnit}, Price=${price}/${priceUnit}, Factor=${conversionFactor}, ItemCost=${itemCost.toFixed(4)}`
+        );
       }
 
       if (missingIngredients.length > 0) {
         toast({
           title: 'Advertencia',
-          description: `Faltan precios para ingredientes: ${missingIngredients.join(', ')}. El coste será impreciso.`,
+          description: `Faltan precios para ingredientes: ${missingIngredients.join(', ')}.`,
           variant: 'destructive'
         });
       }
+      if (conversionErrors.length > 0) {
+        toast({
+          title: 'Error de Conversión',
+          description: `No se pudo convertir unidades para: ${conversionErrors.join(', ')}. Revisa unidades en recetas y ajustes.`,
+          variant: 'destructive',
+          duration: 10000
+        });
+      }
 
-      const cogsPackaging = data.productType === ProductType.Tarta ? 2.5 : 1.0;
-      const estimatedHours =
-        recipe.baseLaborHours *
+      const formQuantity = data.quantity || 1;
+      const baseCogsIngredientsPerUnit = cogsIngredients;
+      const totalCogsIngredients = baseCogsIngredientsPerUnit * formQuantity;
+
+      const baseCogsPackaging =
+        selectedRecipe.productType === ProductType.Tarta ? 2.5 : 1.0;
+      const totalCogsPackaging =
+        selectedRecipe.productType === ProductType.Tarta
+          ? baseCogsPackaging
+          : baseCogsPackaging * formQuantity;
+
+      const baseEstimatedHours =
+        Number(selectedRecipe.baseLaborHours) *
         (decorationLaborMultiplier[data.decorationComplexity] || 1.0);
-      const directLaborCost = estimatedHours * Number(laborRateHourly!);
-      const directCosts = cogsIngredients + cogsPackaging + directLaborCost;
-      const allocatedOverhead =
-        directCosts * (Number(overheadMarkupPercent!) / 100);
-      const totalCost = directCosts + allocatedOverhead;
+      const totalDirectLaborCost =
+        baseEstimatedHours * Number(laborRateHourly!) * formQuantity;
+
+      const totalDirectCosts =
+        totalCogsIngredients + totalCogsPackaging + totalDirectLaborCost;
+      const totalAllocatedOverhead =
+        totalDirectCosts * (Number(overheadMarkupPercent!) / 100);
+      const totalCost = totalDirectCosts + totalAllocatedOverhead;
       const marginDecimal = Number(profitMarginPercent!) / 100;
       const basePrice =
         marginDecimal < 1 && marginDecimal >= 0
@@ -226,10 +293,10 @@ export default function QuotesPage() {
       const finalPrice = basePrice + ivaAmount;
 
       const result: QuoteBreakdown = {
-        cogsIngredients: parseFloat(cogsIngredients.toFixed(2)),
-        cogsPackaging: parseFloat(cogsPackaging.toFixed(2)),
-        directLaborCost: parseFloat(directLaborCost.toFixed(2)),
-        allocatedOverhead: parseFloat(allocatedOverhead.toFixed(2)),
+        cogsIngredients: parseFloat(totalCogsIngredients.toFixed(2)),
+        cogsPackaging: parseFloat(totalCogsPackaging.toFixed(2)),
+        directLaborCost: parseFloat(totalDirectLaborCost.toFixed(2)),
+        allocatedOverhead: parseFloat(totalAllocatedOverhead.toFixed(2)),
         totalCost: parseFloat(totalCost.toFixed(2)),
         profitAmount: parseFloat((basePrice - totalCost).toFixed(2)),
         basePrice: parseFloat(basePrice.toFixed(2)),
@@ -241,12 +308,32 @@ export default function QuotesPage() {
       setIsCalculating(false);
       return result;
     },
-    [settings, ingredientPrices, loadingData, toast, essentialSettingsMissing]
+    [
+      settings,
+      ingredientPrices,
+      availableRecipes,
+      loadingData,
+      toast,
+      essentialSettingsMissing
+    ]
   );
 
   const onSubmit = (data: QuoteFormData) => {
+    console.log('Quote Form Submitted Data:', data);
     const result = calculateQuote(data);
     setQuoteResult(result);
+  };
+
+  const onValidationErrors = (errors: any) => {
+    console.error(
+      'QUOTE FORM VALIDATION ERRORS:',
+      JSON.stringify(errors, null, 2)
+    );
+    toast({
+      title: 'Error de Validación',
+      description: 'Por favor revisa los campos marcados en el formulario.',
+      variant: 'destructive'
+    });
   };
 
   if (loadingData) {
@@ -278,59 +365,80 @@ export default function QuotesPage() {
       {essentialSettingsMissing && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Faltan Ajustes Esenciales</AlertTitle>
+          <AlertTitle>Faltan Ajustes, Ingredientes o Recetas</AlertTitle>
           <AlertDescription>
-            No se pueden calcular presupuestos porque faltan ajustes clave
-            (coste por hora, margen, % overhead, IVA) o precios de ingredientes.
-            Por favor, configúralos en la página de{' '}
+            No se pueden calcular presupuestos. Por favor, configura los{' '}
             <Link
               href="/ajustes"
               className="font-semibold underline hover:text-destructive-foreground/80"
             >
               Ajustes
+            </Link>{' '}
+            (costes, márgenes), añade{' '}
+            <Link
+              href="/ajustes"
+              className="font-semibold underline hover:text-destructive-foreground/80"
+            >
+              Precios de Ingredientes
+            </Link>{' '}
+            y define{' '}
+            <Link
+              href="/ajustes"
+              className="font-semibold underline hover:text-destructive-foreground/80"
+            >
+              Recetas
             </Link>
             .
           </AlertDescription>
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={handleSubmit(onSubmit, onValidationErrors)}
+        className="space-y-6"
+      >
         <Card>
           <CardHeader>
             <CardTitle>Detalles del Producto</CardTitle>
             <CardDescription>
-              Introduce las características del pedido para calcular un
-              presupuesto.
+              Selecciona una receta y ajusta los detalles.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="productType">Tipo de Producto</Label>
+              <Label htmlFor="recipeId">Receta Base</Label>
               <Controller
-                name="productType"
+                name="recipeId"
                 control={control}
                 render={({ field }) => (
                   <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={essentialSettingsMissing}
+                    onValueChange={(value) =>
+                      field.onChange(value ? parseInt(value, 10) : undefined)
+                    }
+                    value={field.value?.toString()}
+                    disabled={
+                      essentialSettingsMissing || availableRecipes.length === 0
+                    }
                   >
-                    <SelectTrigger id="productType">
-                      <SelectValue placeholder="Selecciona tipo..." />
+                    <SelectTrigger id="recipeId">
+                      <SelectValue placeholder="Selecciona receta..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(ProductType).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
+                      {availableRecipes.map((recipe) => (
+                        <SelectItem
+                          key={recipe.id}
+                          value={recipe.id.toString()}
+                        >
+                          {recipe.name} ({recipe.productType})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.productType && (
+              {errors.recipeId && (
                 <p className="text-xs text-red-600 mt-1">
-                  {errors.productType.message}
+                  {errors.recipeId.message}
                 </p>
               )}
             </div>
@@ -351,7 +459,7 @@ export default function QuotesPage() {
             </div>
             <div>
               <Label htmlFor="sizeOrWeight">
-                Tamaño/Peso (ej: 20cm, 1.5kg)
+                Tamaño/Peso Específico (Opcional)
               </Label>
               <Input
                 id="sizeOrWeight"
@@ -365,7 +473,7 @@ export default function QuotesPage() {
               )}
             </div>
             <div>
-              <Label htmlFor="flavor">Sabor/Relleno</Label>
+              <Label htmlFor="flavor">Sabor/Relleno (Opcional)</Label>
               <Input
                 id="flavor"
                 {...register('flavor')}
@@ -391,7 +499,7 @@ export default function QuotesPage() {
                     disabled={essentialSettingsMissing}
                   >
                     <SelectTrigger id="decorationComplexity">
-                      <SelectValue placeholder="Selecciona complejidad..." />
+                      <SelectValue placeholder="Simple" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="simple">Simple</SelectItem>
@@ -408,7 +516,9 @@ export default function QuotesPage() {
               )}
             </div>
             <div className="md:col-span-2">
-              <Label htmlFor="details">Detalles Adicionales</Label>
+              <Label htmlFor="details">
+                Detalles Adicionales / Modificaciones
+              </Label>
               <Textarea
                 id="details"
                 {...register('details')}
