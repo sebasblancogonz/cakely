@@ -396,13 +396,6 @@ export default function OrdersPage() {
               limit={limit}
               totalOrders={totalOrders}
             />
-            {orders.length === 0 && !isLoading && (
-              <div className="flex justify-center items-center h-64 text-center">
-                <p className="text-lg text-muted-foreground">
-                  No orders found matching your criteria.
-                </p>
-              </div>
-            )}
           </TabsContent>
         )}
       </Tabs>
