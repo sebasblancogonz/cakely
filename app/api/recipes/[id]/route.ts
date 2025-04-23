@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
-import { UpdateRecipeInputSchema } from '@/lib/validators/recipes'; // Ajusta ruta
-import { eq, and } from 'drizzle-orm';
-import { z } from 'zod';
+import { recipes, recipeIngredients } from '@/lib/db';
+import { UpdateRecipeInputSchema } from '@/lib/validators/recipes';
+import { eq } from 'drizzle-orm';
 
 interface RouteContext {
   params: { id: string };
@@ -26,7 +25,7 @@ export async function GET(req: NextRequest) {
       with: {
         recipeIngredients: {
           with: {
-            ingredient: true // Carga datos de ingredientPrices
+            ingredient: true
           }
         }
       }
@@ -79,7 +78,6 @@ export async function PUT(req: NextRequest) {
       validation.data;
 
     const updatedRecipe = await db.transaction(async (tx) => {
-      // 1. Actualizar datos básicos de la receta (si hay)
       const dataToUpdateRecipe: Record<string, string | Date | undefined> = {};
       if (recipeData.name !== undefined)
         dataToUpdateRecipe.name = recipeData.name;
@@ -98,13 +96,12 @@ export async function PUT(req: NextRequest) {
           .update(recipes)
           .set(dataToUpdateRecipe)
           .where(eq(recipes.id, id))
-          .returning({ id: recipes.id }); // Devuelve solo ID para confirmar
+          .returning({ id: recipes.id });
         if (updateResult.length === 0) {
-          throw new Error('Recipe not found for update'); // Lanza error para rollback
+          throw new Error('Recipe not found for update');
         }
         updatedRecipeBase = updateResult[0];
       } else {
-        // Si no hay datos de receta, al menos verifica que exista
         const existing = await tx
           .select({ id: recipes.id })
           .from(recipes)
@@ -113,8 +110,6 @@ export async function PUT(req: NextRequest) {
         updatedRecipeBase = existing[0];
       }
 
-      // 2. Actualizar ingredientes (si se proporcionaron en el body)
-      // Estrategia: Borrar existentes y añadir los nuevos
       if (ingredientsData !== undefined) {
         await tx
           .delete(recipeIngredients)
@@ -131,7 +126,6 @@ export async function PUT(req: NextRequest) {
         }
       }
 
-      // 3. Devolver la receta completa actualizada (haciendo un query final dentro de la tx)
       const finalRecipe = await tx.query.recipes.findFirst({
         where: eq(recipes.id, id),
         with: {
@@ -140,7 +134,6 @@ export async function PUT(req: NextRequest) {
       });
 
       if (!finalRecipe) {
-        // Esto no debería pasar si las operaciones anteriores funcionaron
         throw new Error('Failed to retrieve updated recipe');
       }
 
@@ -172,10 +165,11 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  const { params } = context;
+export async function DELETE(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const id = Number(pathname.split('/').pop());
+
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -183,19 +177,13 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // Usar transacción es más seguro aunque cascade debería funcionar
     const deletedRecipe = await db.transaction(async (tx) => {
-      // Opcional: Borrar ingredientes explícitamente si no confías/usas cascade
-      // await tx.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, id));
-
-      // Borrar la receta principal
       const result = await tx
         .delete(recipes)
         .where(eq(recipes.id, id))
         .returning({ deletedId: recipes.id });
 
       if (result.length === 0) {
-        // Lanza error para hacer rollback si no se encontró
         throw new Error('Recipe not found for deletion');
       }
       return result[0];
@@ -205,14 +193,11 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       message: 'Recipe deleted successfully',
       id: deletedRecipe.deletedId
     });
-    // Alternativa: Devolver 204 No Content sin cuerpo
-    // return new NextResponse(null, { status: 204 });
   } catch (error: any) {
-    console.error(`API Error deleting recipe ${params.id}:`, error);
+    console.error(`API Error deleting recipe ${id}:`, error);
     if (error.message?.includes('Recipe not found')) {
       return NextResponse.json({ message: error.message }, { status: 404 });
     }
-    // Podrías checkear error de FK (23503) si algo impide borrar
     return NextResponse.json(
       { message: 'Failed to delete recipe', error: error.message },
       { status: 500 }
