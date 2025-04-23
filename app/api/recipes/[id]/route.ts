@@ -9,10 +9,11 @@ interface RouteContext {
   params: { id: string };
 }
 
-export async function GET(request: NextRequest, context: RouteContext) {
-  const { params } = context;
+export async function GET(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const id = Number(pathname.split('/').pop());
+
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json(recipeDetails);
   } catch (error) {
-    console.error(`API Error fetching recipe ${params.id}:`, error);
+    console.error(`API Error fetching recipe ${id}:`, error);
     return NextResponse.json(
       { message: 'Failed to fetch recipe details' },
       { status: 500 }
@@ -48,10 +49,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function PUT(request: NextRequest, context: RouteContext) {
-  const { params } = context;
+export async function PUT(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const id = Number(pathname.split('/').pop());
+
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -59,7 +61,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const validation = UpdateRecipeInputSchema.safeParse(body);
 
     if (!validation.success) {
@@ -147,7 +149,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json(updatedRecipe);
   } catch (error: any) {
-    console.error(`API Error updating recipe ${params.id}:`, error);
+    console.error(`API Error updating recipe ${id}:`, error);
     if (error.message?.includes('Recipe not found')) {
       return NextResponse.json({ message: error.message }, { status: 404 });
     }
