@@ -10,6 +10,7 @@ const Lightbox = dynamic(() => import('yet-another-react-lightbox'), {
 });
 
 import 'yet-another-react-lightbox/styles.css';
+import Link from 'next/link';
 
 interface OrderDetailsProps {
   order: Order;
@@ -81,6 +82,33 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
       label: 'Instagram',
       value: order.customer?.instagramHandle || '-',
       key: 'customerInstagram'
+    },
+    {
+      label: 'Conversación',
+      value: (
+        <>
+          <Link
+            className="text-blue-500"
+            target="_blank"
+            rel="noreferrer noopener"
+            href={'https://wa.me/' + order.customer?.phone}
+          >
+            WhatsApp
+          </Link>
+          <br />
+          {order.customer?.instagramHandle && (
+            <Link
+              target="_blank"
+              className="text-blue-500"
+              rel="noreferrer noopener"
+              href={'https://ig.me/m/' + order.customer?.instagramHandle}
+            >
+              Instagram
+            </Link>
+          )}
+        </>
+      ),
+      key: 'conversation'
     },
     { label: 'Descripción', value: order.description, key: 'description' },
     {
