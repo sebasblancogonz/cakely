@@ -1,64 +1,111 @@
-<div align="center"><strong>Next.js 15 Admin Dashboard Template</strong></div>
-<div align="center">Built with the Next.js App Router</div>
-<br />
-<div align="center">
-<a href="https://next-admin-dash.vercel.app/">Demo</a>
-<span> · </span>
-<a href="https://vercel.com/templates/next.js/admin-dashboard-tailwind-postgres-react-nextjs">Clone & Deploy</a>
-<span>
-</div>
+# Aura Bakery Dashboard
 
-## Overview
+Panel de control interno para la gestión de pedidos, clientes, recetas, presupuestos y ajustes generales de Aura Bakery.
 
-This is a starter template using the following stack:
+## Descripción
 
-- Framework - [Next.js (App Router)](https://nextjs.org)
-- Language - [TypeScript](https://www.typescriptlang.org)
-- Auth - [Auth.js](https://authjs.dev)
-- Database - [Postgres](https://vercel.com/postgres)
-- Deployment - [Vercel](https://vercel.com/docs/concepts/next.js/overview)
-- Styling - [Tailwind CSS](https://tailwindcss.com)
-- Components - [Shadcn UI](https://ui.shadcn.com/)
-- Analytics - [Vercel Analytics](https://vercel.com/analytics)
-- Formatting - [Prettier](https://prettier.io)
+Esta aplicación web, construida con Next.js y el App Router, centraliza la administración de las operaciones clave de Aura Bakery. Permite al personal gestionar eficientemente los pedidos desde su creación hasta la entrega, administrar la base de datos de clientes, configurar costes detallados para asegurar la rentabilidad, generar presupuestos precisos, definir recetas y visualizar la planificación de entregas.
 
-This template uses the new Next.js App Router. This includes support for enhanced layouts, colocation of components, tests, and styles, component-level data fetching, and more.
+## Funcionalidades Principales
 
-## Getting Started
+- **Gestión de Pedidos:** Crear, ver, editar, eliminar y cambiar el estado de los pedidos. Búsqueda y paginación.
+- **Gestión de Clientes:** Crear, ver, editar y eliminar clientes. Búsqueda y paginación.
+- **Gestión de Ajustes:**
+  - Configurar costes operativos (alquiler, precios de suministros como luz/gas/agua).
+  - Definir coste por hora de mano de obra.
+  - Establecer márgenes de beneficio e IVA aplicable.
+  - Gestionar precios de materias primas (ingredientes) por unidad.
+  - Definir y gestionar recetas base (ingredientes, cantidades, tiempo de elaboración).
+- **Generador de Presupuestos:** Calcular precios de venta recomendados (PVP) para productos basados en recetas, costes configurados y margen de beneficio, mostrando desglose de costes.
+- **Calendario de Entregas:** Visualizar los pedidos por entregar en una vista semanal o mensual.
+- **Estadísticas:** Gráficas y resúmenes básicos sobre estados de pedidos, tipos de producto, métodos de pago e ingresos (filtrado por fecha).
+- **Autenticación:** Sistema de inicio de sesión para usuarios autorizados (usando NextAuth.js).
+- **Interfaz Responsiva:** Diseño adaptable a diferentes tamaños de pantalla.
 
-During the deployment, Vercel will prompt you to create a new Postgres database. This will add the necessary environment variables to your project.
+## Tecnologías Utilizadas
 
-Inside the Vercel Postgres dashboard, create a table based on the schema defined in this repository.
+- **Framework:** [Next.js](https://nextjs.org/) (v15+ con App Router)
+- **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
+- **Base de Datos:** [PostgreSQL](https://www.postgresql.org/) (gestionada en [NeonDB Serverless](https://neon.tech/))
+- **ORM:** [Drizzle ORM](https://orm.drizzle.team/)
+- **Gestor de Paquetes:** [pnpm](https://pnpm.io/)
+- **UI:** [shadcn/ui](https://ui.shadcn.com/)
+  - **Primitivos UI:** [Radix UI](https://www.radix-ui.com/)
+  - **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
+- **Formularios:** [React Hook Form](https://react-hook-form.com/)
+- **Validación:** [Zod](https://zod.dev/)
+- **Autenticación:** [NextAuth.js](https://next-auth.js.org/) (v5 Beta)
+- **Gráficas:** [Recharts](https://recharts.org/)
+- **Manejo de Fechas:** [date-fns](https://date-fns.org/)
+- **Gestión de Imágenes:** [ImageKit.io](https://imagekit.io/) (`imagekit`, `@imagekit/next`)
+- **Utilidades:** `server-only`, `client-only`, `clsx`, `tailwind-merge`
+- **Analytics:** `@vercel/analytics`
 
-```
-CREATE TYPE status AS ENUM ('active', 'inactive', 'archived');
+## Prerrequisitos
 
-CREATE TABLE products (
-  id SERIAL PRIMARY KEY,
-  image_url TEXT NOT NULL,
-  name TEXT NOT NULL,
-  status status NOT NULL,
-  price NUMERIC(10, 2) NOT NULL,
-  stock INTEGER NOT NULL,
-  available_at TIMESTAMP NOT NULL
-);
-```
+Antes de comenzar, necesitarás tener instalado en tu sistema:
 
-Then, uncomment `app/api/seed.ts` and hit `http://localhost:3000/api/seed` to seed the database with products.
+- [Node.js](https://nodejs.org/) (v18.18 o superior)
+- [pnpm](https://pnpm.io/installation) (v8 o v9 recomendada)
+- [Git](https://git-scm.com/)
+- Una cuenta y un proyecto creado en [NeonDB](https://neon.tech/) (para obtener la cadena de conexión PostgreSQL).
 
-Next, copy the `.env.example` file to `.env` and update the values. Follow the instructions in the `.env.example` file to set up your GitHub OAuth application.
+## Puesta en Marcha
 
-```bash
-npm i -g vercel
-vercel link
-vercel env pull
-```
+Sigue estos pasos para configurar y ejecutar el proyecto en tu entorno local:
 
-Finally, run the following commands to start the development server:
+### 1. Clonar Repositorio
 
-```
-pnpm install
-pnpm dev
-```
+    git clone [URL_DEL_REPOSITORIO_GIT]
+    cd aura-dashboard
 
-You should now be able to access the application at http://localhost:3000.
+_(Reemplaza `[URL_DEL_REPOSITORIO_GIT]` con la URL real)_
+
+### 2. Instalar Dependencias
+
+Usa `pnpm` para instalar todos los paquetes necesarios.
+
+    pnpm install
+
+_(Si encuentras errores ERESOLVE o de peer dependencies, asegúrate de que las versiones en `package.json` sean compatibles y considera limpiar `node_modules` y `pnpm-lock.yaml` antes de reinstalar)._
+
+### 3. Configurar Variables de Entorno
+
+- Crea una copia del archivo de ejemplo:
+
+        cp .env.example .env.local
+
+- Edita el archivo `.env.local` y añade los valores correspondientes:
+  - **`POSTGRES_URL`**: Tu cadena de conexión de NeonDB. **Importante:** Usa la cadena de conexión estándar `postgresql://...` que soporta WebSockets (necesaria para las transacciones de Drizzle con `neon-serverless`), no la del proxy HTTP.
+  - **`NEXTAUTH_URL`**: La URL base donde correrá tu aplicación en desarrollo. Por defecto: `http://localhost:3000`.
+  - **`NEXTAUTH_SECRET`**: Una cadena secreta y aleatoria para NextAuth. Puedes generar una con: `openssl rand -base64 32` en tu terminal.
+  - **(Opcional) Credenciales OAuth:** Si has configurado proveedores como Google o GitHub, añade aquí sus `CLIENT_ID` y `CLIENT_SECRET`.
+    ```
+    # AUTH_GOOGLE_ID=...
+    # AUTH_GOOGLE_SECRET=...
+    ```
+  - **(Opcional) Claves ImageKit:** Si usas ImageKit para las imágenes de pedidos, añade tus claves:
+    ```
+    # IMAGEKIT_PUBLIC_KEY=...
+    # IMAGEKIT_PRIVATE_KEY=...
+    # IMAGEKIT_URL_ENDPOINT=...
+    ```
+
+### 4. Configurar Base de Datos (Migraciones)
+
+- Con tu `POSTGRES_URL` configurada en `.env.local`, ejecuta las migraciones de Drizzle para crear la estructura de tablas en tu base de datos Neon:
+
+        pnpm drizzle-kit push
+
+  _Este comando aplica directamente los cambios definidos en tu schema Drizzle a la base de datos. Es útil para desarrollo._
+  _(Para entornos de producción, es más recomendable generar archivos de migración SQL (`pnpm drizzle-kit generate:pg`) y aplicarlos con una herramienta de migración o manualmente)._
+
+### 5. Ejecutar Servidor de Desarrollo
+
+- Inicia la aplicación:
+
+        pnpm run dev
+
+  _(Este comando usará Turbopack por defecto, según tu `package.json`. Si prefieres Webpack, usa `pnpm run dev --no-turbo`)._
+
+- Abre tu navegador y ve a [http://localhost:3000](http://localhost:3000) (o el puerto que indique la terminal).

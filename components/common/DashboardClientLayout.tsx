@@ -91,7 +91,7 @@ export default function DashboardClientLayout({
           />
           <div
             className={cn(
-              'flex flex-col sm:gap-4 sm:py-4 transition-all duration-300 ease-in-out',
+              'flex flex-col sm:gap-4 sm:py-4 transition-all duration-500 ease-in-out',
               isNavExpanded ? 'sm:pl-64' : 'sm:pl-14'
             )}
           >
@@ -118,19 +118,23 @@ interface DesktopNavProps {
 }
 
 function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
+  const transitionDuration = 'duration-500';
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-10 hidden flex-col border-r bg-background sm:flex transition-all duration-300 ease-in-out',
-        isExpanded ? 'w-52' : 'w-14'
+        'fixed inset-y-0 left-0 z-10 hidden flex-col border-r bg-background sm:flex transition-all ease-in-out overflow-x-hidden',
+        transitionDuration,
+        isExpanded ? 'w-52' : 'w-16'
       )}
     >
-      <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
+      <nav className="flex flex-col gap-4 px-2 sm:py-5">
         <Link
           href="#"
           className={cn(
-            'group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base',
-            isExpanded && 'self-start ml-3 mb-2'
+            'group flex h-9 w-9 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base',
+            isExpanded
+              ? 'self-start ml-1 h-9 w-auto'
+              : 'self-center h-9 w-9 justify-center md:h-8 md:w-8'
           )}
         >
           <Image
@@ -142,64 +146,84 @@ function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
           />
         </Link>
 
-        <NavItem href="/" label="Dashboard" isExpanded={isExpanded}>
+        <NavItem
+          href="/"
+          label="Dashboard"
+          isExpanded={isExpanded}
+          animationDuration={transitionDuration}
+        >
           <Home className="h-5 w-5" />
         </NavItem>
-        <NavItem href="/pedidos" label="Pedidos" isExpanded={isExpanded}>
+        <NavItem
+          href="/pedidos"
+          label="Pedidos"
+          isExpanded={isExpanded}
+          animationDuration={transitionDuration}
+        >
           <ShoppingCart className="h-5 w-5" />
         </NavItem>
-        <NavItem href="/clientes" label="Clientes" isExpanded={isExpanded}>
+        <NavItem
+          href="/clientes"
+          label="Clientes"
+          isExpanded={isExpanded}
+          animationDuration={transitionDuration}
+        >
           <Users2 className="h-5 w-5" />
         </NavItem>
-        <NavItem href="/calendario" label="Calendario" isExpanded={isExpanded}>
+        <NavItem
+          href="/calendario"
+          label="Calendario"
+          isExpanded={isExpanded}
+          animationDuration={transitionDuration}
+        >
           <Calendar className="h-5 w-5" />
         </NavItem>
         <NavItem
           href="/presupuesto"
           label="Presupuesto"
           isExpanded={isExpanded}
+          animationDuration={transitionDuration}
         >
           <Calculator className="h-5 w-5" />
         </NavItem>
       </nav>
 
-      <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              href="/ajustes"
-              className={cn(
-                'flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground',
-                isExpanded
-                  ? 'w-full justify-start px-2.5 py-1.5'
-                  : 'h-9 w-9 md:h-8 md:w-8'
-              )}
-            >
-              <Settings className="h-5 w-5" />
-              <span className={cn('ml-2', !isExpanded && 'sr-only')}>
-                Ajustes
-              </span>
-            </Link>
-          </TooltipTrigger>
-          {!isExpanded && <TooltipContent side="right">Ajustes</TooltipContent>}
-        </Tooltip>
-
-        <Button
-          onClick={onToggle}
-          variant="ghost"
-          size="icon"
-          className={cn(
-            'rounded-full h-8 w-8 mt-2 border',
-            isExpanded && 'self-end mr-2'
-          )}
-          aria-label={isExpanded ? 'Collapse navigation' : 'Expand navigation'}
+      <nav className="mt-auto flex flex-col gap-4 px-2 sm:py-5">
+        <NavItem
+          href="/ajustes"
+          label="Ajustes"
+          isExpanded={isExpanded}
+          animationDuration={transitionDuration}
         >
-          {isExpanded ? (
-            <ChevronLeft className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
+          <Settings className="h-5 w-5" />
+        </NavItem>
+        <div
+          className={cn(
+            'flex w-full mt-2',
+            isExpanded ? 'justify-end pr-1' : 'justify-center'
           )}
-        </Button>
+        >
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onToggle}
+                variant="ghost"
+                size="icon"
+                className="rounded-full h-8 w-8 border"
+                aria-label={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
+              >
+                {isExpanded ? (
+                  <ChevronLeft className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={5}>
+              {isExpanded ? 'Colapsar' : 'Expandir'}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </nav>
     </aside>
   );

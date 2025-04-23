@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -32,13 +32,17 @@ import {
 } from '@/components/ui/table';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose
+  DialogTrigger
 } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Trash2, Edit, PlusCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { RecipeForm } from '@/components/common/RecipeForm';
 import {
   Select,
   SelectContent,
@@ -46,10 +50,6 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Trash2, Edit, PlusCircle } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { RecipeForm } from '@/components/common/RecipeForm';
 
 const settingsSchema = z.object({
   laborRateHourly: z.coerce.number().positive({ message: 'Debe ser positivo' }),
@@ -99,7 +99,6 @@ const recipeFormSchema = z.object({
 });
 
 type RecipeFormData = z.infer<typeof recipeFormSchema>;
-
 const defaultSettingsValues: SettingsFormData = {
   laborRateHourly: 15,
   profitMarginPercent: 30,
@@ -126,8 +125,7 @@ function IngredientForm({
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-    reset,
-    getValues
+    reset
   } = useForm<IngredientFormData>({
     resolver: zodResolver(ingredientSchema),
     defaultValues: {
@@ -136,46 +134,107 @@ function IngredientForm({
       unit: ingredient?.unit || 'g',
       pricePerUnit: ingredient?.pricePerUnit
         ? Number(ingredient.pricePerUnit)
-        : 0,
+        : undefined,
       supplier: ingredient?.supplier || ''
     }
   });
 
+  useEffect(() => {
+    reset({
+      id: ingredient?.id,
+      name: ingredient?.name || '',
+      unit: ingredient?.unit || 'g',
+      pricePerUnit: ingredient?.pricePerUnit
+        ? Number(ingredient.pricePerUnit)
+        : undefined,
+      supplier: ingredient?.supplier || ''
+    });
+  }, [ingredient, reset]);
+
   const onSubmit = async (data: IngredientFormData) => {
     await onSave(data);
-    reset();
     closeDialog();
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div>
-        <Label htmlFor="name">Nombre</Label>
-        <Input id="name" {...register('name')} />
-        {errors.name && <span>{errors.name.message}</span>}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <input type="hidden" {...register('id')} />
+      <div className="space-y-1.5">
+        <Label htmlFor="name">Nombre Ingrediente</Label>
+        <Input
+          id="name"
+          {...register('name')}
+          placeholder="Ej: Harina de Trigo"
+        />
+        {errors.name && (
+          <p className="text-xs text-destructive mt-1">{errors.name.message}</p>
+        )}
       </div>
-      <div>
-        <Label htmlFor="unit">Unidad</Label>
-        <Input id="unit" {...register('unit')} />
-        {errors.unit && <span>{errors.unit.message}</span>}
+      <div className="space-y-1.5">
+        <Label htmlFor="unit">Unidad de Compra/Precio</Label>
+        <Controller
+          name="unit"
+          control={control}
+          render={({ field }) => (
+            <Select
+              onValueChange={field.onChange}
+              value={field.value}
+              defaultValue={field.value}
+            >
+              <SelectTrigger id="unit">
+                <SelectValue placeholder="Selecciona unidad" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="g">g (Gramos)</SelectItem>
+                <SelectItem value="kg">kg (Kilogramos)</SelectItem>
+                <SelectItem value="ml">ml (Mililitros)</SelectItem>
+                <SelectItem value="l">l (Litros)</SelectItem>
+                <SelectItem value="unidad">Unidad</SelectItem>
+                <SelectItem value="docena">Docena</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.unit && (
+          <p className="text-xs text-destructive mt-1">{errors.unit.message}</p>
+        )}
       </div>
-      <div>
-        <Label htmlFor="pricePerUnit">Precio por unidad</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="pricePerUnit">Precio por Unidad (€)</Label>
         <Input
           id="pricePerUnit"
           type="number"
-          step={0.01}
+          step="0.0001"
           {...register('pricePerUnit')}
+          placeholder="Ej: 1.55"
         />
-        {errors.pricePerUnit && <span>{errors.pricePerUnit.message}</span>}
+        {errors.pricePerUnit && (
+          <p className="text-xs text-destructive mt-1">
+            {errors.pricePerUnit.message}
+          </p>
+        )}
       </div>
-      <div>
-        <Label htmlFor="supplier">Proveedor</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="supplier">Proveedor (Opcional)</Label>
         <Input id="supplier" {...register('supplier')} />
+        {errors.supplier && (
+          <p className="text-xs text-destructive mt-1">
+            {errors.supplier.message}
+          </p>
+        )}
       </div>
-      <button type="submit" disabled={isSubmitting}>
-        {ingredient ? 'Actualizar' : 'Agregar'} Ingrediente
-      </button>
+      <DialogFooter className="pt-4">
+        <DialogClose asChild>
+          <Button type="button" variant="outline">
+            Cancelar
+          </Button>
+        </DialogClose>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting
+            ? 'Guardando...'
+            : (ingredient?.id ? 'Actualizar' : 'Añadir') + ' Ingrediente'}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }
@@ -202,47 +261,131 @@ export default function SettingsPage() {
     reset,
     formState: { errors, isDirty }
   } = useForm<SettingsFormData>({
-    resolver: zodResolver(settingsSchema),
-    defaultValues: defaultSettingsValues
+    resolver: zodResolver(settingsSchema)
   });
 
   useEffect(() => {
+    let isMounted = true;
     async function loadData() {
       setLoadingSettings(true);
       setLoadingIngredients(true);
       setLoadingRecipes(true);
       try {
-        const [settingsRes, ingredientsRes, recipesRes] = await Promise.all([
-          fetch('/api/settings'),
-          fetch('/api/ingredient-prices'),
-          fetch('/api/recipes')
-        ]);
-        if (!settingsRes.ok) throw new Error('Failed to fetch settings');
-        if (!ingredientsRes.ok) throw new Error('Failed to fetch ingredients');
-        if (!recipesRes.ok) throw new Error('Failed to fetch recipes');
+        const [settingsRes, ingredientsRes, recipesRes] =
+          await Promise.allSettled([
+            fetch('/api/settings'),
+            fetch('/api/ingredient-prices'),
+            fetch('/api/recipes')
+          ]);
+        let settingsData: Partial<Setting> = {};
+        let ingredientsData: IngredientPrice[] = [];
+        let recipesData: Recipe[] = [];
+        let fetchOk = true;
 
-        const settingsData = await settingsRes.json();
-        const ingredientsData = await ingredientsRes.json();
-        const recipesData = await recipesRes.json();
+        if (settingsRes.status === 'fulfilled' && settingsRes.value.ok) {
+          settingsData = await settingsRes.value.json();
+        } else {
+          fetchOk = false;
+          console.error(
+            'Failed to fetch settings:',
+            settingsRes.status === 'fulfilled'
+              ? await settingsRes.value.text()
+              : settingsRes.reason
+          );
+        }
+        if (ingredientsRes.status === 'fulfilled' && ingredientsRes.value.ok) {
+          ingredientsData = await ingredientsRes.value.json();
+        } else {
+          fetchOk = false;
+          console.error(
+            'Failed to fetch ingredients:',
+            ingredientsRes.status === 'fulfilled'
+              ? await ingredientsRes.value.text()
+              : ingredientsRes.reason
+          );
+        }
+        if (recipesRes.status === 'fulfilled' && recipesRes.value.ok) {
+          recipesData = await recipesRes.value.json();
+        } else {
+          fetchOk = false;
+          console.error(
+            'Failed to fetch recipes:',
+            recipesRes.status === 'fulfilled'
+              ? await recipesRes.value.text()
+              : recipesRes.reason
+          );
+        }
+
+        if (!isMounted) return;
+        if (!fetchOk) {
+          toast({
+            title: 'Error',
+            description: 'No se pudieron cargar todos los datos.',
+            variant: 'destructive'
+          });
+        }
 
         setSettings(settingsData || {});
         setIngredients(ingredientsData || []);
         setRecipes(recipesData || []);
+
+        const formDefaults = {
+          laborRateHourly: Number(
+            settingsData?.laborRateHourly ??
+              defaultSettingsValues.laborRateHourly
+          ),
+          profitMarginPercent: Number(
+            settingsData?.profitMarginPercent ??
+              defaultSettingsValues.profitMarginPercent
+          ),
+          ivaPercent: Number(
+            settingsData?.ivaPercent ?? defaultSettingsValues.ivaPercent
+          ),
+          rentMonthly: Number(
+            settingsData?.rentMonthly ?? defaultSettingsValues.rentMonthly
+          ),
+          electricityPriceKwh: Number(
+            settingsData?.electricityPriceKwh ??
+              defaultSettingsValues.electricityPriceKwh
+          ),
+          gasPriceUnit: Number(
+            settingsData?.gasPriceUnit ?? defaultSettingsValues.gasPriceUnit
+          ),
+          waterPriceUnit: Number(
+            settingsData?.waterPriceUnit ?? defaultSettingsValues.waterPriceUnit
+          ),
+          otherMonthlyOverhead: Number(
+            settingsData?.otherMonthlyOverhead ??
+              defaultSettingsValues.otherMonthlyOverhead
+          ),
+          overheadMarkupPercent: Number(
+            settingsData?.overheadMarkupPercent ??
+              defaultSettingsValues.overheadMarkupPercent
+          )
+        };
+        reset(formDefaults);
       } catch (error) {
         console.error('Error loading page data:', error);
-        toast({
-          title: 'Error',
-          description: 'No se pudieron cargar algunos datos.',
-          variant: 'destructive'
-        });
-        reset(defaultSettingsValues);
+        if (isMounted) {
+          toast({
+            title: 'Error',
+            description: 'Error general al cargar datos.',
+            variant: 'destructive'
+          });
+          reset(defaultSettingsValues);
+        }
       } finally {
-        setLoadingSettings(false);
-        setLoadingIngredients(false);
-        setLoadingRecipes(false);
+        if (isMounted) {
+          setLoadingSettings(false);
+          setLoadingIngredients(false);
+          setLoadingRecipes(false);
+        }
       }
     }
     loadData();
+    return () => {
+      isMounted = false;
+    };
   }, [reset, toast]);
 
   const onSettingsSubmit = async (data: SettingsFormData) => {
@@ -292,15 +435,13 @@ export default function SettingsPage() {
         throw new Error(errorData.message || 'API error');
       }
       const savedIngredient = await response.json();
-      setIngredients((prev) => {
-        if (isEditing) {
-          return prev.map((ing) =>
-            ing.id === savedIngredient.id ? savedIngredient : ing
-          );
-        } else {
-          return [...prev, savedIngredient];
-        }
-      });
+      setIngredients((prev) =>
+        isEditing
+          ? prev.map((ing) =>
+              ing.id === savedIngredient.id ? savedIngredient : ing
+            )
+          : [...prev, savedIngredient]
+      );
       toast({
         title: 'Éxito',
         description: `Ingrediente ${isEditing ? 'actualizado' : 'añadido'}.`
@@ -346,7 +487,6 @@ export default function SettingsPage() {
     setIsIngredientDialogOpen(true);
   };
 
-  // --- Handlers para Recetas ---
   const handleSaveRecipe = async (data: RecipeFormData) => {
     const isEditing = !!data.id;
     const url = isEditing ? `/api/recipes/${data.id}` : '/api/recipes';
@@ -363,14 +503,11 @@ export default function SettingsPage() {
         throw new Error(errorData.message || 'API error');
       }
       const savedRecipe = await response.json();
-
-      setRecipes((prev) => {
-        if (isEditing) {
-          return prev.map((r) => (r.id === savedRecipe.id ? savedRecipe : r));
-        } else {
-          return [...prev, savedRecipe];
-        }
-      });
+      setRecipes((prev) =>
+        isEditing
+          ? prev.map((r) => (r.id === savedRecipe.id ? savedRecipe : r))
+          : [...prev, savedRecipe]
+      );
       toast({
         title: 'Éxito',
         description: `Receta ${isEditing ? 'actualizada' : 'creada'}.`
@@ -412,8 +549,9 @@ export default function SettingsPage() {
   };
 
   const openRecipeDialog = async (recipe: Partial<Recipe> | null = null) => {
+    setIsRecipeDialogOpen(true);
+    setEditingRecipe(null);
     if (recipe && recipe.id) {
-      setLoadingRecipes(true);
       try {
         const res = await fetch(`/api/recipes/${recipe.id}`);
         if (!res.ok) throw new Error('Failed to fetch recipe details');
@@ -426,53 +564,19 @@ export default function SettingsPage() {
           description: 'No se pudo cargar detalles de la receta.',
           variant: 'destructive'
         });
-        setEditingRecipe(null);
-      } finally {
-        setLoadingRecipes(false);
+        setIsRecipeDialogOpen(false);
       }
-    } else {
-      setEditingRecipe(null);
     }
-    setIsRecipeDialogOpen(true);
   };
 
-  if (loadingSettings) {
-    return (
-      <div className="p-4 md:p-6 space-y-6">
-        <Skeleton className="h-8 w-1/3 mb-4" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-1/4" />
-            <Skeleton className="h-4 w-1/2 mt-2" />
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(9)].map((_, i) => (
-              <Skeleton key={`settings-sk-${i}`} className="h-16 w-full" />
-            ))}
-          </CardContent>
-          <CardFooter>
-            <Skeleton className="h-10 w-32" />
-          </CardFooter>
-        </Card>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-1/4" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-1/4" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const TableSkeleton = ({ rows = 3, cols = 5 }) => (
+    <div className="space-y-2 pt-4">
+      <Skeleton className="h-10 w-full" />
+      {[...Array(rows)].map((_, i) => (
+        <Skeleton key={`row-sk-${i}`} className="h-12 w-full" />
+      ))}
+    </div>
+  );
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -486,143 +590,156 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="laborRateHourly">
-                Coste Mano de Obra (€/hora)
-              </Label>
-              <Input
-                id="laborRateHourly"
-                type="number"
-                step="0.01"
-                {...register('laborRateHourly')}
-              />
-              {errors.laborRateHourly && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.laborRateHourly.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="profitMarginPercent">Margen Beneficio (%)</Label>
-              <Input
-                id="profitMarginPercent"
-                type="number"
-                step="0.01"
-                {...register('profitMarginPercent')}
-              />
-              {errors.profitMarginPercent && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.profitMarginPercent.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="ivaPercent">% IVA Aplicable</Label>
-              <Input
-                id="ivaPercent"
-                type="number"
-                step="0.01"
-                {...register('ivaPercent')}
-              />
-              {errors.ivaPercent && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.ivaPercent.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="rentMonthly">Alquiler Mensual (€)</Label>
-              <Input
-                id="rentMonthly"
-                type="number"
-                step="0.01"
-                {...register('rentMonthly')}
-              />
-              {errors.rentMonthly && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.rentMonthly.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="electricityPriceKwh">
-                Precio Electricidad (€/kWh)
-              </Label>
-              <Input
-                id="electricityPriceKwh"
-                type="number"
-                step="0.0001"
-                {...register('electricityPriceKwh')}
-              />
-              {errors.electricityPriceKwh && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.electricityPriceKwh.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="gasPriceUnit">Precio Gas (€/unidad)</Label>
-              <Input
-                id="gasPriceUnit"
-                type="number"
-                step="0.0001"
-                {...register('gasPriceUnit')}
-              />
-              {errors.gasPriceUnit && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.gasPriceUnit.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="waterPriceUnit">Precio Agua (€/unidad)</Label>
-              <Input
-                id="waterPriceUnit"
-                type="number"
-                step="0.0001"
-                {...register('waterPriceUnit')}
-              />
-              {errors.waterPriceUnit && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.waterPriceUnit.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="otherMonthlyOverhead">
-                Otros Gastos Fijos (€/mes)
-              </Label>
-              <Input
-                id="otherMonthlyOverhead"
-                type="number"
-                step="0.01"
-                {...register('otherMonthlyOverhead')}
-              />
-              {errors.otherMonthlyOverhead && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.otherMonthlyOverhead.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="overheadMarkupPercent">
-                Overhead (% sobre Coste Directo)
-              </Label>
-              <Input
-                id="overheadMarkupPercent"
-                type="number"
-                step="0.01"
-                {...register('overheadMarkupPercent')}
-              />
-              {errors.overheadMarkupPercent && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.overheadMarkupPercent.message}
-                </p>
-              )}
-            </div>
+            {loadingSettings ? (
+              [...Array(9)].map((_, i) => (
+                <Skeleton key={`settings-sk-${i}`} className="h-16 w-full" />
+              ))
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="laborRateHourly">
+                    Coste Mano de Obra (€/hora)
+                  </Label>
+                  <Input
+                    id="laborRateHourly"
+                    type="number"
+                    step="0.01"
+                    {...register('laborRateHourly')}
+                  />
+                  {errors.laborRateHourly && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.laborRateHourly.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="profitMarginPercent">
+                    Margen Beneficio (%)
+                  </Label>
+                  <Input
+                    id="profitMarginPercent"
+                    type="number"
+                    step="0.01"
+                    {...register('profitMarginPercent')}
+                  />
+                  {errors.profitMarginPercent && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.profitMarginPercent.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ivaPercent">% IVA Aplicable</Label>
+                  <Input
+                    id="ivaPercent"
+                    type="number"
+                    step="0.01"
+                    {...register('ivaPercent')}
+                  />
+                  {errors.ivaPercent && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.ivaPercent.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rentMonthly">Alquiler Mensual (€)</Label>
+                  <Input
+                    id="rentMonthly"
+                    type="number"
+                    step="0.01"
+                    {...register('rentMonthly')}
+                  />
+                  {errors.rentMonthly && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.rentMonthly.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="electricityPriceKwh">
+                    Precio Electricidad (€/kWh)
+                  </Label>
+                  <Input
+                    id="electricityPriceKwh"
+                    type="number"
+                    step="0.0001"
+                    {...register('electricityPriceKwh')}
+                  />
+                  {errors.electricityPriceKwh && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.electricityPriceKwh.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gasPriceUnit">Precio Gas (€/unidad)</Label>
+                  <Input
+                    id="gasPriceUnit"
+                    type="number"
+                    step="0.0001"
+                    {...register('gasPriceUnit')}
+                  />
+                  {errors.gasPriceUnit && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.gasPriceUnit.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="waterPriceUnit">Precio Agua (€/unidad)</Label>
+                  <Input
+                    id="waterPriceUnit"
+                    type="number"
+                    step="0.0001"
+                    {...register('waterPriceUnit')}
+                  />
+                  {errors.waterPriceUnit && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.waterPriceUnit.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="otherMonthlyOverhead">
+                    Otros Gastos Fijos (€/mes)
+                  </Label>
+                  <Input
+                    id="otherMonthlyOverhead"
+                    type="number"
+                    step="0.01"
+                    {...register('otherMonthlyOverhead')}
+                  />
+                  {errors.otherMonthlyOverhead && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.otherMonthlyOverhead.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="overheadMarkupPercent">
+                    Overhead (% sobre Coste Directo)
+                  </Label>
+                  <Input
+                    id="overheadMarkupPercent"
+                    type="number"
+                    step="0.01"
+                    {...register('overheadMarkupPercent')}
+                  />
+                  {errors.overheadMarkupPercent && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.overheadMarkupPercent.message}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={isSavingSettings || !isDirty}>
+            <Button
+              type="submit"
+              disabled={isSavingSettings || !isDirty || loadingSettings}
+            >
               {isSavingSettings ? 'Guardando...' : 'Guardar Ajustes Generales'}
             </Button>
           </CardFooter>
@@ -662,12 +779,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           {loadingIngredients ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
+            <TableSkeleton rows={4} cols={5} />
           ) : (
             <Table>
               <TableHeader>
@@ -714,7 +826,7 @@ export default function SettingsPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow key="no-recipes-row">
+                  <TableRow key="no-ingredients-row">
                     <TableCell colSpan={5} className="text-center h-24">
                       No hay ingredientes definidos.
                     </TableCell>
@@ -749,23 +861,22 @@ export default function SettingsPage() {
                   {editingRecipe?.id ? 'Editar' : 'Añadir'} Receta
                 </DialogTitle>
               </DialogHeader>
-              <RecipeForm
-                recipe={editingRecipe}
-                availableIngredients={ingredients}
-                onSave={handleSaveRecipe}
-                closeDialog={() => setIsRecipeDialogOpen(false)}
-              />
+              {isRecipeDialogOpen && !loadingIngredients ? (
+                <RecipeForm
+                  recipe={editingRecipe}
+                  availableIngredients={ingredients}
+                  onSave={handleSaveRecipe}
+                  closeDialog={() => setIsRecipeDialogOpen(false)}
+                />
+              ) : (
+                <div className="p-6 text-center">Cargando ingredientes...</div>
+              )}
             </DialogContent>
           </Dialog>
         </CardHeader>
         <CardContent>
           {loadingRecipes ? (
-            <div className="space-y-2 pt-4">
-              <Skeleton className="h-10 w-full" />
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={`rec-sk-${i}`} className="h-12 w-full" />
-              ))}
-            </div>
+            <TableSkeleton rows={3} cols={4} />
           ) : (
             <Table>
               <TableHeader>
@@ -810,7 +921,7 @@ export default function SettingsPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
+                  <TableRow key="no-recipes-row">
                     <TableCell colSpan={4} className="text-center h-24">
                       No hay recetas definidas.
                     </TableCell>
