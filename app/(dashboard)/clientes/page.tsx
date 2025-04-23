@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Keep Tabs import if needed, otherwise remove
 import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomersTable } from './customers-table';
@@ -22,10 +21,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle
+  CardHeader
 } from '@/components/ui/card';
 
 const DEFAULT_PAGE_SIZE = 5;
@@ -97,7 +94,6 @@ export default function CustomersPage() {
         }
         const data = await response.json();
         setCustomers(data.customers || []);
-        // Ensure totalCustomers comes from API, remove fallback to length
         setTotalCustomers(data.totalCustomers || 0);
       } catch (error) {
         console.error('Failed to fetch customers:', error);
@@ -109,7 +105,7 @@ export default function CustomersPage() {
     }
 
     fetchCustomers();
-  }, [search, offsetParam, limitParam]); // Depend on URL params
+  }, [search, offsetParam, limitParam]);
 
   const updateQueryParams = useCallback(
     (newParams: Record<string, string | number>) => {
@@ -129,7 +125,7 @@ export default function CustomersPage() {
         params.set('offset', '0');
       }
       if (!params.has('limit')) {
-        params.set('limit', String(pageSize)); // Use state value as default if missing
+        params.set('limit', String(pageSize));
       }
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     },
@@ -148,7 +144,6 @@ export default function CustomersPage() {
     updateQueryParams({ q: currentSearch });
   };
 
-  // Placeholder for CSV download - adapt headers/data for customers
   const downloadCSV = () => {
     if (customers.length === 0) {
       alert('No customers on the current page to export.');

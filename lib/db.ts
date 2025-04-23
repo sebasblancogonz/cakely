@@ -126,12 +126,12 @@ export const recipes = pgTable(
   'recipes',
   {
     id: serial('id').primaryKey(),
-    name: varchar('name', { length: 255 }).notNull().unique(), // Ej: "Tarta Chocolate 20cm", "Galleta Mantequilla Unidad"
-    productType: varchar('product_type', { length: 100 }).notNull(), // Podrías usar pgEnum si prefieres
+    name: varchar('name', { length: 255 }).notNull().unique(),
+    productType: varchar('product_type', { length: 100 }).notNull(),
     baseLaborHours: numeric('base_labor_hours', {
       precision: 10,
       scale: 3
-    }).notNull(), // Horas para 1 unidad/batch base
+    }).notNull(),
     notes: text('notes'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull()
@@ -150,9 +150,9 @@ export const recipeIngredients = pgTable('recipe_ingredients', {
     .references(() => recipes.id, { onDelete: 'cascade' }),
   ingredientId: integer('ingredient_id')
     .notNull()
-    .references(() => ingredientPrices.id, { onDelete: 'restrict' }), // Restrict deletion if used
-  quantity: numeric('quantity', { precision: 10, scale: 3 }).notNull(), // Cantidad del ingrediente para esta receta
-  unit: varchar('unit', { length: 50 }).notNull() // Unidad usada en ESTA receta (g, ml, unidad...)
+    .references(() => ingredientPrices.id, { onDelete: 'restrict' }),
+  quantity: numeric('quantity', { precision: 10, scale: 3 }).notNull(),
+  unit: varchar('unit', { length: 50 }).notNull()
 });
 
 export const ingredientPrices = pgTable(

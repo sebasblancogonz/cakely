@@ -172,10 +172,9 @@ export default function OrdersPage() {
         );
       }
     },
-    [] // Asumiendo que setOrders tiene referencia estable
+    []
   );
 
-  // --- downloadCSV (sin cambios, pero depende de 'orders' local) ---
   const downloadCSV = useCallback(() => {
     const dataToExport = orders;
     if (dataToExport.length === 0) {
@@ -204,7 +203,7 @@ export default function OrdersPage() {
     ];
 
     const csvRows = [
-      headers.join(','), // Encabezados
+      headers.join(','),
       ...orders.map((order) =>
         [
           order.customerName,
@@ -225,7 +224,7 @@ export default function OrdersPage() {
           order.paymentMethod,
           order.notes
         ]
-          .map((value) => `"${String(value).replace(/"/g, '""')}"`) // Escapar comillas
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
           .join(',')
       )
     ].join('\n');
@@ -240,14 +239,13 @@ export default function OrdersPage() {
     document.body.removeChild(link);
   }, [orders]);
 
-  // --- Handlers solo actualizan la URL ---
   const updateQueryParams = useCallback(
     (newParams: Record<string, string | number>) => {
       const params = new URLSearchParams(searchParams);
       let resetOffset = false;
       Object.entries(newParams).forEach(([key, value]) => {
         if (key !== 'offset' && params.get(key) !== String(value)) {
-          resetOffset = true; // Reset offset if filters change
+          resetOffset = true;
         }
         if (value !== undefined && value !== null && String(value) !== '') {
           params.set(key, String(value));
@@ -259,7 +257,7 @@ export default function OrdersPage() {
         params.set('offset', '0');
       }
       if (!params.has('limit')) {
-        params.set('limit', String(pageSizeValue)); // Use state for default limit if not present
+        params.set('limit', String(pageSizeValue));
       }
       router.push(`${pathname}?${params.toString()}`, { scroll: false });
     },

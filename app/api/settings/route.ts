@@ -1,4 +1,3 @@
-// app/api/settings/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { businessSettings } from '@/lib/db';

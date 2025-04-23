@@ -6,7 +6,7 @@ export const NewIngredientPriceSchema = z.object({
   id: z.coerce.number().optional(),
   name: z.string().trim().min(1, { message: 'El nombre es requerido' }),
   unit: allowedUnits,
-  pricePerUnit: z.coerce // Convierte string a número
+  pricePerUnit: z.coerce
     .number({ invalid_type_error: 'El precio debe ser un número' })
     .min(0, { message: 'El precio no puede ser negativo' }),
   supplier: z.string().trim().optional()

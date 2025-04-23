@@ -20,9 +20,8 @@ interface DashboardBreadcrumbProps {
 }
 
 function DashboardBreadcrumb({ trail }: DashboardBreadcrumbProps) {
-  // Si no hay ruta, no renderizar nada o un estado por defecto
   if (!trail || trail.length === 0) {
-    return null; // O un breadcrumb base si siempre quieres mostrar "Inicio"
+    return null;
   }
 
   return (

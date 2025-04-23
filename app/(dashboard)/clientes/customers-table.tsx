@@ -15,18 +15,16 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'; // Import hooks
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Customer } from './customer';
 import { Customer as CustomerType } from '@types';
-import { JSX, useCallback } from 'react'; // Import useCallback
-
-// Removed CUSTOMERS_PER_PAGE constant
+import { JSX, useCallback } from 'react';
 
 interface CustomersTableProps {
   customers: CustomerType[];
   offset: number;
-  limit: number; // Added limit prop
+  limit: number;
   totalCustomers: number;
   setCustomers: React.Dispatch<React.SetStateAction<CustomerType[]>>;
   editCustomer: (customer: CustomerType) => void;
@@ -36,7 +34,7 @@ interface CustomersTableProps {
 export function CustomersTable({
   customers,
   offset,
-  limit, // Use limit prop
+  limit,
   totalCustomers,
   setCustomers,
   editCustomer,

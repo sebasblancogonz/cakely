@@ -203,7 +203,7 @@ export function OrdersTable({
             <DropdownMenuSeparator />
             {availableColumns.map((column) => {
               if (!column.canHide && column.id !== 'actions') return null;
-              if (column.id === 'actions' && !column.canHide) return null; // Explicitly keep actions always visible if canHide is false
+              if (column.id === 'actions' && !column.canHide) return null;
 
               if (column.canHide) {
                 return (

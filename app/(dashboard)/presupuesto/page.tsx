@@ -130,7 +130,7 @@ export default function QuotesPage() {
       }
     }
     loadPrerequisites();
-  }, [toast, setValue, watch]); // Added watch
+  }, [toast, setValue, watch]);
 
   const essentialSettingsMissing = useMemo(() => {
     if (loadingData) return true;

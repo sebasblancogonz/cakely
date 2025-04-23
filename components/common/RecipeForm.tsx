@@ -1,17 +1,10 @@
-// components/forms/RecipeForm.tsx (Nueva ruta de ejemplo)
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  IngredientPrice,
-  ProductType,
-  Recipe,
-  RecipeIngredient,
-  RecipeWithIngredients
-} from '@types';
+import { IngredientPrice, ProductType, RecipeWithIngredients } from '@types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,7 +18,6 @@ import {
 } from '@/components/ui/select';
 import { DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Trash2, Plus } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 const recipeFormSchema = z.object({
   id: z.coerce.number().optional(),
@@ -64,13 +56,10 @@ export function RecipeForm({
   onSave,
   closeDialog
 }: RecipeFormProps) {
-  const { toast } = useToast();
   const {
     register,
     handleSubmit,
     control,
-    setValue,
-    watch,
     formState: { errors, isSubmitting }
   } = useForm<RecipeFormData>({
     resolver: zodResolver(recipeFormSchema),

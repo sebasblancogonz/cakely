@@ -65,7 +65,6 @@ export function Order({
         const value = Number(order[key]);
         return isNaN(value) ? '-' : `${value.toFixed(2)}€`;
       case 'orderStatus':
-        // Ensure currentStatus is not undefined before passing
         return order.orderStatus ? (
           <Status
             orderId={order.id!}
@@ -74,9 +73,9 @@ export function Order({
           />
         ) : (
           '-'
-        ); // Fallback if status is missing
+        );
       case 'actions':
-        return null; // Handled separately
+        return null;
       default:
         return order[key as keyof OrderType] !== null &&
           order[key as keyof OrderType] !== undefined

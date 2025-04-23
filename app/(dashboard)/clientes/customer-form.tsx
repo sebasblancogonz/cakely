@@ -52,7 +52,7 @@ const CustomerForm = ({
         keyof Customer,
         (value: FormDataEntryValue) => any
       > = {
-        id: (value) => value, // No se actualiza
+        id: (value) => value,
         name: (value) => value.toString(),
         email: (value) => value.toString(),
         phone: (value) => value.toString(),

@@ -111,7 +111,7 @@ const OrderDetails = ({ order }: { order: Order }) => {
         slides={order.images.map((img) => ({ src: img.url }))}
         styles={{
           container: {
-            backgroundColor: 'rgba(0, 0, 0, 0.5)' // 20% opacidad
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
           }
         }}
       />

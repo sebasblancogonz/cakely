@@ -53,14 +53,12 @@ export function NavItem({
       : 'h-9 w-9 justify-center md:h-8 md:w-8'
   );
 
-  const contentClasses = cn(
-    'flex items-center gap-2 overflow-hidden w-full' // Overflow hidden aquí es importante
-  );
+  const contentClasses = cn('flex items-center gap-2 overflow-hidden w-full');
 
   const labelClasses = cn(
-    'whitespace-nowrap transition-all ease-in-out', // Transición para max-width y opacity
-    animationDuration, // Usa la duración pasada como prop o el default
-    isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0' // Animar max-width y opacity
+    'whitespace-nowrap transition-all ease-in-out',
+    animationDuration,
+    isExpanded ? 'opacity-100 max-w-[150px]' : 'opacity-0 max-w-0'
   );
 
   const itemContent = (

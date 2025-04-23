@@ -1,4 +1,3 @@
-// app/api/upload/route.ts
 import { OrderImage } from '@types';
 import ImageKit from 'imagekit';
 import { NextRequest, NextResponse } from 'next/server';
