@@ -88,7 +88,7 @@ export interface OrderHistoryEntry {
 }
 
 export interface OrderImage {
-  id?: string;
+  id: string;
   url: string;
   thumbnailUrl?: string;
 }
