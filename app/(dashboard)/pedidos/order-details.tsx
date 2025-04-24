@@ -66,6 +66,9 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
   const imagesArray: OrderImage[] = Array.isArray(order.images)
     ? order.images
     : [];
+  const totalPriceNum = Number(order.totalPrice || '0');
+  const depositAmountNum = Number(order.depositAmount || '0');
+  const pendingAmount = totalPriceNum - depositAmountNum;
 
   const orderDetails: OrderDetailUIItem[] = [
     {
@@ -147,8 +150,19 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
     },
     {
       label: 'Precio Total',
-      value: formatCurrency(order.totalPrice),
+      value: formatCurrency(totalPriceNum),
       key: 'totalPrice'
+    },
+    {
+      label: 'Señal Recibida',
+      value: formatCurrency(depositAmountNum),
+      key: 'depositAmount'
+    },
+    {
+      label: 'Importe Pendiente',
+      value: formatCurrency(pendingAmount),
+      key: 'pendingAmount',
+      className: 'font-semibold'
     },
     {
       label: 'Estado de pago',

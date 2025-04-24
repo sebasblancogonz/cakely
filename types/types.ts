@@ -124,7 +124,7 @@ export const recipeFormSchema = z.object({
 });
 export type RecipeFormData = z.infer<typeof recipeFormSchema>;
 
-export const orderFormSchema = z.object({
+export const createOrderFormSchema = z.object({
   customerId: z.coerce
     .number()
     .int()
@@ -154,6 +154,23 @@ export const orderFormSchema = z.object({
     .positive({ message: 'Precio total debe ser positivo' }),
   paymentStatus: z.nativeEnum(PaymentStatus),
   paymentMethod: z.nativeEnum(PaymentMethod),
+  depositAmount: z.coerce
+    .number()
+    .min(0, { message: 'La señal no puede ser negativa' })
+    .optional(),
   notes: z.string().optional()
 });
-export type OrderFormData = z.infer<typeof orderFormSchema>;
+
+export const updateOrderFormSchema = createOrderFormSchema
+  .omit({ customerId: true })
+  .partial()
+  .refine(
+    (data) => Object.keys(data).length > 0,
+
+    {
+      message: 'Al menos un campo debe ser proporcionado'
+    }
+  );
+
+export type OrderFormData = z.infer<typeof createOrderFormSchema>;
+export type UpdateOrderFormData = z.infer<typeof updateOrderFormSchema>;

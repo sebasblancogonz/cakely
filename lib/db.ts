@@ -24,7 +24,13 @@ import {
   relations,
   SQL
 } from 'drizzle-orm';
-import { OrderStatus, PaymentMethod, PaymentStatus, ProductType } from '@types';
+import {
+  OrderFormData,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  ProductType
+} from '@types';
 
 export const orderStatusEnum = pgEnum(
   'order_status',
@@ -74,6 +80,9 @@ export const orders = pgTable('orders', {
   totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
   paymentStatus: paymentStatusEnum('payment_status').notNull(),
   paymentMethod: paymentMethodEnum('payment_method').notNull(),
+  depositAmount: numeric('deposit_amount', { precision: 10, scale: 2 }).default(
+    '0.00'
+  ),
   notes: text('notes'),
   orderHistory: jsonb('order_history').default('[]'),
   images: jsonb('images').default('[]')
@@ -275,6 +284,7 @@ const UpdateOrderSchema = z
     totalPrice: z.coerce.number().positive().optional(),
     paymentStatus: z.nativeEnum(PaymentStatus).optional(),
     paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+    depositAmount: z.coerce.number().positive().optional(),
     notes: z.string().optional()
   })
   .partial()
@@ -491,6 +501,7 @@ export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
     totalPrice: orderInput.totalPrice,
     paymentStatus: orderInput.paymentStatus,
     paymentMethod: orderInput.paymentMethod,
+    depositAmount: (orderInput.depositAmount ?? 0).toString(),
     notes: orderInput.notes,
     orderHistory: orderInput.orderHistory ?? [],
     images: orderInput.images ?? []
@@ -529,7 +540,7 @@ export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
 }
 
 export async function updateOrder(
-  orderInput: Partial<Omit<Order, 'id' | 'customer'>>,
+  orderInput: Partial<OrderFormData>,
   orderId: number
 ): Promise<Order> {
   const validationResult = UpdateOrderSchema.safeParse(orderInput);
@@ -548,9 +559,9 @@ export async function updateOrder(
   const dataToSet: Record<string, any> = {};
   for (const [key, value] of Object.entries(validatedData)) {
     if (value !== undefined) {
-      if (key === 'amount' || key === 'totalPrice') {
+      if (key === 'amount' || key === 'totalPrice' || key === 'depositAmount') {
         dataToSet[key] = (value as number).toString();
-      } else if (key === 'orderDate' || key === 'deliveryDate') {
+      } else if (key === 'deliveryDate') {
         dataToSet[key] =
           value === null
             ? null

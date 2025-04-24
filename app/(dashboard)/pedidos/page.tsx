@@ -29,6 +29,7 @@ import {
   CardFooter,
   CardHeader
 } from '@/components/ui/card';
+import UpdateOrderForm from './update-order-form';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -401,13 +402,18 @@ export default function OrdersPage() {
       </Tabs>
 
       <Modal isOpen={isModalOpen} onClose={closeModal}>
-        {isEditing || isCreating ? (
+        {isCreating ? (
           <OrderForm
             setIsModalOpen={setIsModalOpen}
             setOrders={setOrders}
-            setIsEditing={setIsEditing}
             setIsCreating={setIsCreating}
-            orderToEdit={isEditing ? orderToEdit : null}
+          />
+        ) : isEditing ? (
+          <UpdateOrderForm
+            setIsModalOpen={setIsModalOpen}
+            setOrders={setOrders}
+            setIsEditing={setIsEditing}
+            orderToEdit={orderToEdit!}
           />
         ) : isUploadingImage && orderToEdit ? (
           <UploadImage orderId={orderToEdit.id!} />

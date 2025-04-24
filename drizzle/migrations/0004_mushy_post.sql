@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "deposit_amount" numeric(10, 2) DEFAULT '0.00';

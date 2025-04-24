@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, updateOrder, orders } from '@/lib/db';
-import { Order } from '@types';
+import { Order, UpdateOrderFormData, updateOrderFormSchema } from '@types';
 import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -45,12 +45,29 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const order: Order = await req.json();
+  const orderInput: unknown = await req.json();
 
-  console.log('Received order:', order);
+  const validationResult = updateOrderFormSchema.safeParse(orderInput);
+
+  if (!validationResult.success) {
+    console.error(
+      'API Order PATCH Validation Error:',
+      validationResult.error.format()
+    );
+    return NextResponse.json(
+      {
+        message: 'Invalid input data',
+        errors: validationResult.error.format()
+      },
+      { status: 400 }
+    );
+  }
+
+  const validatedData: UpdateOrderFormData = validationResult.data;
+  console.log('Validated order update data:', validatedData);
 
   try {
-    const res = await updateOrder(order, orderId);
+    const res = await updateOrder(validatedData, orderId);
     return NextResponse.json(res);
   } catch (error) {
     console.error('Error updating order:', error);
