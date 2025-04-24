@@ -11,7 +11,9 @@ import {
   serial,
   jsonb,
   varchar,
-  uniqueIndex
+  uniqueIndex,
+  foreignKey,
+  primaryKey
 } from 'drizzle-orm/pg-core';
 import {
   and,
@@ -29,7 +31,9 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
-  ProductType
+  ProductType,
+  UpdateOrderFormData,
+  updateOrderFormSchema
 } from '@types';
 
 export const orderStatusEnum = pgEnum(
@@ -52,8 +56,36 @@ export const productTypeEnum = pgEnum(
   Object.values(ProductType) as [string, ...string[]]
 );
 
+export const users = pgTable('users', {
+  id: text('id').primaryKey(),
+  businessId: integer('business_id'),
+  name: text('name'),
+  email: text('email').notNull().unique(),
+  emailVerified: timestamp('emailVerified', { mode: 'date' }),
+  image: text('image')
+});
+
+export const businesses = pgTable('businesses', {
+  id: serial('id').primaryKey(),
+  ownerUserId: text('owner_user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  logoUrl: text('logo_url'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+export const usersBusinessFk = foreignKey({
+  columns: [users.businessId],
+  foreignColumns: [businesses.id]
+}).onDelete('cascade');
+
 export const orders = pgTable('orders', {
   id: serial('order_id').primaryKey(),
+  businessId: integer('business_id')
+    .notNull()
+    .references(() => businesses.id, { onDelete: 'cascade' }),
   customerId: integer('customer_id')
     .notNull()
     .references(() => customers.id, {
@@ -61,16 +93,12 @@ export const orders = pgTable('orders', {
       onUpdate: 'cascade'
     }),
   description: text('description').notNull(),
-  orderDate: timestamp('order_date', {
-    withTimezone: false,
-    mode: 'date'
-  }).notNull(),
+  orderDate: timestamp('order_date', { mode: 'date' }).notNull().defaultNow(),
   amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
-  deliveryDate: timestamp('delivery_date', {
-    withTimezone: false,
-    mode: 'date'
-  }),
-  orderStatus: orderStatusEnum('order_status').notNull(),
+  deliveryDate: timestamp('delivery_date', { mode: 'date' }),
+  orderStatus: orderStatusEnum('order_status')
+    .notNull()
+    .default(OrderStatus.pending),
   productType: productTypeEnum('product_type').notNull(),
   customizationDetails: text('customization_details'),
   quantity: integer('quantity').notNull(),
@@ -78,8 +106,12 @@ export const orders = pgTable('orders', {
   flavor: text('flavor').notNull(),
   allergyInformation: text('allergy_information'),
   totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
-  paymentStatus: paymentStatusEnum('payment_status').notNull(),
-  paymentMethod: paymentMethodEnum('payment_method').notNull(),
+  paymentStatus: paymentStatusEnum('payment_status')
+    .notNull()
+    .default(PaymentStatus.Pendiente),
+  paymentMethod: paymentMethodEnum('payment_method')
+    .notNull()
+    .default(PaymentMethod.Efectivo),
   depositAmount: numeric('deposit_amount', { precision: 10, scale: 2 }).default(
     '0.00'
   ),
@@ -89,7 +121,9 @@ export const orders = pgTable('orders', {
 });
 
 export const businessSettings = pgTable('business_settings', {
-  id: serial('id').primaryKey(),
+  businessId: integer('business_id')
+    .primaryKey()
+    .references(() => businesses.id, { onDelete: 'cascade' }),
   laborRateHourly: numeric('labor_rate_hourly', { precision: 10, scale: 2 })
     .notNull()
     .default('15.00'),
@@ -131,7 +165,10 @@ export const recipes = pgTable(
   'recipes',
   {
     id: serial('id').primaryKey(),
-    name: varchar('name', { length: 255 }).notNull().unique(),
+    businessId: integer('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
     productType: varchar('product_type', { length: 100 }).notNull(),
     baseLaborHours: numeric('base_labor_hours', {
       precision: 10,
@@ -142,7 +179,10 @@ export const recipes = pgTable(
     updatedAt: timestamp('updated_at').defaultNow().notNull()
   },
   (table) => ({
-    recipeNameIdx: uniqueIndex('recipe_name_idx').on(table.name)
+    businessRecipeNameIdx: uniqueIndex('business_recipe_name_idx').on(
+      table.businessId,
+      table.name
+    )
   })
 );
 
@@ -150,7 +190,10 @@ export const ingredientPrices = pgTable(
   'ingredient_prices',
   {
     id: serial('id').primaryKey(),
-    name: varchar('name', { length: 255 }).notNull().unique(),
+    businessId: integer('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
     unit: varchar('unit', { length: 50 }).notNull(),
     pricePerUnit: numeric('price_per_unit', {
       precision: 10,
@@ -160,7 +203,10 @@ export const ingredientPrices = pgTable(
     updatedAt: timestamp('updated_at').defaultNow().notNull()
   },
   (table) => ({
-    nameIdx: uniqueIndex('ingredient_name_idx').on(table.name)
+    businessIngredientNameIdx: uniqueIndex('business_ingredient_name_idx').on(
+      table.businessId,
+      table.name
+    )
   })
 );
 
@@ -178,6 +224,9 @@ export const recipeIngredients = pgTable('recipe_ingredients', {
 
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
+  businessId: integer('business_id')
+    .notNull()
+    .references(() => businesses.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   email: text('email').notNull(),
   phone: text('phone').notNull(),
@@ -191,13 +240,108 @@ export const customers = pgTable('customers', {
   notes: text('notes')
 });
 
-export const recipesRelations = relations(recipes, ({ many }) => ({
+export const accounts = pgTable(
+  'accounts',
+  {
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    provider: text('provider').notNull(),
+    providerAccountId: text('providerAccountId').notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
+    scope: text('scope'),
+    id_token: text('id_token'),
+    session_state: text('session_state')
+  },
+  (account) => ({
+    compoundKey: primaryKey({
+      columns: [account.provider, account.providerAccountId]
+    })
+  })
+);
+
+export const sessions = pgTable('sessions', {
+  sessionToken: text('sessionToken').primaryKey(),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expires: timestamp('expires', { mode: 'date' }).notNull()
+});
+
+export const verificationTokens = pgTable(
+  'verification_tokens',
+  {
+    identifier: text('identifier').notNull(),
+    token: text('token').notNull(),
+    expires: timestamp('expires', { mode: 'date' }).notNull()
+  },
+  (vt) => ({
+    compoundKey: primaryKey({ columns: [vt.identifier, vt.token] })
+  })
+);
+
+export const businessesRelations = relations(businesses, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [businesses.ownerUserId],
+    references: [users.id]
+  }),
+  settings: one(businessSettings, {
+    fields: [businesses.id],
+    references: [businessSettings.businessId]
+  }),
+  customers: many(customers),
+  orders: many(orders),
+  recipes: many(recipes),
+  ingredientPrices: many(ingredientPrices)
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  business: one(businesses, {
+    fields: [users.businessId],
+    references: [businesses.id]
+  }),
+  accounts: many(accounts),
+  sessions: many(sessions)
+}));
+
+export const customersRelations = relations(customers, ({ one, many }) => ({
+  business: one(businesses, {
+    fields: [customers.businessId],
+    references: [businesses.id]
+  }),
+  orders: many(orders)
+}));
+
+export const ordersRelations = relations(orders, ({ one }) => ({
+  business: one(businesses, {
+    fields: [orders.businessId],
+    references: [businesses.id]
+  }),
+  customer: one(customers, {
+    fields: [orders.customerId],
+    references: [customers.id]
+  })
+}));
+
+export const recipesRelations = relations(recipes, ({ one, many }) => ({
+  business: one(businesses, {
+    fields: [recipes.businessId],
+    references: [businesses.id]
+  }),
   recipeIngredients: many(recipeIngredients)
 }));
 
 export const ingredientPricesRelations = relations(
   ingredientPrices,
-  ({ many }) => ({
+  ({ one, many }) => ({
+    business: one(businesses, {
+      fields: [ingredientPrices.businessId],
+      references: [businesses.id]
+    }),
     recipeIngredients: many(recipeIngredients)
   })
 );
@@ -216,29 +360,47 @@ export const recipeIngredientsRelations = relations(
   })
 );
 
-export const customersRelations = relations(customers, ({ many }) => ({
-  orders: many(orders)
+export const businessSettingsRelations = relations(
+  businessSettings,
+  ({ one }) => ({
+    business: one(businesses, {
+      fields: [businessSettings.businessId],
+      references: [businesses.id]
+    })
+  })
+);
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, { fields: [accounts.userId], references: [users.id] })
 }));
 
-export const ordersRelations = relations(orders, ({ one }) => ({
-  customer: one(customers, {
-    fields: [orders.customerId],
-    references: [customers.id]
-  })
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, { fields: [sessions.userId], references: [users.id] })
 }));
 
 const schema = {
+  businesses,
+  users,
+  accounts,
+  sessions,
+  verificationTokens,
+  customers,
   orders,
   businessSettings,
   recipes,
   ingredientPrices,
   recipeIngredients,
-  customers,
+  // Relations
+  businessesRelations,
+  usersRelations,
   customersRelations,
   ordersRelations,
   recipesRelations,
   ingredientPricesRelations,
-  recipeIngredientsRelations
+  recipeIngredientsRelations,
+  businessSettingsRelations,
+  accountsRelations,
+  sessionsRelations
 };
 
 if (!process.env.POSTGRES_URL) {
@@ -249,6 +411,8 @@ const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 
 export const db = drizzle(pool, { schema });
 
+export type SelectBusiness = typeof businesses.$inferSelect;
+export type SelectUser = typeof users.$inferSelect;
 export type SelectOrder = typeof orders.$inferSelect;
 export type SelectCustomer = typeof customers.$inferSelect;
 export type Setting = typeof businessSettings.$inferSelect;
@@ -298,63 +462,166 @@ interface GetCustomersResult {
   totalCustomers: number;
 }
 
-export async function getCustomers(
-  search = '',
-  offset = 0,
-  limit = 5
-): Promise<GetCustomersResult> {
-  let searchCondition: SQL | undefined;
-  const trimmedSearch = search?.trim();
-  if (trimmedSearch) {
-    const searchTerm = `%${trimmedSearch}%`;
-    searchCondition = or(
-      ilike(customers.name, searchTerm),
-      ilike(customers.email, searchTerm),
-      ilike(customers.phone, searchTerm),
-      ilike(customers.notes, searchTerm)
-    );
-  }
-
-  let countQueryBuilder = db
-    .select({ count: count() })
-    .from(customers)
-    .$dynamic();
-  if (searchCondition) {
-    countQueryBuilder = countQueryBuilder.where(searchCondition);
-  }
-  const totalResult = await countQueryBuilder;
-  const totalCustomers = totalResult[0]?.count ?? 0;
-
-  let dataQueryBuilder = db.select().from(customers).$dynamic();
-  if (searchCondition) {
-    dataQueryBuilder = dataQueryBuilder.where(searchCondition);
-  }
-  dataQueryBuilder = dataQueryBuilder.orderBy(asc(customers.name));
-  dataQueryBuilder = dataQueryBuilder.limit(limit).offset(offset);
-  const results = await dataQueryBuilder;
-
-  const fetchedCustomers: Customer[] = results as Customer[];
-  const newOffset = offset + limit < totalCustomers ? offset + limit : null;
-
-  return {
-    customers: fetchedCustomers,
-    newOffset,
-    totalCustomers
-  };
-}
-
 interface GetOrdersResult {
   orders: Order[];
   newOffset: number | null;
   totalOrders: number;
 }
 
+export async function getCustomers(
+  businessId: number,
+  search = '',
+  offset = 0,
+  limit = 5
+): Promise<GetCustomersResult> {
+  if (!businessId) throw new Error('Business ID is required');
+
+  const baseCondition = eq(customers.businessId, businessId);
+  let searchCondition: SQL | undefined;
+  const trimmedSearch = search?.trim();
+
+  if (trimmedSearch) {
+    const searchTerm = `%${trimmedSearch}%`;
+    searchCondition = or(
+      ilike(customers.name, searchTerm),
+      ilike(customers.email, searchTerm),
+      ilike(customers.phone, searchTerm),
+      ilike(customers.instagramHandle, searchTerm),
+      ilike(customers.notes, searchTerm)
+    );
+  }
+
+  const whereClause = searchCondition
+    ? and(baseCondition, searchCondition)
+    : baseCondition;
+
+  let countQueryBuilder = db
+    .select({ count: count() })
+    .from(customers)
+    .where(whereClause)
+    .$dynamic();
+
+  let totalCustomers = 0;
+  try {
+    const totalResult = await countQueryBuilder;
+    totalCustomers = totalResult[0]?.count ?? 0;
+  } catch (e) {
+    console.error('Error counting customers:', e);
+  }
+
+  let dataQueryBuilder = db
+    .select()
+    .from(customers)
+    .where(whereClause)
+    .orderBy(asc(customers.name))
+    .limit(limit)
+    .offset(offset)
+    .$dynamic();
+
+  let results: SelectCustomer[] = [];
+  try {
+    results = await dataQueryBuilder;
+  } catch (e) {
+    console.error('Error fetching customers:', e);
+    throw new Error('Failed to fetch customer data');
+  }
+
+  const newOffset = offset + limit < totalCustomers ? offset + limit : null;
+
+  return {
+    customers: results as Customer[],
+    newOffset,
+    totalCustomers
+  };
+}
+
+export async function saveCustomer(
+  businessId: number,
+  customerInput: Omit<Customer, 'id' | 'registrationDate' | 'orders'>
+): Promise<Customer> {
+  if (!businessId) throw new Error('Business ID is required');
+
+  const customerToSave = {
+    ...customerInput,
+    businessId: businessId,
+    registrationDate: new Date()
+  };
+  try {
+    const result = await db
+      .insert(customers)
+      .values(customerToSave)
+      .returning();
+    return result[0] as Customer;
+  } catch (error) {
+    console.error('Error saving customer:', error);
+    throw new Error('Failed to save customer');
+  }
+}
+
+export async function updateCustomer(
+  businessId: number,
+  customerInput: Partial<
+    Omit<Customer, 'id' | 'registrationDate' | 'orders' | 'businessId'>
+  >,
+  customerId: number
+): Promise<void> {
+  if (!businessId) throw new Error('Business ID is required');
+  if (!customerId) throw new Error('Customer ID is required');
+
+  const dataToSet = { ...customerInput };
+  if (Object.keys(dataToSet).length === 0)
+    throw new Error('No fields provided for update');
+
+  try {
+    const result = await db
+      .update(customers)
+      .set(dataToSet)
+      .where(
+        and(eq(customers.id, customerId), eq(customers.businessId, businessId))
+      );
+    if (result.rowCount === 0)
+      throw new Error(`Customer not found or access denied.`);
+  } catch (error) {
+    console.error('Error updating customer:', error);
+    throw new Error('Failed to update customer');
+  }
+}
+
+export async function deleteCustomerById(
+  businessId: number,
+  id: number
+): Promise<void> {
+  if (!businessId) throw new Error('Business ID is required');
+  if (!id) throw new Error('Customer ID is required');
+  try {
+    const result = await db
+      .delete(customers)
+      .where(and(eq(customers.id, id), eq(customers.businessId, businessId)));
+    if (result.rowCount === 0) {
+      console.warn(
+        `Attempted to delete non-existent or unauthorized customer: ID ${id}, Business ${businessId}`
+      );
+    }
+  } catch (error) {
+    console.error(
+      `Error deleting customer ${id} for business ${businessId}:`,
+      error
+    );
+    throw new Error('Failed to delete customer');
+  }
+}
+
 export async function getOrders(
+  businessId: number,
   search: string = '',
   offset: number = 0,
   limit: number = 5,
   status: string | null = null
 ): Promise<GetOrdersResult> {
+  if (!businessId) throw new Error('Business ID is required');
+
+  const baseBusinessCondition = eq(orders.businessId, businessId);
+
   let statusCondition: SQL | undefined;
   const statusKey = status?.trim().toLowerCase();
   if (statusKey && statusKey !== 'all') {
@@ -384,25 +651,25 @@ export async function getOrders(
     );
   }
 
-  const conditions: (SQL | undefined)[] = [];
+  const conditions: (SQL | undefined)[] = [baseBusinessCondition];
   if (statusCondition) conditions.push(statusCondition);
   if (searchCondition) conditions.push(searchCondition);
 
-  const whereClause =
-    conditions.length > 0
-      ? and(...(conditions.filter((c) => c !== undefined) as SQL[]))
-      : undefined;
+  const whereClause = and(
+    ...(conditions.filter((c) => c !== undefined) as SQL[])
+  );
 
   let countQueryBuilder = db
     .select({ count: count(orders.id) })
     .from(orders)
+    .where(
+      and(
+        ...([baseBusinessCondition, statusCondition].filter(
+          (c) => c !== undefined
+        ) as SQL[])
+      )
+    )
     .$dynamic();
-  const orderOnlyConditions = [statusCondition].filter(
-    (c) => c !== undefined
-  ) as SQL[];
-  if (orderOnlyConditions.length > 0) {
-    countQueryBuilder = countQueryBuilder.where(and(...orderOnlyConditions));
-  }
 
   let totalOrders = 0;
   try {
@@ -443,54 +710,24 @@ export async function getOrders(
   };
 }
 
-export async function deleteCustomerById(id: number): Promise<void> {
-  await db.delete(customers).where(eq(customers.id, id));
-}
-
-export async function deleteOrderById(id: number): Promise<void> {
-  await db.delete(orders).where(eq(orders.id, id));
-}
-
-export async function saveCustomer(
-  customer: Omit<Customer, 'id' | 'registrationDate' | 'orders'>
-): Promise<Customer> {
-  const customerToSave = {
-    ...customer,
-    registrationDate: new Date()
-  };
-  try {
-    console.log('Inserting customer:', customerToSave);
-    const result = await db
-      .insert(customers)
-      .values(customerToSave)
-      .returning();
-    return result[0] as Customer;
-  } catch (error) {
-    console.error('Error saving customer:', error);
-    throw new Error('Failed to save customer');
-  }
-}
-
-type SaveOrderInput = Omit<
-  Order,
-  'id' | 'customer' | 'orderHistory' | 'images' | 'createdAt' | 'updatedAt'
-> & {
-  customerId: number;
+type SaveOrderInput = OrderFormData & {
+  businessId: number;
+  orderStatus: OrderStatus;
   orderHistory?: any[];
   images?: any[];
 };
 
 export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
+  if (!orderInput.businessId)
+    throw new Error('Business ID is required to save an order');
+
   const orderToSave = {
+    businessId: orderInput.businessId,
     customerId: orderInput.customerId,
     description: orderInput.description,
     orderDate: new Date(),
-    amount: orderInput.amount,
-    deliveryDate: orderInput.deliveryDate
-      ? orderInput.deliveryDate instanceof Date
-        ? orderInput.deliveryDate
-        : new Date(orderInput.deliveryDate)
-      : null,
+    amount: orderInput.amount.toString(),
+    deliveryDate: orderInput.deliveryDate ? orderInput.deliveryDate : null,
     orderStatus: orderInput.orderStatus,
     productType: orderInput.productType,
     customizationDetails: orderInput.customizationDetails,
@@ -498,7 +735,7 @@ export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
     sizeOrWeight: orderInput.sizeOrWeight,
     flavor: orderInput.flavor,
     allergyInformation: orderInput.allergyInformation,
-    totalPrice: orderInput.totalPrice,
+    totalPrice: orderInput.totalPrice.toString(),
     paymentStatus: orderInput.paymentStatus,
     paymentMethod: orderInput.paymentMethod,
     depositAmount: (orderInput.depositAmount ?? 0).toString(),
@@ -508,29 +745,25 @@ export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
   };
 
   try {
-    console.log('Inserting order:', orderToSave);
     const result = await db
       .insert(orders)
       .values(orderToSave)
       .returning({ insertedId: orders.id });
-
-    if (!result || result.length === 0) {
+    if (!result || result.length === 0)
       throw new Error('Insert failed, no order ID returned.');
-    }
     const newOrderId = result[0].insertedId;
 
     const newOrderWithCustomer = await db.query.orders.findFirst({
-      where: eq(orders.id, newOrderId),
-      with: {
-        customer: true
-      }
+      where: and(
+        eq(orders.id, newOrderId),
+        eq(orders.businessId, orderInput.businessId)
+      ),
+      with: { customer: true }
     });
-
-    if (!newOrderWithCustomer) {
+    if (!newOrderWithCustomer)
       throw new Error(
         'Failed to fetch newly created order with customer details.'
       );
-    }
 
     return newOrderWithCustomer as Order;
   } catch (error) {
@@ -540,10 +773,14 @@ export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
 }
 
 export async function updateOrder(
-  orderInput: Partial<OrderFormData>,
+  businessId: number,
+  orderInput: UpdateOrderFormData,
   orderId: number
 ): Promise<Order> {
-  const validationResult = UpdateOrderSchema.safeParse(orderInput);
+  if (!businessId) throw new Error('Business ID is required');
+  if (!orderId) throw new Error('Order ID is required');
+
+  const validationResult = updateOrderFormSchema.safeParse(orderInput);
   if (!validationResult.success) {
     console.error('Validation failed:', validationResult.error.format());
     throw new Error(
@@ -551,10 +788,8 @@ export async function updateOrder(
     );
   }
   const validatedData = validationResult.data;
-
-  if (Object.keys(validatedData).length === 0) {
+  if (Object.keys(validatedData).length === 0)
     throw new Error('No valid fields provided for update');
-  }
 
   const dataToSet: Record<string, any> = {};
   for (const [key, value] of Object.entries(validatedData)) {
@@ -579,23 +814,19 @@ export async function updateOrder(
     const updatedResult = await db
       .update(orders)
       .set(dataToSet)
-      .where(eq(orders.id, orderId))
+      .where(and(eq(orders.id, orderId), eq(orders.businessId, businessId)))
       .returning({ updatedId: orders.id });
 
     if (!updatedResult || updatedResult.length === 0) {
-      throw new Error(`Order with ID ${orderId} not found.`);
+      throw new Error(`Order with ID ${orderId} not found or not authorized.`);
     }
 
     const updatedOrderWithCustomer = await db.query.orders.findFirst({
-      where: eq(orders.id, orderId),
-      with: {
-        customer: true
-      }
+      where: and(eq(orders.id, orderId), eq(orders.businessId, businessId)),
+      with: { customer: true }
     });
-
-    if (!updatedOrderWithCustomer) {
+    if (!updatedOrderWithCustomer)
       throw new Error('Failed to fetch updated order with customer details.');
-    }
 
     return updatedOrderWithCustomer as Order;
   } catch (error) {
@@ -604,37 +835,49 @@ export async function updateOrder(
   }
 }
 
+export async function deleteOrderById(
+  businessId: number,
+  id: number
+): Promise<void> {
+  if (!businessId) throw new Error('Business ID is required');
+  if (!id) throw new Error('Order ID is required');
+  try {
+    const result = await db
+      .delete(orders)
+      .where(and(eq(orders.id, id), eq(orders.businessId, businessId)));
+    if (result.rowCount === 0) {
+      console.warn(
+        `Attempted to delete non-existent or unauthorized order: ID ${id}, Business ${businessId}`
+      );
+    }
+  } catch (error) {
+    console.error(
+      `Error deleting order ${id} for business ${businessId}:`,
+      error
+    );
+    throw new Error('Failed to delete order');
+  }
+}
+
 export async function saveImageUrlsForOrder(
+  businessId: number,
   orderId: number,
   imageUrls: string[]
 ): Promise<void> {
+  if (!businessId) throw new Error('Business ID is required');
+  if (!orderId) throw new Error('Order ID is required');
   try {
     const result = await db
       .update(orders)
       .set({ images: imageUrls })
-      .where(eq(orders.id, orderId));
+      .where(and(eq(orders.id, orderId), eq(orders.businessId, businessId)));
 
     if (result.rowCount === 0) {
-      console.error(`Order with ID ${orderId} not found.`);
-      throw new Error('Order not found');
+      throw new Error('Order not found or not authorized.');
     }
     console.log(`Successfully saved image URLs for order with ID ${orderId}`);
   } catch (error) {
     console.error('Error saving image URLs for order:', error);
     throw new Error('Failed to save image URLs for order');
   }
-}
-
-export async function updateCustomer(
-  customerInput: Partial<Omit<Customer, 'id' | 'registrationDate' | 'orders'>>,
-  customerId: number
-): Promise<void> {
-  const dataToSet = { ...customerInput };
-  if (Object.keys(dataToSet).length === 0)
-    throw new Error('No fields provided');
-  const result = await db
-    .update(customers)
-    .set(dataToSet)
-    .where(eq(customers.id, customerId));
-  if (result.rowCount === 0) throw new Error(`Customer not found.`);
 }

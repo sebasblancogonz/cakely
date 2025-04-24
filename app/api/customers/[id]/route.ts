@@ -1,65 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateCustomer, db, customers } from '@/lib/db';
-import { Customer } from '@types';
-import { eq } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { ingredientPrices } from '@/lib/db';
+import { NewIngredientPriceSchema } from '@/lib/validators/ingredients';
+import { ilike, or, asc, eq, and, SQL } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const customerId = Number(pathname.split('/').pop());
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
 
   try {
-    if (isNaN(customerId)) {
-      return NextResponse.json(
-        { message: 'Invalid Customer ID' },
-        { status: 400 }
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('q') || '';
+
+    const conditions: SQL[] = [];
+    conditions.push(eq(ingredientPrices.businessId, businessId));
+
+    if (search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      conditions.push(
+        or(
+          ilike(ingredientPrices.name, searchTerm),
+          ilike(ingredientPrices.supplier, searchTerm)
+        )!
       );
     }
 
-    const customerResult = await db
+    const query = db
       .select()
-      .from(customers)
-      .where(eq(customers.id, customerId))
-      .limit(1);
+      .from(ingredientPrices)
 
-    if (customerResult.length === 0) {
-      return NextResponse.json(
-        { message: 'Customer not found' },
-        { status: 404 }
-      );
-    }
+      .where(and(...conditions))
 
-    return NextResponse.json(customerResult[0]);
+      .orderBy(asc(ingredientPrices.name));
+
+    const ingredients = await query;
+
+    return NextResponse.json(ingredients);
   } catch (error) {
-    console.error(`API Error fetching customer ${customerId}:`, error);
+    console.error(
+      `API Error fetching ingredients for business ${businessId}:`,
+      error
+    );
     return NextResponse.json(
-      { message: 'Failed to fetch customer' },
+      { message: 'Failed to fetch ingredients' },
       { status: 500 }
     );
   }
 }
 
-export async function PATCH(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const customerId = Number(pathname.split('/').pop());
+export async function POST(request: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
 
-  if (!customerId) {
+  if (!businessId) {
     return NextResponse.json(
-      { message: 'Customer ID is required' },
-      { status: 400 }
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
     );
   }
 
-  const customer: Customer = await req.json();
-
-  console.log('Received customer:', customer);
-
   try {
-    await updateCustomer(customer, customerId);
-    return NextResponse.json({ message: 'Customer updated successfully' });
-  } catch (error) {
-    console.error('Error updating customer:', error);
+    const body = await request.json();
+    const validation = NewIngredientPriceSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { message: 'Invalid input data', errors: validation.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const validatedData = validation.data;
+
+    const dataToInsert = {
+      ...validatedData,
+      businessId: businessId,
+      pricePerUnit: validatedData.pricePerUnit.toString()
+    };
+
+    const newIngredient = await db
+      .insert(ingredientPrices)
+      .values(dataToInsert)
+      .returning();
+
+    if (!newIngredient || newIngredient.length === 0) {
+      throw new Error('Failed to return new ingredient after insert.');
+    }
+
+    return NextResponse.json(newIngredient[0], { status: 201 });
+  } catch (error: any) {
+    console.error(
+      `API Error creating ingredient for business ${businessId}:`,
+      error
+    );
+    if (
+      error.code === '23505' &&
+      error.constraint === 'business_ingredient_name_idx'
+    ) {
+      return NextResponse.json(
+        {
+          message:
+            'An ingredient with this name already exists for your business'
+        },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
-      { message: 'Failed to update customer' },
+      { message: 'Failed to create ingredient', error: error.message },
       { status: 500 }
     );
   }

@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { businessSettings } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { auth } from '@/lib/auth';
 
-const SettingsPartialSchema = z
+const SettingsUpdateSchema = z
   .object({
     laborRateHourly: z.coerce.number().positive().optional(),
     profitMarginPercent: z.coerce.number().min(0).optional(),
@@ -16,26 +17,52 @@ const SettingsPartialSchema = z
     otherMonthlyOverhead: z.coerce.number().min(0).optional(),
     overheadMarkupPercent: z.coerce.number().min(0).optional()
   })
-  .partial();
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Se requiere al menos un campo para actualizar'
+  });
 
-const SettingsCompleteSchema = z.object({
-  laborRateHourly: z.coerce.number().positive().default(15),
-  profitMarginPercent: z.coerce.number().min(0).default(30),
-  ivaPercent: z.coerce.number().min(0).default(10),
-  rentMonthly: z.coerce.number().min(0).default(0),
-  electricityPriceKwh: z.coerce.number().min(0).default(0.15),
-  gasPriceUnit: z.coerce.number().min(0).default(0.06),
-  waterPriceUnit: z.coerce.number().min(0).default(2.0),
-  otherMonthlyOverhead: z.coerce.number().min(0).default(50),
-  overheadMarkupPercent: z.coerce.number().min(0).default(20)
-});
+const defaultSettingsValues = {
+  laborRateHourly: '15.00',
+  profitMarginPercent: '30.00',
+  ivaPercent: '10.00',
+  rentMonthly: '0.00',
+  electricityPriceKwh: '0.1500',
+  gasPriceUnit: '0.0600',
+  waterPriceUnit: '2.0000',
+  otherMonthlyOverhead: '50.00',
+  overheadMarkupPercent: '20.00'
+};
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
   try {
-    const settings = await db.select().from(businessSettings).limit(1);
-    return NextResponse.json(settings[0] || {});
+    const settingsResult = await db
+      .select()
+      .from(businessSettings)
+      .where(eq(businessSettings.businessId, businessId))
+      .limit(1);
+
+    const settingsFromDb = settingsResult[0];
+    const settingsToReturn = settingsFromDb
+      ? { ...settingsFromDb, updatedAt: settingsFromDb.updatedAt }
+      : { ...defaultSettingsValues, businessId: businessId, updatedAt: null };
+
+    return NextResponse.json(settingsToReturn);
   } catch (error) {
-    console.error('API Error fetching settings:', error);
+    console.error(
+      `API Error fetching settings for business ${businessId}:`,
+      error
+    );
     return NextResponse.json(
       { message: 'Failed to fetch settings' },
       { status: 500 }
@@ -43,85 +70,81 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
-    const partialValidation = SettingsPartialSchema.safeParse(body);
+    const validation = SettingsUpdateSchema.safeParse(body);
 
-    if (!partialValidation.success) {
+    if (!validation.success) {
       return NextResponse.json(
-        {
-          message: 'Invalid input data',
-          errors: partialValidation.error.format()
-        },
+        { message: 'Invalid input data', errors: validation.error.format() },
         { status: 400 }
       );
     }
 
-    const dataToUpdateOrInsert: Record<string, string | Date> = {};
-    for (const [key, value] of Object.entries(partialValidation.data)) {
-      if (value !== undefined) {
-        dataToUpdateOrInsert[key] =
-          typeof value === 'number' ? value.toString() : value;
-      }
+    const dataToSet: Record<string, string | Date> = {};
+    for (const [key, value] of Object.entries(validation.data)) {
+      dataToSet[key] = (value as number).toString();
     }
+    dataToSet.updatedAt = new Date();
 
-    if (
-      Object.keys(dataToUpdateOrInsert).length === 0 &&
-      request.method !== 'POST'
-    ) {
-      return NextResponse.json(
-        { message: 'No valid fields provided to update' },
-        { status: 400 }
-      );
-    }
+    const dataForInsert = {
+      businessId: businessId,
+      laborRateHourly:
+        validation.data.laborRateHourly?.toString() ??
+        defaultSettingsValues.laborRateHourly,
+      profitMarginPercent:
+        validation.data.profitMarginPercent?.toString() ??
+        defaultSettingsValues.profitMarginPercent,
+      ivaPercent:
+        validation.data.ivaPercent?.toString() ??
+        defaultSettingsValues.ivaPercent,
+      rentMonthly:
+        validation.data.rentMonthly?.toString() ??
+        defaultSettingsValues.rentMonthly,
+      electricityPriceKwh:
+        validation.data.electricityPriceKwh?.toString() ??
+        defaultSettingsValues.electricityPriceKwh,
+      gasPriceUnit:
+        validation.data.gasPriceUnit?.toString() ??
+        defaultSettingsValues.gasPriceUnit,
+      waterPriceUnit:
+        validation.data.waterPriceUnit?.toString() ??
+        defaultSettingsValues.waterPriceUnit,
+      otherMonthlyOverhead:
+        validation.data.otherMonthlyOverhead?.toString() ??
+        defaultSettingsValues.otherMonthlyOverhead,
+      overheadMarkupPercent:
+        validation.data.overheadMarkupPercent?.toString() ??
+        defaultSettingsValues.overheadMarkupPercent,
+      updatedAt: dataToSet.updatedAt
+    };
 
-    dataToUpdateOrInsert.updatedAt = new Date();
-
-    const existing = await db
-      .select({ id: businessSettings.id })
-      .from(businessSettings)
-      .limit(1);
-
-    let resultSettings;
-    if (existing.length > 0) {
-      resultSettings = await db
-        .update(businessSettings)
-        .set(dataToUpdateOrInsert)
-        .where(eq(businessSettings.id, existing[0].id))
-        .returning();
-    } else {
-      const completeValidation = SettingsCompleteSchema.safeParse(body);
-      if (!completeValidation.success) {
-        console.error(
-          'Complete schema validation failed for insert:',
-          completeValidation.error.format()
-        );
-        return NextResponse.json(
-          {
-            message: 'Invalid data for initial settings creation',
-            errors: completeValidation.error.format()
-          },
-          { status: 400 }
-        );
-      }
-
-      const completeDataForDb: Record<string, string | Date> = {};
-      for (const [key, value] of Object.entries(completeValidation.data)) {
-        completeDataForDb[key] =
-          typeof value === 'number' ? value.toString() : value;
-      }
-      completeDataForDb.updatedAt = new Date();
-
-      resultSettings = await db
-        .insert(businessSettings)
-        .values(completeDataForDb)
-        .returning();
-    }
+    const resultSettings = await db
+      .insert(businessSettings)
+      .values(dataForInsert)
+      .onConflictDoUpdate({
+        target: businessSettings.businessId,
+        set: dataToSet
+      })
+      .returning();
 
     return NextResponse.json(resultSettings[0] || null);
   } catch (error) {
-    console.error('API Error updating/inserting settings:', error);
+    console.error(
+      `API Error updating/inserting settings for business ${businessId}:`,
+      error
+    );
     return NextResponse.json(
       { message: 'Failed to save settings' },
       { status: 500 }

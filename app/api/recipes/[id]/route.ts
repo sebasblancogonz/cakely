@@ -1,18 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { recipes, recipeIngredients } from '@/lib/db';
+import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
 import { UpdateRecipeInputSchema } from '@/lib/validators/recipes';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
 
 interface RouteContext {
   params: { id: string };
 }
 
-export async function GET(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const id = Number(pathname.split('/').pop());
+export async function GET(request: NextRequest, context: RouteContext) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
 
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
+  const { params } = context;
   try {
+    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -21,7 +31,7 @@ export async function GET(req: NextRequest) {
     }
 
     const recipeDetails = await db.query.recipes.findFirst({
-      where: eq(recipes.id, id),
+      where: and(eq(recipes.id, id), eq(recipes.businessId, businessId)),
       with: {
         recipeIngredients: {
           with: {
@@ -40,7 +50,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(recipeDetails);
   } catch (error) {
-    console.error(`API Error fetching recipe ${id}:`, error);
+    console.error(
+      `API Error fetching recipe ${params.id} for business ${businessId}:`,
+      error
+    );
     return NextResponse.json(
       { message: 'Failed to fetch recipe details' },
       { status: 500 }
@@ -48,11 +61,20 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const id = Number(pathname.split('/').pop());
+export async function PUT(request: NextRequest, context: RouteContext) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
 
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
+  const { params } = context;
   try {
+    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -60,7 +82,7 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
+    const body = await request.json();
     const validation = UpdateRecipeInputSchema.safeParse(body);
 
     if (!validation.success) {
@@ -89,45 +111,73 @@ export async function PUT(req: NextRequest) {
       if (recipeData.notes !== undefined)
         dataToUpdateRecipe.notes = recipeData.notes;
 
-      let updatedRecipeBase;
+      let recipeExists = false;
       if (Object.keys(dataToUpdateRecipe).length > 0) {
         dataToUpdateRecipe.updatedAt = new Date();
         const updateResult = await tx
           .update(recipes)
           .set(dataToUpdateRecipe)
-          .where(eq(recipes.id, id))
+          .where(and(eq(recipes.id, id), eq(recipes.businessId, businessId)))
           .returning({ id: recipes.id });
         if (updateResult.length === 0) {
-          throw new Error('Recipe not found for update');
+          throw new Error('Recipe not found for update or not authorized');
         }
-        updatedRecipeBase = updateResult[0];
+        recipeExists = true;
       } else {
         const existing = await tx
           .select({ id: recipes.id })
           .from(recipes)
-          .where(eq(recipes.id, id));
-        if (existing.length === 0) throw new Error('Recipe not found');
-        updatedRecipeBase = existing[0];
+          .where(and(eq(recipes.id, id), eq(recipes.businessId, businessId)));
+        if (existing.length === 0)
+          throw new Error('Recipe not found or not authorized');
+        recipeExists = true;
       }
 
-      if (ingredientsData !== undefined) {
+      if (recipeExists && ingredientsData !== undefined) {
         await tx
           .delete(recipeIngredients)
           .where(eq(recipeIngredients.recipeId, id));
 
         if (ingredientsData.length > 0) {
-          const ingredientsToInsert = ingredientsData.map((ing) => ({
-            recipeId: id,
-            ingredientId: ing.ingredientId,
-            quantity: ing.quantity.toString(),
-            unit: ing.unit
-          }));
-          await tx.insert(recipeIngredients).values(ingredientsToInsert);
+          const ingredientIdsToCheck = ingredientsData.map(
+            (ing) => ing.ingredientId
+          );
+
+          const validIngredientIds = await tx
+            .select({ id: ingredientPrices.id })
+            .from(ingredientPrices)
+            .where(
+              and(
+                eq(ingredientPrices.businessId, businessId),
+                inArray(ingredientPrices.id, ingredientIdsToCheck)
+              )
+            );
+
+          const validIdSet = new Set(validIngredientIds.map((i) => i.id));
+
+          const ingredientsToInsert = ingredientsData
+            .filter((ing) => validIdSet.has(ing.ingredientId))
+            .map((ing) => ({
+              recipeId: id,
+              ingredientId: ing.ingredientId,
+              quantity: ing.quantity.toString(),
+              unit: ing.unit
+            }));
+
+          if (ingredientsToInsert.length !== ingredientsData.length) {
+            console.warn(
+              `Attempted to add ingredients not belonging to business ${businessId} for recipe ${id}`
+            );
+          }
+
+          if (ingredientsToInsert.length > 0) {
+            await tx.insert(recipeIngredients).values(ingredientsToInsert);
+          }
         }
       }
 
       const finalRecipe = await tx.query.recipes.findFirst({
-        where: eq(recipes.id, id),
+        where: and(eq(recipes.id, id), eq(recipes.businessId, businessId)),
         with: {
           recipeIngredients: { with: { ingredient: true } }
         }
@@ -136,19 +186,24 @@ export async function PUT(req: NextRequest) {
       if (!finalRecipe) {
         throw new Error('Failed to retrieve updated recipe');
       }
-
       return finalRecipe;
     });
 
     return NextResponse.json(updatedRecipe);
   } catch (error: any) {
-    console.error(`API Error updating recipe ${id}:`, error);
+    console.error(
+      `API Error updating recipe ${params.id} for business ${businessId}:`,
+      error
+    );
     if (error.message?.includes('Recipe not found')) {
       return NextResponse.json({ message: error.message }, { status: 404 });
     }
-    if (error.code === '23505' && error.constraint === 'recipes_name_key') {
+    if (
+      error.code === '23505' &&
+      error.constraint === 'business_recipe_name_idx'
+    ) {
       return NextResponse.json(
-        { message: 'A recipe with this name already exists' },
+        { message: 'A recipe with this name already exists for your business' },
         { status: 409 }
       );
     }
@@ -165,11 +220,20 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const id = Number(pathname.split('/').pop());
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
 
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
+  const { params } = context;
   try {
+    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -180,11 +244,11 @@ export async function DELETE(req: NextRequest) {
     const deletedRecipe = await db.transaction(async (tx) => {
       const result = await tx
         .delete(recipes)
-        .where(eq(recipes.id, id))
+        .where(and(eq(recipes.id, id), eq(recipes.businessId, businessId)))
         .returning({ deletedId: recipes.id });
 
       if (result.length === 0) {
-        throw new Error('Recipe not found for deletion');
+        throw new Error('Recipe not found for deletion or not authorized');
       }
       return result[0];
     });
@@ -194,7 +258,10 @@ export async function DELETE(req: NextRequest) {
       id: deletedRecipe.deletedId
     });
   } catch (error: any) {
-    console.error(`API Error deleting recipe ${id}:`, error);
+    console.error(
+      `API Error deleting recipe ${params.id} for business ${businessId}:`,
+      error
+    );
     if (error.message?.includes('Recipe not found')) {
       return NextResponse.json({ message: error.message }, { status: 404 });
     }

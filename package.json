@@ -6,6 +6,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.9.0",
     "@electric-sql/pglite": "^0.2.17",
     "@hookform/resolvers": "^5.0.1",
     "@imagekit/next": "^2.1.0",
@@ -50,6 +51,7 @@
     "server-only": "^0.0.1",
     "serverless@latest": "link:neondatabase/serverless@latest",
     "shadcdn": "^0.0.8",
+    "simple-icons": "^14.12.3",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
