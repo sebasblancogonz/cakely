@@ -23,13 +23,6 @@ export function Customer({
   showDetails: (customer: CustomerType) => void;
   editCustomer: (customer: CustomerType) => void;
 }) {
-  const statusTranslations: Record<string, string> = {
-    pendiente: 'bg-pending text-pending-text',
-    preparando: 'bg-wip text-wip-text',
-    listo: 'bg-ready text-ready-text',
-    entregado: 'bg-delivered  text-delivered-text'
-  };
-
   return (
     <TableRow>
       <TableCell className="font-medium">{customer.name}</TableCell>

@@ -31,16 +31,19 @@ const CustomerDetails = ({ customer }: { customer: Customer }) => {
           >
             WhatsApp
           </Link>
-          <br />
           {customer.instagramHandle && (
-            <Link
-              target="_blank"
-              className="text-blue-500"
-              rel="noreferrer noopener"
-              href={'https://ig.me/m/' + customer.instagramHandle}
-            >
-              Instagram
-            </Link>
+            <>
+              {' '}
+              |{' '}
+              <Link
+                target="_blank"
+                className="text-blue-500"
+                rel="noreferrer noopener"
+                href={'https://ig.me/m/' + customer.instagramHandle}
+              >
+                Instagram
+              </Link>
+            </>
           )}
         </>
       ),

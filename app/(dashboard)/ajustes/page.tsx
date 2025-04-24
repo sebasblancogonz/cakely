@@ -579,7 +579,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 overflow-hidden">
       <h1 className="text-2xl font-bold">Ajustes del Negocio</h1>
       <form onSubmit={handleSubmit(onSettingsSubmit)}>
         <Card>
@@ -750,7 +750,7 @@ export default function SettingsPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle>Materias Primas</CardTitle>
-            <CardDescription>
+            <CardDescription className="mr-2">
               Gestiona los precios de tus ingredientes.
             </CardDescription>
           </div>
@@ -760,7 +760,10 @@ export default function SettingsPage() {
           >
             <DialogTrigger asChild>
               <Button size="sm" onClick={() => openIngredientDialog()}>
-                <PlusCircle className="h-4 w-4 mr-2" /> Añadir Ingrediente
+                <PlusCircle className="h-3.5 w-3.5" />{' '}
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Añadir Ingrediente
+                </span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -842,7 +845,7 @@ export default function SettingsPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle>Recetas</CardTitle>
-            <CardDescription>
+            <CardDescription className="mr-2">
               Define las recetas base para tus productos.
             </CardDescription>
           </div>
@@ -852,7 +855,10 @@ export default function SettingsPage() {
           >
             <DialogTrigger asChild>
               <Button size="sm" onClick={() => openRecipeDialog(null)}>
-                <PlusCircle className="h-4 w-4 mr-2" /> Añadir Receta
+                <PlusCircle className="h-3.5 w-3.5" />{' '}
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Añadir Receta
+                </span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
