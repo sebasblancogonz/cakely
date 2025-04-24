@@ -474,10 +474,7 @@ export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
   const orderToSave = {
     customerId: orderInput.customerId,
     description: orderInput.description,
-    orderDate:
-      orderInput.orderDate instanceof Date
-        ? orderInput.orderDate
-        : new Date(orderInput.orderDate),
+    orderDate: new Date(),
     amount: orderInput.amount,
     deliveryDate: orderInput.deliveryDate
       ? orderInput.deliveryDate instanceof Date

@@ -60,7 +60,7 @@ export default function StatisticsPage() {
     setLoading(true);
     async function fetchOrders() {
       try {
-        const response = await fetch('/api/orders');
+        const response = await fetch('/api/orders?limit=9999');
         if (!response.ok) {
           throw new Error(`API Error: ${response.statusText}`);
         }

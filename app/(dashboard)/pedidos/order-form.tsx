@@ -37,7 +37,6 @@ const orderFormSchema = z.object({
     .string()
     .trim()
     .min(1, { message: 'La descripción es requerida' }),
-  orderDate: z.coerce.date({ invalid_type_error: 'Fecha de pedido inválida' }),
   amount: z.coerce
     .number()
     .positive({ message: 'Importe original debe ser positivo' }),
@@ -72,22 +71,20 @@ interface OrderFormProps {
   orderToEdit: Order | null;
 }
 
-// Define valores por defecto fuera o al inicio del componente
 const defaultOrderFormValues: OrderFormData = {
-  customerId: 0, // O usa 'undefined' si el Select lo maneja bien con placeholder
+  customerId: 0,
   description: '',
-  orderDate: new Date(),
   amount: 0,
   deliveryDate: null,
-  productType: ProductType.Tarta, // Valor Enum válido
+  productType: ProductType.Tarta,
   customizationDetails: '',
   quantity: 1,
   sizeOrWeight: '',
   flavor: '',
   allergyInformation: '',
   totalPrice: 0,
-  paymentStatus: PaymentStatus.Pendiente, // Valor Enum válido
-  paymentMethod: PaymentMethod.Efectivo, // Valor Enum válido
+  paymentStatus: PaymentStatus.Pendiente,
+  paymentMethod: PaymentMethod.Efectivo,
   notes: ''
 };
 
@@ -113,7 +110,6 @@ const OrderForm = ({
     formState: { errors, isSubmitting }
   } = useForm<OrderFormData>({
     resolver: zodResolver(orderFormSchema),
-    // Proporciona los valores por defecto directamente aquí
     defaultValues: defaultOrderFormValues
   });
 
@@ -141,15 +137,11 @@ const OrderForm = ({
       });
   }, [toast]);
 
-  // useEffect ahora solo resetea cuando cambia el modo o el objeto a editar
   useEffect(() => {
     if (isEditingMode && orderToEdit) {
       reset({
         customerId: orderToEdit.customerId,
         description: orderToEdit.description,
-        orderDate: orderToEdit.orderDate
-          ? new Date(orderToEdit.orderDate)
-          : new Date(),
         amount: Number(orderToEdit.amount) || 0,
         deliveryDate: orderToEdit.deliveryDate
           ? new Date(orderToEdit.deliveryDate)
@@ -168,7 +160,6 @@ const OrderForm = ({
       setImageUrls(Array.isArray(orderToEdit.images) ? orderToEdit.images : []);
       setImagesToDelete([]);
     } else if (!isEditingMode) {
-      // Si cambiamos a modo creación (o es el estado inicial), resetea a los defaults definidos
       reset(defaultOrderFormValues);
       setImageUrls([]);
       setImagesToDelete([]);
@@ -248,7 +239,6 @@ const OrderForm = ({
     setIsModalOpen(false);
     setIsEditing(false);
     setIsCreating(false);
-    // Reset al cerrar también es buena idea
     reset(defaultOrderFormValues);
   };
 
@@ -278,7 +268,7 @@ const OrderForm = ({
                 onValueChange={(value) =>
                   field.onChange(value ? parseInt(value, 10) : undefined)
                 }
-                value={field.value?.toString()} // RHF maneja el valor
+                value={field.value?.toString()}
                 disabled={loadingCustomers}
               >
                 <SelectTrigger
@@ -334,20 +324,6 @@ const OrderForm = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="orderDate">Fecha Pedido</Label>
-            <Input
-              id="orderDate"
-              type="date"
-              {...register('orderDate', { valueAsDate: true })}
-              className={cn(errors.orderDate && 'border-destructive')}
-            />
-            {errors.orderDate && (
-              <p className="text-xs text-destructive mt-1">
-                {errors.orderDate.message}
-              </p>
-            )}
-          </div>
           <div className="space-y-1.5">
             <Label htmlFor="deliveryDate">Fecha Entrega</Label>
             <Input
