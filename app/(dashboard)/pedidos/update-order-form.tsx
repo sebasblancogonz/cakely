@@ -5,7 +5,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Order,
-  Customer,
   OrderImage,
   ProductType,
   PaymentMethod,
@@ -67,7 +66,7 @@ const UpdateOrderForm = ({
     handleSubmit,
     control,
     reset,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting, isDirty }
   } = useForm<UpdateOrderFormData>({
     resolver: zodResolver(updateOrderFormSchema),
     defaultValues: defaultOrderFormValues
@@ -99,6 +98,18 @@ const UpdateOrderForm = ({
   }, [orderToEdit, reset]);
 
   const onSubmit = async (data: UpdateOrderFormData) => {
+    if (!isDirty) {
+      toast({
+        title: 'Sin cambios',
+        description: 'No has modificado ningún dato del pedido.',
+        variant: 'default'
+      });
+      setIsModalOpen(false);
+      setIsEditing(false);
+      setImagesToDelete([]);
+      setImageUrls([]);
+      return;
+    }
     console.log('Form Data Submitted:', data);
 
     const apiData = {

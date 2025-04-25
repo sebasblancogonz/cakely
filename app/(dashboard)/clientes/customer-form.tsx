@@ -68,7 +68,7 @@ const CustomerForm = ({
       if (isEditingMode) {
         if (!isDirty) {
           toast({
-            title: 'Sin Cambios',
+            title: 'Sin cambios',
             description: 'No has modificado ningún dato del cliente.',
             variant: 'default'
           });
@@ -76,6 +76,7 @@ const CustomerForm = ({
           setIsEditing(false);
           return;
         }
+
         const customerDataToUpdate: Partial<UpdateCustomerFormData> = {
           name: data.name,
           email: data.email,

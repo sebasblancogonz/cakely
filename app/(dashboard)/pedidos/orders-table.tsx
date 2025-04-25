@@ -87,7 +87,7 @@ const availableColumns: {
     defaultVisible: false,
     canHide: true,
     className: 'hidden lg:table-cell'
-  }, // Default hidden example
+  },
   { id: 'actions', label: 'Acciones', defaultVisible: true, canHide: false }
 ];
 
