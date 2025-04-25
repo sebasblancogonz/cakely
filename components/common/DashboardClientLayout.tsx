@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useBusinessProfile } from '@/hooks/use-business-profile';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -17,7 +17,13 @@ import {
   Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
@@ -47,6 +53,18 @@ export default function DashboardClientLayout({
   const pathname = usePathname();
   const { profile, isLoadingProfile } = useBusinessProfile();
   const [isNavExpanded, setIsNavExpanded] = useState(false);
+  const baseTitle = 'Panel de Control';
+  const defaultBusinessName = 'Cakely';
+
+  useEffect(() => {
+    if (isLoadingProfile) {
+      document.title = 'Cargando perfil... | ' + baseTitle;
+    } else if (profile?.name) {
+      document.title = `${profile.name} - ${baseTitle}`;
+    } else {
+      document.title = `${defaultBusinessName} - ${baseTitle}`;
+    }
+  }, [isLoadingProfile, profile?.name]);
 
   const breadcrumbTrail = useMemo((): BreadcrumbTrailItem[] => {
     const segments = pathname.split('/').filter(Boolean);
@@ -311,6 +329,9 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="sm:max-w-xs">
+        <SheetHeader hidden={true}>
+          <SheetTitle>Menu</SheetTitle>
+        </SheetHeader>
         <nav className="grid gap-6 text-lg font-medium mt-4">
           <SheetTrigger asChild>
             <Link

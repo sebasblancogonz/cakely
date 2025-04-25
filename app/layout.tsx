@@ -4,9 +4,9 @@ import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
 
 export const metadata = {
-  title: 'Aura Bakery - Panel de control',
+  title: 'Cakely - Panel de control',
   description:
-    'Un panel de control para administrar pedidos, clientes y productos de Aura Bakery.'
+    'Un panel de control para administrar pedidos, clientes y productos de tu negocio.'
 };
 
 export default function RootLayout({
