@@ -181,7 +181,7 @@ function DesktopNav({
                 }}
               />
               {isExpanded && (
-                <span className="text-sm font-semibold text-foreground truncate pl-1">
+                <span className="text-sm font-semibold text-foreground pl-1">
                   {profile.name ?? defaultBusinessName}
                 </span>
               )}
@@ -199,7 +199,7 @@ function DesktopNav({
                   : 'B'}
               </span>
               {isExpanded && (
-                <span className="text-sm font-semibold text-foreground truncate pl-1">
+                <span className="text-sm font-semibold text-foreground pl-1">
                   {profile?.name ?? defaultBusinessName}
                 </span>
               )}
@@ -314,29 +314,31 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
         <nav className="grid gap-6 text-lg font-medium mt-4">
           <SheetTrigger asChild>
             <Link
-              href="#"
-              className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base mb-4"
+              href="/"
+              className="flex items-center gap-4 px-2.5 text-foreground hover:text-foreground"
             >
-              {isLoadingProfile ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : profile?.logoUrl ? (
-                <Image
-                  src={profile.logoUrl}
-                  alt={profile.name ?? defaultBusinessName}
-                  width={32}
-                  height={32}
-                  className="rounded-md"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <span className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-sm">
-                  {profile?.name
-                    ? profile.name.substring(0, 1).toUpperCase()
-                    : 'B'}
-                </span>
-              )}
+              <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
+                {isLoadingProfile ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                ) : profile?.logoUrl ? (
+                  <Image
+                    src={profile.logoUrl}
+                    alt={profile.name ?? defaultBusinessName}
+                    width={32}
+                    height={32}
+                    className="rounded-md"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-sm">
+                    {profile?.name
+                      ? profile.name.substring(0, 1).toUpperCase()
+                      : 'B'}
+                  </span>
+                )}
+              </div>
               <span className="text-base text-foreground truncate">
                 {isLoadingProfile
                   ? 'Cargando...'
