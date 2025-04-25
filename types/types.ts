@@ -100,3 +100,8 @@ interface BreadcrumbItem {
 export interface DashboardBreadcrumbProps {
   items: BreadcrumbItem[];
 }
+
+export interface BusinessProfileData {
+  name: string | null;
+  logoUrl: string | null;
+}

@@ -8,6 +8,9 @@ import { IngredientPrice, Recipe, RecipeWithIngredients } from '@/types/types';
 import { IngredientFormData } from '@/lib/validators/ingredients';
 import { RecipeFormData } from '@/lib/validators/recipes';
 import { toast } from '@/hooks/use-toast';
+import { BusinessProfileFormData } from '@/lib/validators/business';
+import BusinessProfileSettings from '@/components/settings/BusinessProfileSettings';
+import { useBusinessProfile } from '@/hooks/use-business-profile';
 
 export default function SettingsPage() {
   const [loadingIngredients, setLoadingIngredients] = useState(false);
@@ -20,18 +23,30 @@ export default function SettingsPage() {
     useState<Partial<RecipeWithIngredients> | null>(null);
   const [editingIngredient, setEditingIngredient] =
     useState<Partial<IngredientPrice> | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [businessName, setBusinessName] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const { mutateProfile } = useBusinessProfile();
 
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       setLoadingIngredients(true);
+      setLoadingProfile(true);
+      setLoadingRecipes(true);
       try {
-        const [ingredientsRes, recipesRes] = await Promise.allSettled([
-          fetch('/api/ingredient-prices'),
-          fetch('/api/recipes')
-        ]);
+        const [ingredientsRes, recipesRes, profileRes] =
+          await Promise.allSettled([
+            fetch('/api/ingredient-prices'),
+            fetch('/api/recipes'),
+            fetch('/api/business-profile')
+          ]);
         let ingredientsData: IngredientPrice[] = [];
         let recipesData: Recipe[] = [];
+        let profileData: { name: string | null; logoUrl: string | null } = {
+          name: null,
+          logoUrl: null
+        };
         let fetchOk = true;
 
         if (ingredientsRes.status === 'fulfilled' && ingredientsRes.value.ok) {
@@ -57,6 +72,21 @@ export default function SettingsPage() {
           );
         }
 
+        if (profileRes.status === 'fulfilled' && profileRes.value.ok) {
+          profileData = await profileRes.value.json();
+        } else {
+          console.error(
+            'Failed to fetch business profile (or not set up yet):',
+            profileRes.status === 'fulfilled'
+              ? await profileRes.value.text()
+              : profileRes.reason
+          );
+          toast({
+            title: 'Info',
+            description: 'No se pudo cargar el perfil del negocio.'
+          });
+        }
+
         if (isMounted) {
           if (!fetchOk) {
             toast({
@@ -65,6 +95,10 @@ export default function SettingsPage() {
               variant: 'destructive'
             });
             setLoadingIngredients(false);
+            setIngredients(ingredientsData || []);
+            setRecipes(recipesData || []);
+            setBusinessName(profileData?.name ?? null); // <-- Actualiza estado perfil
+            setLogoUrl(profileData?.logoUrl ?? null);
           }
         }
         setIngredients(ingredientsData || []);
@@ -77,11 +111,16 @@ export default function SettingsPage() {
             description: 'Error general al cargar datos.',
             variant: 'destructive'
           });
+          setIngredients([]);
+          setRecipes([]);
+          setBusinessName(null);
+          setLogoUrl(null);
         }
       } finally {
         if (isMounted) {
           setLoadingIngredients(false);
           setLoadingRecipes(false);
+          setLoadingProfile(false);
         }
       }
     }
@@ -215,6 +254,41 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveProfile = async (data: BusinessProfileFormData) => {
+    console.log('Saving business profile:', data);
+    try {
+      const response = await fetch('/api/business-profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update profile');
+      }
+
+      const savedProfile = await response.json();
+
+      mutateProfile();
+
+      setBusinessName(savedProfile.name ?? null);
+      setLogoUrl(savedProfile.logoUrl ?? null);
+
+      toast({
+        title: 'Éxito',
+        description: 'Perfil del negocio actualizado.'
+      });
+    } catch (error) {
+      console.error('Error saving business profile:', error);
+      toast({
+        title: 'Error',
+        description: `No se pudo guardar el perfil: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
   const openIngredientDialog = (
     ingredient: Partial<IngredientPrice> | null = null
   ) => {
@@ -246,6 +320,14 @@ export default function SettingsPage() {
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-hidden">
       <h1 className="text-2xl font-bold">Ajustes del Negocio</h1>
+
+      <BusinessProfileSettings
+        currentLogoUrl={logoUrl}
+        currentName={businessName}
+        loadingProfile={loadingProfile}
+        onSaveProfile={handleSaveProfile}
+      />
+
       <OperativeSettings />
 
       <IngredientsSettings

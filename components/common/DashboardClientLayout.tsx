@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useBusinessProfile } from '@/hooks/use-business-profile';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -12,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  Calculator
+  Calculator,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -31,6 +33,7 @@ import DashboardBreadcrumb, {
 import Providers from '../../app/(dashboard)/providers';
 import { SearchInput } from '../../app/(dashboard)/search';
 import { NavItem } from '../../app/(dashboard)/nav-item';
+import { BusinessProfileData } from '@/types/types';
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -42,6 +45,7 @@ export default function DashboardClientLayout({
   userComponent
 }: DashboardClientLayoutProps) {
   const pathname = usePathname();
+  const { profile, isLoadingProfile } = useBusinessProfile();
   const [isNavExpanded, setIsNavExpanded] = useState(false);
 
   const breadcrumbTrail = useMemo((): BreadcrumbTrailItem[] => {
@@ -88,6 +92,8 @@ export default function DashboardClientLayout({
           <DesktopNav
             isExpanded={isNavExpanded}
             onToggle={() => setIsNavExpanded(!isNavExpanded)}
+            profile={profile}
+            isLoadingProfile={isLoadingProfile}
           />
           <div
             className={cn(
@@ -96,7 +102,10 @@ export default function DashboardClientLayout({
             )}
           >
             <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-              <MobileNav />
+              <MobileNav
+                profile={profile}
+                isLoadingProfile={isLoadingProfile}
+              />
               <DashboardBreadcrumb trail={breadcrumbTrail} />
               <SearchInput />
               {userComponent}
@@ -115,10 +124,18 @@ export default function DashboardClientLayout({
 interface DesktopNavProps {
   isExpanded: boolean;
   onToggle: () => void;
+  profile: BusinessProfileData | null;
+  isLoadingProfile: boolean;
 }
 
-function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
+function DesktopNav({
+  profile,
+  isLoadingProfile,
+  isExpanded,
+  onToggle
+}: DesktopNavProps) {
   const transitionDuration = 'duration-500';
+  const defaultBusinessName = 'Mi Negocio';
   return (
     <aside
       className={cn(
@@ -129,21 +146,70 @@ function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
     >
       <nav className="flex flex-col gap-4 px-2 sm:py-5">
         <Link
-          href="#"
+          href="/" // Enlace a la página principal
           className={cn(
-            'group flex h-9 w-9 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base',
+            'group flex items-center justify-center gap-2 rounded-lg text-lg font-semibold text-primary-foreground',
             isExpanded
-              ? 'self-start ml-1 h-9 w-auto'
-              : 'self-center h-9 w-9 justify-center md:h-8 md:w-8'
+              ? 'h-12 self-start ml-1 px-2'
+              : 'h-9 w-9 self-center justify-center md:h-8 md:w-8'
           )}
         >
-          <Image
-            src="/logo small-01.webp"
-            alt="Aura Bakery Logo"
-            width={32}
-            height={32}
-            className="rounded-full"
-          />
+          {isLoadingProfile ? (
+            <div
+              className={cn(
+                'flex items-center justify-center',
+                isExpanded ? 'w-full' : 'h-full w-full'
+              )}
+            >
+              <Loader2
+                className={cn(
+                  'h-5 w-5 animate-spin text-muted-foreground',
+                  isExpanded && 'mr-auto ml-1'
+                )}
+              />
+            </div>
+          ) : profile?.logoUrl ? (
+            <>
+              <Image
+                src={profile.logoUrl}
+                alt={profile.name ?? defaultBusinessName}
+                width={isExpanded ? 36 : 32}
+                height={isExpanded ? 36 : 32}
+                className="rounded-md"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              {isExpanded && (
+                <span className="text-sm font-semibold text-foreground truncate pl-1">
+                  {profile.name ?? defaultBusinessName}
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <span
+                className={cn(
+                  'flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-xs',
+                  isExpanded ? 'h-9 w-9' : 'h-8 w-8'
+                )}
+              >
+                {profile?.name
+                  ? profile.name.substring(0, 1).toUpperCase()
+                  : 'B'}
+              </span>
+              {isExpanded && (
+                <span className="text-sm font-semibold text-foreground truncate pl-1">
+                  {profile?.name ?? defaultBusinessName}
+                </span>
+              )}
+            </>
+          )}
+          {!isExpanded && (
+            <span className="sr-only">
+              {profile?.name ?? defaultBusinessName}
+            </span>
+          )}
         </Link>
 
         <NavItem
@@ -229,7 +295,13 @@ function DesktopNav({ isExpanded, onToggle }: DesktopNavProps) {
   );
 }
 
-function MobileNav() {
+interface MobileNavProps {
+  profile: BusinessProfileData | null;
+  isLoadingProfile: boolean;
+}
+
+function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
+  const defaultBusinessName = 'Mi Negocio';
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -245,14 +317,31 @@ function MobileNav() {
               href="#"
               className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base mb-4"
             >
-              <Image
-                src="/logo small-01.webp"
-                alt="Aura Bakery Logo"
-                width={32}
-                height={32}
-                className="rounded-full transition-all group-hover:scale-110"
-              />
-              <span className="sr-only">Aura Bakery</span>
+              {isLoadingProfile ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : profile?.logoUrl ? (
+                <Image
+                  src={profile.logoUrl}
+                  alt={profile.name ?? defaultBusinessName}
+                  width={32}
+                  height={32}
+                  className="rounded-md"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <span className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-sm">
+                  {profile?.name
+                    ? profile.name.substring(0, 1).toUpperCase()
+                    : 'B'}
+                </span>
+              )}
+              <span className="text-base text-foreground truncate">
+                {isLoadingProfile
+                  ? 'Cargando...'
+                  : (profile?.name ?? defaultBusinessName)}
+              </span>
             </Link>
           </SheetTrigger>
           <SheetTrigger asChild>
