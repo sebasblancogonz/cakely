@@ -22,5 +22,5 @@ export const fetcher = async <T>(
     error.status = res.status;
     throw error;
   }
-  return res.json();
+  return res.json() as Promise<T>;
 };

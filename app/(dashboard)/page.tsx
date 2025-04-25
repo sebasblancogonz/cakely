@@ -111,10 +111,20 @@ export default function StatisticsPage() {
       }))
       .filter((item) => item.value > 0);
 
-    const revenue = filtered.reduce(
-      (sum, order) => sum + (Number(order.totalPrice) || 0),
-      0
-    );
+    const revenue = filtered
+      .filter(
+        (order) =>
+          order.paymentStatus === PaymentStatus.Pagado ||
+          Number(order.depositAmount) > 0
+      )
+      .map((order) => {
+        if (order.paymentStatus === PaymentStatus.Pagado) return order.amount;
+        if (Number(order.depositAmount) > 0) {
+          return order.depositAmount;
+        }
+        return '';
+      })
+      .reduce((sum, amount) => sum + (Number(amount) || 0), 0);
 
     const pending = filtered
       .filter((order) => order.paymentStatus === PaymentStatus.Pendiente)
