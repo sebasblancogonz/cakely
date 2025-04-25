@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { ingredientPrices } from '@/lib/db';
-import { NewIngredientPriceSchema } from '@/lib/validators/ingredients';
-import { ilike, or, asc, eq, and, SQL } from 'drizzle-orm';
+import { updateCustomer, db, customers } from '@/lib/db';
+import { and, eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import {
+  UpdateCustomerFormData,
+  updateCustomerSchema
+} from '@/lib/validators/customers';
 
 export async function GET(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const customerId = Number(pathname.split('/').pop());
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -17,46 +21,39 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('q') || '';
-
-    const conditions: SQL[] = [];
-    conditions.push(eq(ingredientPrices.businessId, businessId));
-
-    if (search.trim()) {
-      const searchTerm = `%${search.trim()}%`;
-      conditions.push(
-        or(
-          ilike(ingredientPrices.name, searchTerm),
-          ilike(ingredientPrices.supplier, searchTerm)
-        )!
+    if (isNaN(customerId)) {
+      return NextResponse.json(
+        { message: 'Invalid Customer ID' },
+        { status: 400 }
       );
     }
 
-    const query = db
+    const customerResult = await db
       .select()
-      .from(ingredientPrices)
+      .from(customers)
+      .where(
+        and(eq(customers.id, customerId), eq(customers.businessId, businessId))
+      )
+      .limit(1);
 
-      .where(and(...conditions))
+    if (customerResult.length === 0) {
+      return NextResponse.json(
+        { message: 'Customer not found' },
+        { status: 404 }
+      );
+    }
 
-      .orderBy(asc(ingredientPrices.name));
-
-    const ingredients = await query;
-
-    return NextResponse.json(ingredients);
+    return NextResponse.json(customerResult[0]);
   } catch (error) {
-    console.error(
-      `API Error fetching ingredients for business ${businessId}:`,
-      error
-    );
+    console.error(`API Error fetching customer ${customerId}:`, error);
     return NextResponse.json(
-      { message: 'Failed to fetch ingredients' },
+      { message: 'Failed to fetch customer' },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function PATCH(req: NextRequest) {
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -67,9 +64,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const { pathname } = req.nextUrl;
+  const customerId = Number(pathname.split('/').pop());
+
   try {
-    const body = await request.json();
-    const validation = NewIngredientPriceSchema.safeParse(body);
+    if (!customerId) {
+      return NextResponse.json(
+        { message: 'Customer ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.json();
+    const validation = updateCustomerSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -78,44 +85,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validatedData = validation.data;
-
-    const dataToInsert = {
-      ...validatedData,
-      businessId: businessId,
-      pricePerUnit: validatedData.pricePerUnit.toString()
-    };
-
-    const newIngredient = await db
-      .insert(ingredientPrices)
-      .values(dataToInsert)
-      .returning();
-
-    if (!newIngredient || newIngredient.length === 0) {
-      throw new Error('Failed to return new ingredient after insert.');
-    }
-
-    return NextResponse.json(newIngredient[0], { status: 201 });
-  } catch (error: any) {
-    console.error(
-      `API Error creating ingredient for business ${businessId}:`,
-      error
-    );
-    if (
-      error.code === '23505' &&
-      error.constraint === 'business_ingredient_name_idx'
-    ) {
+    if (Object.keys(validation.data).length === 0) {
       return NextResponse.json(
-        {
-          message:
-            'An ingredient with this name already exists for your business'
-        },
-        { status: 409 }
+        { message: 'No fields provided for update' },
+        { status: 400 }
       );
     }
+
+    const validatedData: UpdateCustomerFormData = validation.data;
+
+    console.log('Received customer:', validatedData);
+
+    const updatedCustomer = await updateCustomer(
+      businessId,
+      validatedData,
+      customerId
+    );
+    return NextResponse.json(updatedCustomer);
+  } catch (error: any) {
+    console.error(
+      `Error updating customer ${customerId} for business ${businessId}:`,
+      error
+    );
+    let status = 500;
+    let message = 'Failed to update customer';
+    if (error.message?.includes('Invalid input data')) {
+      status = 400;
+      message = 'Invalid input data provided.';
+    } else if (error.message?.includes('not found')) {
+      status = 404;
+      message = 'Customer not found or not authorized.';
+    }
     return NextResponse.json(
-      { message: 'Failed to create ingredient', error: error.message },
-      { status: 500 }
+      { message: message, error: error.message },
+      { status: status }
     );
   }
 }

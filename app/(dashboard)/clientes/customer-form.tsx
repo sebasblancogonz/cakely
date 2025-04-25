@@ -3,7 +3,6 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Customer } from '@types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,16 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-
-const customerFormSchema = z.object({
-  name: z.string().trim().min(1, { message: 'El nombre es requerido' }),
-  email: z.string().email({ message: 'Email inválido' }),
-  phone: z.string().trim().min(1, { message: 'El teléfono es requerido' }),
-  instagramHandle: z.string().optional(),
-  notes: z.string().optional()
-});
-
-type CustomerFormData = z.infer<typeof customerFormSchema>;
+import {
+  CustomerFormData,
+  customerSchema,
+  UpdateCustomerFormData
+} from '@/lib/validators/customers';
 
 interface CustomerFormProps {
   setIsModalOpen: (value: boolean) => void;
@@ -46,10 +40,10 @@ const CustomerForm = ({
     reset,
     formState: { errors, isSubmitting }
   } = useForm<CustomerFormData>({
-    resolver: zodResolver(customerFormSchema),
+    resolver: zodResolver(customerSchema),
     defaultValues: {
       name: customerToEdit?.name || '',
-      email: customerToEdit?.email || '',
+      email: customerToEdit?.email || undefined,
       phone: customerToEdit?.phone || '',
       instagramHandle: customerToEdit?.instagramHandle || '',
       notes: customerToEdit?.notes || ''
@@ -60,7 +54,7 @@ const CustomerForm = ({
     if (customerToEdit) {
       reset({
         name: customerToEdit.name,
-        email: customerToEdit.email,
+        email: customerToEdit.email || undefined,
         phone: customerToEdit.phone,
         instagramHandle: customerToEdit.instagramHandle || '',
         notes: customerToEdit.notes || ''
@@ -80,14 +74,12 @@ const CustomerForm = ({
     try {
       let savedCustomer: Customer;
       if (isEditingMode) {
-        const customerDataToUpdate: Partial<
-          Omit<Customer, 'id' | 'registrationDate' | 'orders'>
-        > = {
+        const customerDataToUpdate: Partial<UpdateCustomerFormData> = {
           name: data.name,
           email: data.email,
           phone: data.phone,
-          instagramHandle: data.instagramHandle || null,
-          notes: data.notes || null
+          instagramHandle: data.instagramHandle || undefined,
+          notes: data.notes || undefined
         };
 
         const response = await fetch(`/api/customers/${customerToEdit.id}`, {
@@ -116,10 +108,10 @@ const CustomerForm = ({
       } else {
         const newCustomerData: Omit<
           Customer,
-          'id' | 'registrationDate' | 'orders'
+          'id' | 'registrationDate' | 'orders' | 'businessId'
         > = {
           name: data.name,
-          email: data.email,
+          email: data.email || null,
           phone: data.phone,
           instagramHandle: data.instagramHandle || null,
           notes: data.notes || null
@@ -160,7 +152,7 @@ const CustomerForm = ({
       isEditingMode
         ? {
             name: customerToEdit?.name || '',
-            email: customerToEdit?.email || '',
+            email: customerToEdit?.email || undefined,
             phone: customerToEdit?.phone || '',
             instagramHandle: customerToEdit?.instagramHandle || '',
             notes: customerToEdit?.notes || ''

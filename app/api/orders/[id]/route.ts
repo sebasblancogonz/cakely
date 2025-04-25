@@ -1,14 +1,13 @@
-// app/api/orders/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db, updateOrder, orders } from '@/lib/db';
-import { UpdateOrderFormData, updateOrderFormSchema } from '@types';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
-interface RouteContext {
-  params: { id: string };
-}
+import {
+  UpdateOrderFormData,
+  updateOrderFormSchema
+} from '@/lib/validators/orders';
 
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest) {
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -19,9 +18,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const { params } = context;
+  const { pathname } = request.nextUrl;
+  const orderId = Number(pathname.split('/').pop());
+
   try {
-    const orderId = parseInt(params.id, 10);
     if (isNaN(orderId)) {
       return NextResponse.json(
         { message: 'Invalid Order ID' },
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return NextResponse.json(orderResult);
   } catch (error) {
     console.error(
-      `API Error fetching order ${params.id} for business ${businessId}:`,
+      `API Error fetching order ${orderId} for business ${businessId}:`,
       error
     );
     return NextResponse.json(
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function PATCH(request: NextRequest, context: RouteContext) {
+export async function PATCH(request: NextRequest) {
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -64,9 +64,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const { params } = context;
+  const { pathname } = request.nextUrl;
+  const orderId = Number(pathname.split('/').pop());
+
   try {
-    const orderId = parseInt(params.id, 10);
     if (isNaN(orderId)) {
       return NextResponse.json(
         { message: 'Invalid Order ID' },
@@ -105,7 +106,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json(updatedOrder);
   } catch (error: any) {
     console.error(
-      `Error updating order ${params.id} for business ${businessId}:`,
+      `Error updating order ${orderId} for business ${businessId}:`,
       error
     );
     let status = 500;

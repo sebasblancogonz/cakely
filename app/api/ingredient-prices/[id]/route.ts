@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ingredientPrices } from '@/lib/db';
-import { UpdateIngredientPriceSchema } from '@/lib/validators/ingredients';
+import { updateIngredientSchema } from '@/lib/validators/ingredients';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 
@@ -79,7 +79,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const validation = UpdateIngredientPriceSchema.safeParse(body);
+    const validation = updateIngredientSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(

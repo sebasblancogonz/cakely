@@ -23,8 +23,7 @@ export async function GET(req: NextRequest) {
     const { customers, newOffset, totalCustomers } = await getCustomers(
       businessId,
       search as string,
-      Number(offset),
-      businessId
+      Number(offset)
     );
 
     return NextResponse.json({ customers, newOffset, totalCustomers });

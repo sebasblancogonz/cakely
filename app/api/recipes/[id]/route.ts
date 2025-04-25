@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
-import { UpdateRecipeInputSchema } from '@/lib/validators/recipes';
 import { eq, and, inArray } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { updateRecipeSchema } from '@/lib/validators/recipes';
 
-interface RouteContext {
-  params: { id: string };
-}
-
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest) {
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -20,9 +16,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const { params } = context;
+  const { pathname } = request.nextUrl;
+  const id = Number(pathname.split('/').pop());
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -51,7 +47,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return NextResponse.json(recipeDetails);
   } catch (error) {
     console.error(
-      `API Error fetching recipe ${params.id} for business ${businessId}:`,
+      `API Error fetching recipe ${id} for business ${businessId}:`,
       error
     );
     return NextResponse.json(
@@ -61,7 +57,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function PUT(request: NextRequest, context: RouteContext) {
+export async function PUT(request: NextRequest) {
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -72,9 +68,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const { params } = context;
+  const { pathname } = request.nextUrl;
+  const id = Number(pathname.split('/').pop());
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -83,7 +79,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
-    const validation = UpdateRecipeInputSchema.safeParse(body);
+    const validation = updateRecipeSchema.safeParse(body);
 
     if (!validation.success) {
       console.error(
@@ -192,7 +188,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json(updatedRecipe);
   } catch (error: any) {
     console.error(
-      `API Error updating recipe ${params.id} for business ${businessId}:`,
+      `API Error updating recipe ${id} for business ${businessId}:`,
       error
     );
     if (error.message?.includes('Recipe not found')) {
@@ -220,7 +216,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export async function DELETE(request: NextRequest) {
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -231,9 +227,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const { params } = context;
+  const { pathname } = request.nextUrl;
+  const id = Number(pathname.split('/').pop());
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json(
         { message: 'Invalid recipe ID' },
@@ -259,7 +255,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     });
   } catch (error: any) {
     console.error(
-      `API Error deleting recipe ${params.id} for business ${businessId}:`,
+      `API Error deleting recipe ${id} for business ${businessId}:`,
       error
     );
     if (error.message?.includes('Recipe not found')) {

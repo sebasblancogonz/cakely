@@ -32,6 +32,7 @@ import {
   UpdateOrderFormData,
   updateOrderFormSchema
 } from './validators/orders';
+import { UpdateCustomerFormData } from './validators/customers';
 
 export const orderStatusEnum = pgEnum(
   'order_status',
@@ -225,7 +226,7 @@ export const customers = pgTable('customers', {
     .notNull()
     .references(() => businesses.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  email: text('email').notNull(),
+  email: text('email'),
   phone: text('phone').notNull(),
   registrationDate: timestamp('registration_date', {
     withTimezone: false,
@@ -428,31 +429,6 @@ export type Customer = SelectCustomer & {
   orders?: SelectOrder[];
 };
 
-const UpdateOrderSchema = z
-  .object({
-    customerId: z.coerce.number().int().positive().optional(),
-    description: z.string().optional(),
-    orderDate: z.coerce.date().optional(),
-    amount: z.coerce.number().positive().optional(),
-    deliveryDate: z.coerce.date().optional().nullable(),
-    orderStatus: z.nativeEnum(OrderStatus).optional(),
-    productType: z.nativeEnum(ProductType).optional(),
-    customizationDetails: z.string().optional(),
-    quantity: z.coerce.number().int().positive().optional(),
-    sizeOrWeight: z.string().optional(),
-    flavor: z.string().optional(),
-    allergyInformation: z.string().optional(),
-    totalPrice: z.coerce.number().positive().optional(),
-    paymentStatus: z.nativeEnum(PaymentStatus).optional(),
-    paymentMethod: z.nativeEnum(PaymentMethod).optional(),
-    depositAmount: z.coerce.number().positive().optional(),
-    notes: z.string().optional()
-  })
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, {
-    message: 'Se requiere al menos un campo para actualizar'
-  });
-
 interface GetCustomersResult {
   customers: Customer[];
   newOffset: number | null;
@@ -557,27 +533,44 @@ export async function saveCustomer(
 
 export async function updateCustomer(
   businessId: number,
-  customerInput: Partial<
-    Omit<Customer, 'id' | 'registrationDate' | 'orders' | 'businessId'>
-  >,
+  customerInput: UpdateCustomerFormData,
   customerId: number
-): Promise<void> {
+): Promise<Customer> {
   if (!businessId) throw new Error('Business ID is required');
   if (!customerId) throw new Error('Customer ID is required');
 
-  const dataToSet = { ...customerInput };
-  if (Object.keys(dataToSet).length === 0)
-    throw new Error('No fields provided for update');
+  const dataToSet: Record<string, any> = {};
+  for (const [key, value] of Object.entries(customerInput)) {
+    if (value !== undefined) {
+      dataToSet[key] = value;
+    }
+  }
+  dataToSet.updatedAt = new Date();
 
   try {
-    const result = await db
+    const updatedResult = await db
       .update(customers)
       .set(dataToSet)
       .where(
         and(eq(customers.id, customerId), eq(customers.businessId, businessId))
+      )
+      .returning({ updatedId: customers.id });
+
+    if (!updatedResult || updatedResult.length === 0) {
+      throw new Error(
+        `Customer with ID ${customerId} not found or not authorized.`
       );
-    if (result.rowCount === 0)
-      throw new Error(`Customer not found or access denied.`);
+    }
+
+    const updatedCustomerWithOrders = await db.query.customers.findFirst({
+      where: and(
+        eq(customers.id, customerId),
+        eq(customers.businessId, businessId)
+      ),
+      with: { orders: true }
+    });
+
+    return updatedCustomerWithOrders as Customer;
   } catch (error) {
     console.error('Error updating customer:', error);
     throw new Error('Failed to update customer');
@@ -777,19 +770,8 @@ export async function updateOrder(
   if (!businessId) throw new Error('Business ID is required');
   if (!orderId) throw new Error('Order ID is required');
 
-  const validationResult = updateOrderFormSchema.safeParse(orderInput);
-  if (!validationResult.success) {
-    console.error('Validation failed:', validationResult.error.format());
-    throw new Error(
-      `Invalid input data for updating order: ${JSON.stringify(validationResult.error.format())}`
-    );
-  }
-  const validatedData = validationResult.data;
-  if (Object.keys(validatedData).length === 0)
-    throw new Error('No valid fields provided for update');
-
   const dataToSet: Record<string, any> = {};
-  for (const [key, value] of Object.entries(validatedData)) {
+  for (const [key, value] of Object.entries(orderInput)) {
     if (value !== undefined) {
       if (key === 'amount' || key === 'totalPrice' || key === 'depositAmount') {
         dataToSet[key] = (value as number).toString();
