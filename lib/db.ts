@@ -26,15 +26,12 @@ import {
   relations,
   SQL
 } from 'drizzle-orm';
+import { OrderStatus, PaymentMethod, PaymentStatus, ProductType } from '@types';
 import {
   OrderFormData,
-  OrderStatus,
-  PaymentMethod,
-  PaymentStatus,
-  ProductType,
   UpdateOrderFormData,
   updateOrderFormSchema
-} from '@types';
+} from './validators/orders';
 
 export const orderStatusEnum = pgEnum(
   'order_status',

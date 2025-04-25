@@ -1,8 +1,9 @@
 // app/api/orders/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrders, saveOrder } from '@/lib/db';
-import { createOrderFormSchema, OrderFormData, OrderStatus } from '@types';
+import { OrderStatus } from '@types';
 import { auth } from '@/lib/auth';
+import { createOrderFormSchema, OrderFormData } from '@/lib/validators/orders';
 
 export async function GET(request: NextRequest) {
   const session = await auth();

@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ingredientPrices } from '@/lib/db';
-import { NewIngredientPriceSchema } from '@/lib/validators/ingredients';
-import {
-  ilike,
-  or,
-  asc,
-  sql,
-  eq,
-  count,
-  and,
-  SQLChunk,
-  SQL
-} from 'drizzle-orm';
+import { ingredientSchema } from '@/lib/validators/ingredients';
+import { ilike, or, asc, eq, and, SQL } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -77,7 +67,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const validation = NewIngredientPriceSchema.safeParse(body);
+    const validation = ingredientSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(

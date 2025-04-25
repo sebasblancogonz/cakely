@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
-import { NewRecipeInputSchema } from '@/lib/validators/recipes';
+import { recipeFormSchema } from '@/lib/validators/recipes';
 import { asc, eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const validation = NewRecipeInputSchema.safeParse(body);
+    const validation = recipeFormSchema.safeParse(body);
 
     if (!validation.success) {
       console.error(

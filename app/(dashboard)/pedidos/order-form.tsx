@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   Order,
   Customer,
@@ -11,9 +10,7 @@ import {
   ProductType,
   PaymentMethod,
   OrderStatus,
-  PaymentStatus,
-  createOrderFormSchema, // Schema para CREAR
-  OrderFormData // Tipo base (usado para Create)
+  PaymentStatus
 } from '@types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Loader2, Trash2 } from 'lucide-react';
+import { OrderFormData, createOrderFormSchema } from '@/lib/validators/orders';
 
 const defaultOrderFormValues: Partial<OrderFormData> = {
   customerId: undefined,

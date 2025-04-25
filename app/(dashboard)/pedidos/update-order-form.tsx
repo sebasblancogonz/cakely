@@ -9,9 +9,7 @@ import {
   OrderImage,
   ProductType,
   PaymentMethod,
-  PaymentStatus,
-  updateOrderFormSchema,
-  UpdateOrderFormData
+  PaymentStatus
 } from '@types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +25,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Loader2, Trash2 } from 'lucide-react';
+import {
+  UpdateOrderFormData,
+  updateOrderFormSchema
+} from '@/lib/validators/orders';
 
 const defaultOrderFormValues: Partial<UpdateOrderFormData> = {
   description: '',
