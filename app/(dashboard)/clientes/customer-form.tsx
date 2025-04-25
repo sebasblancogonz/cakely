@@ -38,7 +38,7 @@ const CustomerForm = ({
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting, isDirty }
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
@@ -53,19 +53,11 @@ const CustomerForm = ({
   useEffect(() => {
     if (customerToEdit) {
       reset({
-        name: customerToEdit.name,
+        name: customerToEdit.name || '',
         email: customerToEdit.email || undefined,
-        phone: customerToEdit.phone,
+        phone: customerToEdit.phone || '',
         instagramHandle: customerToEdit.instagramHandle || '',
         notes: customerToEdit.notes || ''
-      });
-    } else {
-      reset({
-        name: '',
-        email: '',
-        phone: '',
-        instagramHandle: '',
-        notes: ''
       });
     }
   }, [customerToEdit, reset]);
@@ -74,6 +66,16 @@ const CustomerForm = ({
     try {
       let savedCustomer: Customer;
       if (isEditingMode) {
+        if (!isDirty) {
+          toast({
+            title: 'Sin Cambios',
+            description: 'No has modificado ningún dato del cliente.',
+            variant: 'default'
+          });
+          setIsModalOpen(false);
+          setIsEditing(false);
+          return;
+        }
         const customerDataToUpdate: Partial<UpdateCustomerFormData> = {
           name: data.name,
           email: data.email,

@@ -69,9 +69,8 @@ const OrderForm = ({
     reset,
     formState: { errors, isSubmitting }
   } = useForm<OrderFormData>({
-    // Usa unión o tipo base si son compatibles
-    resolver: zodResolver(createOrderFormSchema), // Usa el schema dinámico
-    defaultValues: defaultOrderFormValues // Los defaults iniciales pueden ser parciales
+    resolver: zodResolver(createOrderFormSchema),
+    defaultValues: defaultOrderFormValues
   });
 
   useEffect(() => {
@@ -99,22 +98,17 @@ const OrderForm = ({
   }, [toast]);
 
   useEffect(() => {
-    // Resetea el formulario cuando cambia el modo o el pedido a editar
-
     reset(defaultOrderFormValues);
     setImageUrls([]);
     setImagesToDelete([]);
   }, [reset]);
 
-  // El tipo 'data' será inferido por handleSubmit basado en el resolver actual
   const onSubmit = async (data: OrderFormData) => {
     console.log('Form Data Submitted:', data);
 
-    // Prepara los datos para la API, convirtiendo números a string donde sea necesario
-    // y asegurando que customerId solo se envíe si NO estamos editando
     const apiData = {
       ...data,
-      amount: data.amount?.toString(), // Usa optional chaining por si acaso
+      amount: data.amount?.toString(),
       totalPrice: data.totalPrice?.toString(),
       depositAmount: (data.depositAmount ?? 0).toString(),
       deliveryDate: data.deliveryDate ? data.deliveryDate : null
@@ -124,7 +118,6 @@ const OrderForm = ({
       let savedOrUpdatedOrder: Order;
 
       console.log('Saving new order:', apiData);
-      // Asegúrate que apiData (como CreateOrderFormData) tenga customerId
       if (!('customerId' in apiData) || !apiData.customerId) {
         throw new Error('Falta el ID del cliente para crear el pedido.');
       }
@@ -157,10 +150,8 @@ const OrderForm = ({
   };
 
   const onValidationErrors = (validationErrors: any) => {
-    console.error(
-      'ORDER FORM - VALIDATION ERRORS (RHF):',
-      JSON.stringify(validationErrors, null, 2)
-    );
+    console.error('ORDER FORM - VALIDATION ERRORS (RHF):', validationErrors);
+
     toast({
       title: 'Error de Validación',
       description: 'Por favor, revisa los campos marcados en rojo.',
@@ -197,7 +188,7 @@ const OrderForm = ({
             control={control}
             render={({ field }) => (
               <Select
-                onValueChange={field.onChange} // Simplificado, Zod maneja coerce
+                onValueChange={field.onChange}
                 value={field.value == null ? '' : field.value.toString()}
                 disabled={loadingCustomers}
               >
