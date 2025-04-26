@@ -25,6 +25,7 @@ export default function SettingsPage() {
     useState<Partial<IngredientPrice> | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [businessName, setBusinessName] = useState<string | null>(null);
+  const [businessId, setBusinessId] = useState<number | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const { mutateProfile } = useBusinessProfile();
 
@@ -43,9 +44,14 @@ export default function SettingsPage() {
           ]);
         let ingredientsData: IngredientPrice[] = [];
         let recipesData: Recipe[] = [];
-        let profileData: { name: string | null; logoUrl: string | null } = {
+        let profileData: {
+          name: string | null;
+          logoUrl: string | null;
+          id: number | undefined;
+        } = {
           name: null,
-          logoUrl: null
+          logoUrl: null,
+          id: undefined
         };
         let fetchOk = true;
 
@@ -95,14 +101,13 @@ export default function SettingsPage() {
               variant: 'destructive'
             });
             setLoadingIngredients(false);
-            setIngredients(ingredientsData || []);
-            setRecipes(recipesData || []);
-            setBusinessName(profileData?.name ?? null); // <-- Actualiza estado perfil
-            setLogoUrl(profileData?.logoUrl ?? null);
           }
+          setIngredients(ingredientsData || []);
+          setRecipes(recipesData || []);
+          setBusinessName(profileData?.name ?? null);
+          setBusinessId(profileData?.id ?? null);
+          setLogoUrl(profileData?.logoUrl ?? null);
         }
-        setIngredients(ingredientsData || []);
-        setRecipes(recipesData || []);
       } catch (error) {
         console.error('Error loading page data:', error);
         if (isMounted) {
@@ -326,6 +331,8 @@ export default function SettingsPage() {
         currentName={businessName}
         loadingProfile={loadingProfile}
         onSaveProfile={handleSaveProfile}
+        businessId={businessId!}
+        mutateProfile={mutateProfile}
       />
 
       <OperativeSettings />

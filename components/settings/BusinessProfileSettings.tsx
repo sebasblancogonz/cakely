@@ -17,32 +17,31 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import LogoUploadForm from '../forms/UploadImageForm';
 
-const businessProfileSchema = z.object({
-  name: z.string().min(1, 'El nombre del negocio es requerido.'),
-  logoUrl: z
-    .string()
-    .url('Debe ser una URL válida o estar vacío.')
-    .or(z.literal(''))
-    .optional()
+const businessNameSchema = z.object({
+  name: z.string().min(1, 'El nombre del negocio es requerido.')
 });
 
-type BusinessProfileFormData = z.infer<typeof businessProfileSchema>;
+type BusinessNameFormData = z.infer<typeof businessNameSchema>;
 
 interface BusinessProfileSettingsProps {
   currentName: string | null;
   currentLogoUrl: string | null;
   loadingProfile: boolean;
-  onSaveProfile: (data: BusinessProfileFormData) => Promise<void>;
+  onSaveProfile: (data: BusinessNameFormData) => Promise<void>;
+  businessId: number | undefined;
+  mutateProfile: () => void;
 }
 
 const BusinessProfileSettings: React.FC<BusinessProfileSettingsProps> = ({
   currentName,
   currentLogoUrl,
   loadingProfile,
-  onSaveProfile
+  onSaveProfile,
+  businessId,
+  mutateProfile
 }) => {
   const { toast } = useToast();
   const {
@@ -50,30 +49,32 @@ const BusinessProfileSettings: React.FC<BusinessProfileSettingsProps> = ({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting, isDirty }
-  } = useForm<BusinessProfileFormData>({
-    resolver: zodResolver(businessProfileSchema),
+  } = useForm<BusinessNameFormData>({
+    resolver: zodResolver(businessNameSchema),
     defaultValues: {
-      name: currentName ?? '',
-      logoUrl: currentLogoUrl ?? ''
+      name: currentName ?? ''
     }
   });
 
   useEffect(() => {
     reset({
-      name: currentName ?? '',
-      logoUrl: currentLogoUrl ?? ''
+      name: currentName ?? ''
     });
-  }, [currentName, currentLogoUrl, reset]);
+  }, [currentName, reset]);
 
-  const onSubmit = async (data: BusinessProfileFormData) => {
+  const onSubmitName = async (data: BusinessNameFormData) => {
     if (!isDirty) {
       toast({
         title: 'Sin Cambios',
-        description: 'No has modificado los datos del perfil.'
+        description: 'No has modificado el nombre del negocio.'
       });
       return;
     }
     await onSaveProfile(data);
+  };
+
+  const handleLogoUpdateSuccess = () => {
+    mutateProfile();
   };
 
   return (
@@ -84,71 +85,65 @@ const BusinessProfileSettings: React.FC<BusinessProfileSettingsProps> = ({
           Define el nombre y logo que verán tus clientes.
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
+
+      <form onSubmit={handleSubmit(onSubmitName)}>
         <CardContent className="space-y-4">
           {loadingProfile ? (
-            <div className="flex items-center justify-center h-20">
+            <div className="flex items-center justify-center h-10">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="profile-name">Nombre del Negocio</Label>
-                <Input
-                  id="profile-name"
-                  placeholder="Mi Pastelería Creativa"
-                  {...register('name')}
-                  className={cn(errors.name && 'border-destructive')}
-                />
-                {errors.name && (
-                  <p className="text-xs text-destructive mt-1">
-                    {errors.name.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="profile-logoUrl">URL del Logo (Opcional)</Label>
-                <Input
-                  id="profile-logoUrl"
-                  placeholder="https://ejemplo.com/logo.png"
-                  {...register('logoUrl')}
-                  className={cn(errors.logoUrl && 'border-destructive')}
-                />
-                {errors.logoUrl && (
-                  <p className="text-xs text-destructive mt-1">
-                    {errors.logoUrl.message}
-                  </p>
-                )}
-              </div>
-
-              {currentLogoUrl && (
-                <div className="space-y-1.5">
-                  <Label>Logo Actual</Label>
-                  <div className="relative h-24 w-24 rounded-md overflow-hidden border p-1">
-                    <Image
-                      src={currentLogoUrl}
-                      alt="Logo Actual"
-                      layout="fill"
-                      objectFit="contain"
-                      unoptimized
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-name">Nombre del Negocio</Label>
+              <Input
+                id="profile-name"
+                placeholder="Mi Pastelería Creativa"
+                {...register('name')}
+                className={cn(errors.name && 'border-destructive')}
+              />
+              {errors.name && (
+                <p className="text-xs text-destructive mt-1">
+                  {errors.name.message}
+                </p>
               )}
-            </>
+            </div>
           )}
         </CardContent>
         <CardFooter>
           <Button type="submit" disabled={isSubmitting || loadingProfile}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Guardar Perfil
+            Guardar Nombre
           </Button>
         </CardFooter>
       </form>
+
+      <CardContent>
+        <hr className="my-6" />
+        <div className="space-y-2">
+          <Label className="text-base font-medium">Logo del Negocio</Label>
+          <p className="text-sm text-muted-foreground">
+            Sube o cambia el logo (SVG o PNG).
+          </p>
+        </div>
+
+        {loadingProfile ? (
+          <div className="flex items-center justify-center h-20 mt-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : businessId ? (
+          <div className="mt-4">
+            <LogoUploadForm
+              businessId={businessId}
+              currentLogoUrl={currentLogoUrl}
+              onUploadSuccess={handleLogoUpdateSuccess}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-4">
+            No se pudo cargar la información para la subida del logo.
+          </p>
+        )}
+      </CardContent>
     </Card>
   );
 };

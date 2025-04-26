@@ -28,15 +28,10 @@ import {
   SQL
 } from 'drizzle-orm';
 import { OrderStatus, PaymentMethod, PaymentStatus, ProductType } from '@types';
-import {
-  OrderFormData,
-  UpdateOrderFormData,
-  updateOrderFormSchema
-} from './validators/orders';
+import { OrderFormData, UpdateOrderFormData } from './validators/orders';
 import { UpdateCustomerFormData } from './validators/customers';
 import { Pool } from '@neondatabase/serverless';
 
-export const runtime = 'nodejs';
 export const orderStatusEnum = pgEnum(
   'order_status',
   Object.values(OrderStatus) as [string, ...string[]]

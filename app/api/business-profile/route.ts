@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
     const result = await db
       .select({
         name: businesses.name,
-        logoUrl: businesses.logoUrl
+        logoUrl: businesses.logoUrl,
+        id: businesses.id
       })
       .from(businesses)
       .where(eq(businesses.id, businessId))
