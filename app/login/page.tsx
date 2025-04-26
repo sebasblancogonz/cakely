@@ -42,14 +42,6 @@ export default function LoginPage() {
             <Chrome className="mr-2 h-4 w-4" />
             Continuar con Google
           </Button>
-          <Button
-            onClick={handleGitHubSignIn}
-            variant="outline"
-            className="w-full"
-          >
-            <Github className="mr-2 h-4 w-4" />
-            Continuar con GitHub
-          </Button>
         </CardContent>
         <CardFooter className="text-xs text-center text-muted-foreground">
           Al continuar, aceptas nuestros Términos y Política de Privacidad.

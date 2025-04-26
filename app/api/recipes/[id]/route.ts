@@ -4,6 +4,7 @@ import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
 import { eq, and, inArray } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { updateRecipeSchema } from '@/lib/validators/recipes';
+import { IngredientPrice } from '@/types/types';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -149,7 +150,9 @@ export async function PUT(request: NextRequest) {
               )
             );
 
-          const validIdSet = new Set(validIngredientIds.map((i) => i.id));
+          const validIdSet = new Set(
+            validIngredientIds.map((i: IngredientPrice) => i.id)
+          );
 
           const ingredientsToInsert = ingredientsData
             .filter((ing) => validIdSet.has(ing.ingredientId))

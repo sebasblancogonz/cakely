@@ -1,5 +1,6 @@
-import { Pool } from '@neondatabase/serverless';
 import { z } from 'zod';
+import postgres from 'postgres';
+import { drizzle as drizzlePg } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import {
   pgTable,
@@ -33,7 +34,9 @@ import {
   updateOrderFormSchema
 } from './validators/orders';
 import { UpdateCustomerFormData } from './validators/customers';
+import { Pool } from '@neondatabase/serverless';
 
+export const runtime = 'nodejs';
 export const orderStatusEnum = pgEnum(
   'order_status',
   Object.values(OrderStatus) as [string, ...string[]]
@@ -401,13 +404,32 @@ const schema = {
   sessionsRelations
 };
 
-if (!process.env.POSTGRES_URL) {
-  throw new Error('POSTGRES_URL environment variable is not set.');
+let dbInstance: any;
+
+if (
+  process.env.NODE_ENV === 'production' &&
+  process.env.DATABASE_URL?.includes('neon.tech')
+) {
+  if (!process.env.POSTGRES_URL) {
+    throw new Error('POSTGRES_URL environment variable is not set.');
+  }
+
+  const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
+
+  dbInstance = drizzle(pool, { schema });
+} else {
+  if (!process.env.POSTGRES_URL) {
+    throw new Error('DATABASE_URL is required for development environment.');
+  }
+  const queryClient = postgres(process.env.POSTGRES_URL);
+  dbInstance = drizzlePg(queryClient, {
+    schema,
+    logger: process.env.NODE_ENV === 'development'
+  });
+  console.log('Using node-postgres (pg) driver for development.');
 }
 
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
-
-export const db = drizzle(pool, { schema });
+export const db = dbInstance;
 
 export type SelectBusiness = typeof businesses.$inferSelect;
 export type SelectUser = typeof users.$inferSelect;

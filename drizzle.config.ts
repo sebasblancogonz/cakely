@@ -10,12 +10,9 @@ if (!process.env.POSTGRES_URL) {
 export default defineConfig({
   schema: './lib/db.ts',
   out: './drizzle/migrations',
-  driver: 'pglite',
   dialect: 'postgresql',
 
   dbCredentials: {
     url: process.env.POSTGRES_URL
-  },
-  verbose: true,
-  strict: true
+  }
 });

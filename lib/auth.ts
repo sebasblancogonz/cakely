@@ -11,7 +11,7 @@ import {
   businesses
 } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-
+export const runtime = 'nodejs';
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
     usersTable: users,

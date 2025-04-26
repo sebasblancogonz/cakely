@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, businesses } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { profilePatchSchema } from '@/lib/validators/business';
 

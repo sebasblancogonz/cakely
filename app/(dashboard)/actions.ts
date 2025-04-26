@@ -1,5 +1,6 @@
 'use server';
 
+export const runtime = 'nodejs';
 import { auth } from '@/lib/auth';
 import { deleteOrderById, deleteCustomerById } from '@/lib/db';
 

@@ -1,4 +1,3 @@
-// app/api/orders/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrders, saveOrder } from '@/lib/db';
 import { OrderStatus } from '@types';

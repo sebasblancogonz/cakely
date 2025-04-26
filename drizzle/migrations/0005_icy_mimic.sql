@@ -53,6 +53,7 @@ ALTER TABLE "orders" ALTER COLUMN "order_date" SET DEFAULT now();--> statement-b
 ALTER TABLE "orders" ALTER COLUMN "order_status" SET DEFAULT 'Pendiente';--> statement-breakpoint
 ALTER TABLE "orders" ALTER COLUMN "payment_status" SET DEFAULT 'Pendiente';--> statement-breakpoint
 ALTER TABLE "orders" ALTER COLUMN "payment_method" SET DEFAULT 'Efectivo';--> statement-breakpoint
+ALTER TABLE "business_settings" DROP COLUMN "id";
 ALTER TABLE "business_settings" ADD COLUMN "business_id" integer PRIMARY KEY NOT NULL;--> statement-breakpoint
 ALTER TABLE "customers" ADD COLUMN "business_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "ingredient_prices" ADD COLUMN "business_id" integer NOT NULL;--> statement-breakpoint
@@ -68,4 +69,3 @@ ALTER TABLE "orders" ADD CONSTRAINT "orders_business_id_businesses_id_fk" FOREIG
 ALTER TABLE "recipes" ADD CONSTRAINT "recipes_business_id_businesses_id_fk" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "business_ingredient_name_idx" ON "ingredient_prices" USING btree ("business_id","name");--> statement-breakpoint
 CREATE UNIQUE INDEX "business_recipe_name_idx" ON "recipes" USING btree ("business_id","name");--> statement-breakpoint
-ALTER TABLE "business_settings" DROP COLUMN "id";
