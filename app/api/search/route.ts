@@ -12,6 +12,13 @@ interface SearchResult {
   url: string;
 }
 
+interface Select {
+  id: number;
+  title: string;
+  customerName: string;
+  description: string;
+}
+
 export async function GET(request: NextRequest) {
   const session = await auth();
   const businessId = session?.user?.businessId;
@@ -43,7 +50,9 @@ export async function GET(request: NextRequest) {
       ilike(orders.notes, searchTerm),
       ilike(orders.flavor, searchTerm),
       ilike(orders.customizationDetails, searchTerm),
-      ilike(orders.sizeOrWeight, searchTerm)
+      ilike(orders.sizeOrWeight, searchTerm),
+      ilike(customers.name, searchTerm),
+      ilike(orders.productType, searchTerm)
     );
     const orderCondition = and(
       baseBusinessCondition(orders),
@@ -62,7 +71,7 @@ export async function GET(request: NextRequest) {
       .limit(limitPerType);
 
     results.push(
-      ...foundOrders.map((o) => ({
+      ...foundOrders.map((o: Select) => ({
         id: o.id,
         type: 'order' as const,
         title: o.title || `Pedido #${o.id}`,
@@ -94,7 +103,7 @@ export async function GET(request: NextRequest) {
       .limit(limitPerType);
 
     results.push(
-      ...foundCustomers.map((c) => ({
+      ...foundCustomers.map((c: Select) => ({
         id: c.id,
         type: 'customer' as const,
         title: c.title,
@@ -123,7 +132,7 @@ export async function GET(request: NextRequest) {
       .limit(limitPerType);
 
     results.push(
-      ...foundIngredients.map((i) => ({
+      ...foundIngredients.map((i: Select) => ({
         id: i.id,
         type: 'ingredient' as const,
         title: i.title,
@@ -152,7 +161,7 @@ export async function GET(request: NextRequest) {
       .limit(limitPerType);
 
     results.push(
-      ...foundRecipes.map((r) => ({
+      ...foundRecipes.map((r: Select) => ({
         id: r.id,
         type: 'recipe' as const,
         title: r.title,

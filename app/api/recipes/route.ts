@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       baseLaborHours: recipeData.baseLaborHours.toString()
     };
 
-    const newRecipe = await db.transaction(async (tx) => {
+    const newRecipe = await db.transaction(async (tx: any) => {
       const insertedRecipe = await tx
         .insert(recipes)
         .values(dataToInsert)

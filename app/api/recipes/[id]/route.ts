@@ -96,7 +96,7 @@ export async function PUT(request: NextRequest) {
     const { recipeIngredients: ingredientsData, ...recipeData } =
       validation.data;
 
-    const updatedRecipe = await db.transaction(async (tx) => {
+    const updatedRecipe = await db.transaction(async (tx: any) => {
       const dataToUpdateRecipe: Record<string, string | Date | undefined> = {};
       if (recipeData.name !== undefined)
         dataToUpdateRecipe.name = recipeData.name;
@@ -240,7 +240,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const deletedRecipe = await db.transaction(async (tx) => {
+    const deletedRecipe = await db.transaction(async (tx: any) => {
       const result = await tx
         .delete(recipes)
         .where(and(eq(recipes.id, id), eq(recipes.businessId, businessId)))
