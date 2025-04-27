@@ -164,7 +164,7 @@ function DesktopNav({
     >
       <nav className="flex flex-col gap-4 px-2 sm:py-5">
         <Link
-          href="/" // Enlace a la página principal
+          href="/"
           className={cn(
             'group flex items-center justify-center gap-2 rounded-lg text-lg font-semibold text-primary-foreground',
             isExpanded

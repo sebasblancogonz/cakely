@@ -11,6 +11,11 @@ import { toast } from '@/hooks/use-toast';
 import { BusinessProfileFormData } from '@/lib/validators/business';
 import BusinessProfileSettings from '@/components/settings/BusinessProfileSettings';
 import { useBusinessProfile } from '@/hooks/use-business-profile';
+import { useSession } from 'next-auth/react';
+import { Loader2 } from 'lucide-react';
+import TeamManagementSettings from '@/components/settings/TeamManagementSettings';
+
+type BusinessNameUpdateData = { name: string };
 
 export default function SettingsPage() {
   const [loadingIngredients, setLoadingIngredients] = useState(false);
@@ -23,36 +28,32 @@ export default function SettingsPage() {
     useState<Partial<RecipeWithIngredients> | null>(null);
   const [editingIngredient, setEditingIngredient] =
     useState<Partial<IngredientPrice> | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [businessName, setBusinessName] = useState<string | null>(null);
-  const [businessId, setBusinessId] = useState<number | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const { mutateProfile } = useBusinessProfile();
+  const { mutateProfile, profile, isLoadingProfile } = useBusinessProfile();
+  const { data: session, status: sessionStatus } = useSession();
+  const currentUserRole = session?.user?.role;
+  const businessId = session?.user?.businessId;
 
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
+      if (!businessId) {
+        console.log(
+          'SettingsPage: No businessId found in session yet, skipping data load.'
+        );
+        setLoadingIngredients(false);
+        setLoadingRecipes(false);
+        return;
+      }
+
       setLoadingIngredients(true);
-      setLoadingProfile(true);
       setLoadingRecipes(true);
       try {
-        const [ingredientsRes, recipesRes, profileRes] =
-          await Promise.allSettled([
-            fetch('/api/ingredient-prices'),
-            fetch('/api/recipes'),
-            fetch('/api/business-profile')
-          ]);
+        const [ingredientsRes, recipesRes] = await Promise.allSettled([
+          fetch('/api/ingredient-prices'),
+          fetch('/api/recipes')
+        ]);
         let ingredientsData: IngredientPrice[] = [];
         let recipesData: Recipe[] = [];
-        let profileData: {
-          name: string | null;
-          logoUrl: string | null;
-          id: number | undefined;
-        } = {
-          name: null,
-          logoUrl: null,
-          id: undefined
-        };
         let fetchOk = true;
 
         if (ingredientsRes.status === 'fulfilled' && ingredientsRes.value.ok) {
@@ -78,21 +79,6 @@ export default function SettingsPage() {
           );
         }
 
-        if (profileRes.status === 'fulfilled' && profileRes.value.ok) {
-          profileData = await profileRes.value.json();
-        } else {
-          console.error(
-            'Failed to fetch business profile (or not set up yet):',
-            profileRes.status === 'fulfilled'
-              ? await profileRes.value.text()
-              : profileRes.reason
-          );
-          toast({
-            title: 'Info',
-            description: 'No se pudo cargar el perfil del negocio.'
-          });
-        }
-
         if (isMounted) {
           if (!fetchOk) {
             toast({
@@ -104,9 +90,6 @@ export default function SettingsPage() {
           }
           setIngredients(ingredientsData || []);
           setRecipes(recipesData || []);
-          setBusinessName(profileData?.name ?? null);
-          setBusinessId(profileData?.id ?? null);
-          setLogoUrl(profileData?.logoUrl ?? null);
         }
       } catch (error) {
         console.error('Error loading page data:', error);
@@ -118,22 +101,25 @@ export default function SettingsPage() {
           });
           setIngredients([]);
           setRecipes([]);
-          setBusinessName(null);
-          setLogoUrl(null);
         }
       } finally {
         if (isMounted) {
           setLoadingIngredients(false);
           setLoadingRecipes(false);
-          setLoadingProfile(false);
         }
       }
     }
-    loadData();
+    if (sessionStatus === 'authenticated' && businessId) {
+      loadData();
+    } else if (sessionStatus !== 'loading') {
+      setLoadingIngredients(false);
+      setLoadingRecipes(false);
+    }
+
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [sessionStatus, businessId]);
 
   const handleSaveIngredient = async (data: IngredientFormData) => {
     const isEditing = !!data.id;
@@ -259,36 +245,31 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveProfile = async (data: BusinessProfileFormData) => {
-    console.log('Saving business profile:', data);
+  const handleSaveProfileName = async (data: BusinessNameUpdateData) => {
+    console.log('Saving business profile name:', data);
     try {
       const response = await fetch('/api/business-profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({ name: data.name })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to update profile');
+        throw new Error(errorData.message || 'Failed to update profile name');
       }
-
-      const savedProfile = await response.json();
 
       mutateProfile();
 
-      setBusinessName(savedProfile.name ?? null);
-      setLogoUrl(savedProfile.logoUrl ?? null);
-
       toast({
         title: 'Éxito',
-        description: 'Perfil del negocio actualizado.'
+        description: 'Nombre del negocio actualizado.'
       });
     } catch (error) {
-      console.error('Error saving business profile:', error);
+      console.error('Error saving business name:', error);
       toast({
         title: 'Error',
-        description: `No se pudo guardar el perfil: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        description: `No se pudo guardar el nombre: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         variant: 'destructive'
       });
     }
@@ -322,20 +303,45 @@ export default function SettingsPage() {
     }
   };
 
+  if (
+    sessionStatus === 'loading' ||
+    (sessionStatus === 'authenticated' && isLoadingProfile)
+  ) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Estado No Autenticado o sin Business ID/Rol (después de cargar)
+  if (sessionStatus !== 'authenticated' || !businessId || !currentUserRole) {
+    return (
+      <div className="p-4 text-center text-destructive">
+        Error: Acceso no autorizado o falta información del negocio/rol.
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-hidden">
       <h1 className="text-2xl font-bold">Ajustes del Negocio</h1>
 
       <BusinessProfileSettings
-        currentLogoUrl={logoUrl}
-        currentName={businessName}
-        loadingProfile={loadingProfile}
-        onSaveProfile={handleSaveProfile}
-        businessId={businessId!}
+        currentLogoUrl={profile.logoUrl}
+        currentName={profile.name}
+        loadingProfile={isLoadingProfile}
+        onSaveProfile={handleSaveProfileName}
+        businessId={businessId}
         mutateProfile={mutateProfile}
       />
 
       <OperativeSettings />
+
+      <TeamManagementSettings
+        currentUserRole={currentUserRole}
+        businessId={businessId}
+      />
 
       <IngredientsSettings
         ingredients={ingredients}

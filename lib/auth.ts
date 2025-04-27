@@ -2,7 +2,7 @@ import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db } from '@/lib/db';
+import { db, teamMembers } from '@/lib/db';
 import {
   users,
   accounts,
@@ -11,6 +11,7 @@ import {
   businesses
 } from '@/lib/db';
 import { eq } from 'drizzle-orm';
+import { TeamRole } from '@/types/next-auth';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -34,73 +35,104 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user, trigger }) {
-      if (user?.id) {
-        token.id = user.id;
+    async jwt({ token, user, trigger, account, profile }) {
+      const currentUserId = token.id ?? user?.id;
+
+      if (!currentUserId) {
+        return token;
+      }
+      if (!token.id) {
+        token.id = currentUserId;
       }
 
-      const currentUserId = token.id as string | undefined;
+      if (trigger === 'signUp' && user) {
+        console.log('AUTH_CALLBACK: Handling SignUp...');
+        try {
+          const [newBusiness] = await db
+            .insert(businesses)
+            .values({
+              ownerUserId: currentUserId,
+              name: `${user.name || user.email || 'Nuevo'}'s Business`
+            })
+            .returning({ id: businesses.id });
 
-      if (user && currentUserId) {
-        if (trigger === 'signUp') {
-          try {
-            console.log('v5: New user detected, creating business...');
-            const newBusiness = await db
-              .insert(businesses)
+          if (newBusiness?.id) {
+            const businessId = newBusiness.id;
+            token.businessId = businessId;
+            token.role = 'OWNER';
+
+            await db
+              .insert(teamMembers)
               .values({
-                ownerUserId: currentUserId,
-                name: `${user.name || user.email}'s Business`
+                userId: currentUserId,
+                businessId: businessId,
+                role: 'OWNER'
               })
-              .returning({ insertedId: businesses.id });
+              .onConflictDoNothing();
 
-            if (newBusiness && newBusiness.length > 0) {
-              const businessId = newBusiness[0].insertedId;
-              console.log('v5: Created business with ID:', businessId);
-              await db
-                .update(users)
-                .set({ businessId: businessId })
-                .where(eq(users.id, currentUserId)); // Use currentUserId
-              token.businessId = businessId;
-              console.log('v5: User updated with businessId, token updated.');
-            } else {
-              console.error(
-                'v5: Failed to create business for new user:',
-                currentUserId
-              );
-            }
-          } catch (error) {
-            console.error(
-              'v5: Error during business creation/user update:',
-              error
-            );
-          }
-        } else {
-          if (token.businessId === undefined && currentUserId) {
             console.log(
-              'v5: Existing user or missing businessId in token, fetching from DB for user:',
+              `AUTH_CALLBACK: SignUp successful. Business: ${businessId}, Role: OWNER`
+            );
+          } else {
+            console.error(
+              'AUTH_CALLBACK: SignUp - Failed to create business for user:',
               currentUserId
             );
-            const dbUser = await db.query.users.findFirst({
-              where: eq(users.id, currentUserId),
-              columns: { businessId: true }
-            });
-            token.businessId = dbUser?.businessId;
-            console.log('v5: Fetched businessId from DB:', token.businessId);
-          } else if (currentUserId) {
-            console.log(
-              'v5: Existing user, businessId already in token:',
-              token.businessId
-            );
+            token.businessId = null;
+            token.role = null;
           }
+        } catch (error) {
+          console.error(
+            'AUTH_CALLBACK: SignUp - Error creating business/team member:',
+            error
+          );
+          token.businessId = null;
+          token.role = null;
+        }
+      } else if (currentUserId) {
+        if (token.businessId === undefined || token.role === undefined) {
+          console.log(
+            `AUTH_CALLBACK: Login/Update - Fetching team info for user: ${currentUserId}`
+          );
+          const membership = await db.query.teamMembers.findFirst({
+            where: eq(teamMembers.userId, currentUserId as string),
+            columns: { businessId: true, role: true }
+          });
+
+          if (membership) {
+            token.businessId = membership.businessId;
+            token.role = membership.role as any;
+            console.log(`AUTH_CALLBACK: Login/Update - Found team info:`, {
+              bId: token.businessId,
+              role: token.role
+            });
+          } else {
+            console.log(
+              `AUTH_CALLBACK: Login/Update - User ${currentUserId} not found in any team.`
+            );
+            token.businessId = null;
+            token.role = null;
+          }
+        } else {
+          console.log(`AUTH_CALLBACK: Login/Update - Info already in token:`, {
+            bId: token.businessId,
+            role: token.role
+          });
         }
       }
+
       return token;
     },
+
     async session({ session, token }) {
-      if (token && session.user) {
+      if (token.id && session.user) {
         session.user.id = token.id as string;
-        session.user.businessId = token.businessId as number | undefined | null;
       }
+      if (session.user) {
+        session.user.businessId = Number(token.businessId) ?? null;
+        session.user.role = (token.role as TeamRole) ?? null;
+      }
+      console.log('AUTH_CALLBACK: Session created/updated:', session.user);
       return session;
     }
   }

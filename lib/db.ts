@@ -14,7 +14,8 @@ import {
   varchar,
   uniqueIndex,
   foreignKey,
-  primaryKey
+  primaryKey,
+  unique
 } from 'drizzle-orm/pg-core';
 import {
   and,
@@ -280,6 +281,95 @@ export const verificationTokens = pgTable(
   })
 );
 
+export const teamRoleEnum = pgEnum('team_role', [
+  'OWNER',
+  'ADMIN',
+  'EDITOR',
+  'VIEWER'
+]);
+
+export const invitationStatusEnum = pgEnum('invitation_status', [
+  'PENDING',
+  'ACCEPTED',
+  'DECLINED',
+  'EXPIRED',
+  'CANCELLED'
+]);
+
+export const invitations = pgTable('invitations', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull(),
+  businessId: integer('business_id')
+    .notNull()
+    .references(() => businesses.id, { onDelete: 'cascade' }),
+  role: teamRoleEnum('role').notNull(),
+  invitedByUserId: text('invited_by_user_id').references(() => users.id, {
+    onDelete: 'set null'
+  }),
+  status: invitationStatusEnum('status').notNull().default('PENDING'),
+  token: text('token').unique().notNull(),
+  expiresAt: timestamp('expires_at', {
+    mode: 'date',
+    withTimezone: true
+  }).notNull(),
+  createdAt: timestamp('created_at', {
+    mode: 'date',
+    withTimezone: true
+  }).defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+});
+
+export const teamMembers = pgTable(
+  'team_members',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    businessId: integer('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    role: teamRoleEnum('role').notNull(),
+    joinedAt: timestamp('joined_at', {
+      mode: 'date',
+      withTimezone: true
+    }).defaultNow(),
+    createdAt: timestamp('created_at', {
+      mode: 'date',
+      withTimezone: true
+    }).defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+  },
+  (table) => {
+    return {
+      pk: unique().on(table.userId, table.businessId)
+    };
+  }
+);
+
+export const invitationRelations = relations(invitations, ({ one }) => ({
+  business: one(businesses, {
+    fields: [invitations.businessId],
+    references: [businesses.id]
+  }),
+  invitedByUser: one(users, {
+    fields: [invitations.invitedByUserId],
+    references: [users.id]
+  })
+}));
+
+export const teamMemberRelations = relations(teamMembers, ({ one }) => ({
+  user: one(users, { fields: [teamMembers.userId], references: [users.id] }),
+  business: one(businesses, {
+    fields: [teamMembers.businessId],
+    references: [businesses.id]
+  })
+}));
+
 export const businessesRelations = relations(businesses, ({ one, many }) => ({
   owner: one(users, {
     fields: [businesses.ownerUserId],
@@ -292,7 +382,9 @@ export const businessesRelations = relations(businesses, ({ one, many }) => ({
   customers: many(customers),
   orders: many(orders),
   recipes: many(recipes),
-  ingredientPrices: many(ingredientPrices)
+  ingredientPrices: many(ingredientPrices),
+  teamMembers: many(teamMembers),
+  invitations: many(invitations)
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -300,6 +392,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.businessId],
     references: [businesses.id]
   }),
+  teamMemberships: many(teamMembers),
+  sentInvitations: many(invitations, { relationName: 'invitedByUser' }),
   accounts: many(accounts),
   sessions: many(sessions)
 }));
@@ -386,6 +480,8 @@ const schema = {
   recipes,
   ingredientPrices,
   recipeIngredients,
+  invitations,
+  teamMembers,
   // Relations
   businessesRelations,
   usersRelations,
@@ -396,7 +492,9 @@ const schema = {
   recipeIngredientsRelations,
   businessSettingsRelations,
   accountsRelations,
-  sessionsRelations
+  sessionsRelations,
+  invitationRelations,
+  teamMemberRelations
 };
 
 let dbInstance: any;
@@ -438,6 +536,10 @@ export type Recipe = typeof recipes.$inferSelect;
 export type NewRecipe = typeof recipes.$inferInsert;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type NewRecipeIngredient = typeof recipeIngredients.$inferInsert;
+export type TeamMemberWithUser = typeof teamMembers.$inferSelect & {
+  user?: SelectUser;
+};
+export type PendingInvitation = typeof invitations.$inferSelect;
 
 export type Order = SelectOrder & {
   customer?: SelectCustomer;

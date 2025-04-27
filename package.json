@@ -49,6 +49,7 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.56.0",
     "recharts": "^2.15.1",
+    "resend": "^4.4.1",
     "server-only": "^0.0.1",
     "serverless@latest": "link:neondatabase/serverless@latest",
     "shadcdn": "^0.0.8",
@@ -60,6 +61,7 @@
     "toaster": "^0.1.2",
     "typescript": "5.7.2",
     "uuid": "^11.1.0",
+    "webcrypto": "^0.1.1",
     "yet-another-react-lightbox": "^3.22.0",
     "zod": "^3.24.3"
   },

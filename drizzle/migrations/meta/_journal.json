@@ -50,6 +50,20 @@
       "when": 1745610491970,
       "tag": "0006_lovely_goliath",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1745702332137,
+      "tag": "0007_chunky_tempest",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1745715083158,
+      "tag": "0008_melted_black_tom",
+      "breakpoints": true
     }
   ]
 }

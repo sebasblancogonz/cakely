@@ -67,7 +67,7 @@ const availableColumns: {
     defaultVisible: true,
     canHide: true,
     className: 'hidden md:table-cell'
-  }, // Use totalPrice
+  },
   {
     id: 'productType',
     label: 'Producto',

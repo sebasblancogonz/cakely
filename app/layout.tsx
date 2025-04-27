@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import './globals.css';
 
 import { Analytics } from '@vercel/analytics/react';
+import { SessionProvider } from 'next-auth/react';
 
 export const metadata = {
   title: 'Cakely - Panel de control',
@@ -17,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="flex min-h-screen w-full flex-col">
-        <Suspense fallback={<div>Cargando...</div>}>{children}</Suspense>
+        <SessionProvider>
+          <Suspense fallback={<div>Cargando...</div>}>{children}</Suspense>
+        </SessionProvider>
       </body>
       <Analytics />
     </html>

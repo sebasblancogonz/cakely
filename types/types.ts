@@ -7,6 +7,9 @@ import {
   SelectOrder as DbSelectOrder,
   SelectCustomer as DbSelectCustomer
 } from '@/lib/db';
+import { teamRoleEnum } from '@/lib/db';
+
+export type TeamRole = (typeof teamRoleEnum.enumValues)[number];
 
 // --- Core Database Entity Types ---
 export type Setting = SelectSetting;

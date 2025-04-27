@@ -1,4 +1,3 @@
-// src/components/forms/LogoUploadForm.tsx (o donde prefieras)
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
