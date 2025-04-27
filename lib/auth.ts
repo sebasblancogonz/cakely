@@ -2,7 +2,7 @@ import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db, teamMembers } from '@/lib/db';
+import { db, invitations, teamMembers } from '@/lib/db';
 import {
   users,
   accounts,
@@ -10,7 +10,7 @@ import {
   verificationTokens,
   businesses
 } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, gt } from 'drizzle-orm';
 import { TeamRole } from '@/types/next-auth';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -36,92 +36,135 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, user, trigger, account, profile }) {
-      const currentUserId = token.id ?? user?.id;
+      // USA DIRECTAMENTE LOS IDs COMO STRINGS (UUIDs)
+      const currentUserId = (token.id as string) ?? user?.id;
+      const currentUserEmail = (token.email as string) ?? user?.email;
 
-      if (!currentUserId) {
-        return token;
+      if (!currentUserId || !currentUserEmail) {
+        console.log('AUTH_CALLBACK JWT: Falta userId o user.email.');
+        return {
+          ...token,
+          businessId: token.businessId ?? null,
+          role: token.role ?? null
+        };
       }
+      // Asegura token.id (string)
       if (!token.id) {
         token.id = currentUserId;
       }
 
+      // --- Lógica de SIGNUP ---
       if (trigger === 'signUp' && user) {
-        console.log('AUTH_CALLBACK: Handling SignUp...');
+        console.log(
+          `AUTH_CALLBACK: Procesando SignUp para ${currentUserEmail}...`
+        );
         try {
-          const [newBusiness] = await db
-            .insert(businesses)
-            .values({
-              ownerUserId: currentUserId,
-              name: `${user.name || user.email || 'Nuevo'}'s Business`
-            })
-            .returning({ id: businesses.id });
+          const userEmailLower = currentUserEmail.toLowerCase();
+          // 1. Buscar invitación PENDIENTE y válida
+          const pendingInvite = await db.query.invitations.findFirst({
+            where: and(
+              eq(invitations.email, userEmailLower),
+              eq(invitations.status, 'PENDING'),
+              gt(invitations.expiresAt, new Date())
+            ),
+            // Necesitamos businessId (asumiendo que es number/integer) y role
+            columns: { id: true, businessId: true, role: true }
+          });
 
-          if (newBusiness?.id) {
-            const businessId = newBusiness.id;
-            token.businessId = businessId;
-            token.role = 'OWNER';
-
-            await db
-              .insert(teamMembers)
-              .values({
-                userId: currentUserId,
-                businessId: businessId,
-                role: 'OWNER'
-              })
-              .onConflictDoNothing();
-
+          // 2. Si se encuentra invitación...
+          if (pendingInvite && pendingInvite.businessId) {
+            // Asegura que businessId existe
             console.log(
-              `AUTH_CALLBACK: SignUp successful. Business: ${businessId}, Role: OWNER`
+              `AUTH_CALLBACK: SignUp - Invitación pendiente encontrada para ${userEmailLower}. Aceptando automáticamente.`
+            );
+            token.businessId = pendingInvite.businessId; // Asigna businessId (number)
+            token.role = pendingInvite.role as TeamRole; // Asigna rol (string/enum)
+
+            await db.transaction(async (tx) => {
+              await tx
+                .insert(teamMembers)
+                .values({
+                  userId: currentUserId, // <-- USA STRING UUID
+                  businessId: pendingInvite.businessId, // <-- Usa NUMBER (o string si businessId es UUID)
+                  role: pendingInvite.role,
+                  joinedAt: new Date()
+                })
+                .onConflictDoNothing();
+              // Asume que invitations.id es del tipo correcto (number o string/uuid)
+              await tx
+                .update(invitations)
+                .set({ status: 'ACCEPTED' })
+                .where(eq(invitations.id, pendingInvite.id));
+            });
+            console.log(
+              `AUTH_CALLBACK: SignUp - Usuario ${currentUserId} añadido al equipo ${pendingInvite.businessId} como ${pendingInvite.role}.`
             );
           } else {
-            console.error(
-              'AUTH_CALLBACK: SignUp - Failed to create business for user:',
-              currentUserId
+            // --- INVITACIÓN NO ENCONTRADA ---
+            console.log(
+              `AUTH_CALLBACK: SignUp - No se encontró invitación pendiente para ${userEmailLower}. No se asocia negocio.`
             );
             token.businessId = null;
             token.role = null;
           }
         } catch (error) {
           console.error(
-            'AUTH_CALLBACK: SignUp - Error creating business/team member:',
+            'AUTH_CALLBACK: SignUp - Error durante el procesamiento:',
             error
           );
           token.businessId = null;
-          token.role = null;
+          token.role = null; // Resetea en caso de error
         }
-      } else if (currentUserId) {
-        if (token.businessId === undefined || token.role === undefined) {
+      }
+      // --- Lógica de LOGIN / UPDATE (Usuario ya existente) ---
+      else if (currentUserId) {
+        // Usa el string ID para la condición
+        const needsDbCheck =
+          token.businessId === undefined ||
+          token.businessId === null ||
+          token.role === undefined ||
+          token.role === null;
+
+        if (needsDbCheck) {
           console.log(
-            `AUTH_CALLBACK: Login/Update - Fetching team info for user: ${currentUserId}`
+            `AUTH_CALLBACK: Login/Update - Buscando info de equipo para user: ${currentUserId}. Token actual:`,
+            { bId: token.businessId, role: token.role }
           );
           const membership = await db.query.teamMembers.findFirst({
-            where: eq(teamMembers.userId, currentUserId as string),
-            columns: { businessId: true, role: true }
+            // --- USA STRING UUID EN LA COMPARACIÓN ---
+            where: eq(teamMembers.userId, currentUserId), // <-- FIX: Compara string con columna text/uuid
+            columns: { businessId: true, role: true },
+            orderBy: [asc(teamMembers.joinedAt)]
           });
 
           if (membership) {
-            token.businessId = membership.businessId;
-            token.role = membership.role as any;
-            console.log(`AUTH_CALLBACK: Login/Update - Found team info:`, {
-              bId: token.businessId,
-              role: token.role
-            });
+            // Verifica si se encontró membresía
+            token.businessId = membership.businessId; // Asigna businessId (probablemente number)
+            token.role = membership.role as TeamRole;
+            console.log(
+              `AUTH_CALLBACK: Login/Update - Info encontrada en DB:`,
+              { bId: token.businessId, role: token.role }
+            );
           } else {
             console.log(
-              `AUTH_CALLBACK: Login/Update - User ${currentUserId} not found in any team.`
+              `AUTH_CALLBACK: Login/Update - User ${currentUserId} no encontrado en ningún equipo. Asignando null.`
             );
             token.businessId = null;
             token.role = null;
           }
         } else {
-          console.log(`AUTH_CALLBACK: Login/Update - Info already in token:`, {
-            bId: token.businessId,
-            role: token.role
-          });
+          console.log(
+            `AUTH_CALLBACK: Login/Update - Info ya presente en token:`,
+            { bId: token.businessId, role: token.role }
+          );
         }
       }
 
-      return token;
+      // Asegurar valores nulos por defecto
+      token.businessId = token.businessId ?? null;
+      token.role = token.role ?? null;
+
+      return token; // Devuelve el token final
     },
 
     async session({ session, token }) {
