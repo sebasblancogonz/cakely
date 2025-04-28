@@ -31,6 +31,7 @@ export default function SettingsPage() {
   const { mutateProfile, profile, isLoadingProfile } = useBusinessProfile();
   const { data: session, status: sessionStatus } = useSession();
   const currentUserRole = session?.user?.role;
+  const currentUserId = session?.user?.id;
   const businessId = session?.user?.businessId;
 
   useEffect(() => {
@@ -339,6 +340,7 @@ export default function SettingsPage() {
       <OperativeSettings />
 
       <TeamManagementSettings
+        currentUserId={currentUserId}
         currentUserRole={currentUserRole}
         businessId={businessId}
       />

@@ -360,7 +360,7 @@ export default function QuotesPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Generador de Presupuestos</h1>
+      <h1 className="text-2xl font-bold">Generador de Presupuestos (Beta)</h1>
 
       {essentialSettingsMissing && (
         <Alert variant="destructive">
