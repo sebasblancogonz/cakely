@@ -45,6 +45,7 @@ import { cn } from '@/lib/utils';
 import type { TeamMemberWithUser, PendingInvitation, TeamRole } from '@types';
 
 const ROLES_ALLOWED_TO_INVITE = ['ADMIN', 'EDITOR'] as const;
+const ASSIGNABLE_ROLES: TeamRole[] = ['ADMIN', 'EDITOR'];
 
 const inviteMemberSchema = z.object({
   email: z.string().email('Introduce un email válido.'),
@@ -304,6 +305,81 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
     }
   };
 
+  const handleRoleChange = async (memberUserId: string, newRole: TeamRole) => {
+    if (
+      !canManageTeam ||
+      processingId ||
+      !currentUserId ||
+      memberUserId === currentUserId
+    )
+      return;
+
+    const memberToUpdate = teamMembers.find((m) => m.userId === memberUserId);
+    if (!memberToUpdate || memberToUpdate.role === 'OWNER') return;
+    if (
+      currentUserRole === 'ADMIN' &&
+      (memberToUpdate.role === 'ADMIN' || newRole === 'ADMIN')
+    ) {
+      toast({
+        title: 'Permiso denegado',
+        description: 'Un Admin no puede modificar o crear otros Admins.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (newRole === 'OWNER') {
+      toast({
+        title: 'Rol inválido',
+        description: 'No se puede asignar el rol de Propietario.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    console.log(`Changing role for ${memberUserId} to ${newRole}`);
+    setProcessingId(memberUserId);
+
+    try {
+      const response = await fetch(`/api/team-members/${memberUserId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `Error ${response.status} al cambiar rol`
+        );
+      }
+
+      const updatedMember = await response.json();
+
+      toast({
+        title: 'Éxito',
+        description: `Rol actualizado a ${updatedMember.role}.`
+      });
+
+      setTeamMembers((prev) =>
+        prev.map((m) =>
+          m.userId === memberUserId ? { ...m, role: updatedMember.role } : m
+        )
+      );
+    } catch (error) {
+      console.error('Error changing role:', error);
+      toast({
+        title: 'Error al Cambiar Rol',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'No se pudo actualizar el rol.',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -340,7 +416,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
                     </p>
                   )}
                 </div>
-                {/* Rol Select */}
                 <div className="space-y-1.5">
                   <Label htmlFor="invite-role">Asignar Rol</Label>
                   <Controller
@@ -377,7 +452,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
                   )}
                 </div>
               </div>
-              {/* Botón Enviar */}
               <div className="flex justify-end">
                 <Button type="submit" disabled={isInviting}>
                   {isInviting ? (
@@ -396,7 +470,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
         </>
       )}
 
-      {/* --- Sección Invitaciones Pendientes --- */}
       {canManageTeam && (
         <CardContent>
           <h3 className="text-lg font-medium border-b pb-2 mb-4 flex items-center">
@@ -485,25 +558,57 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
             </TableHeader>
             <TableBody>
               {teamMembers.map((member) => {
-                const canPerformActionsOnMember =
+                const canEditThisMemberRole =
                   canManageTeam &&
                   member.role !== 'OWNER' &&
-                  member.userId !== currentUserId;
+                  member.userId !== currentUserId &&
+                  !(currentUserRole === 'ADMIN' && member.role === 'ADMIN');
+
+                const canDeleteThisMember = canEditThisMemberRole;
+
                 return (
                   <TableRow key={member.userId}>
                     <TableCell className="font-medium">
                       {member.name || '-'}
                     </TableCell>
                     <TableCell>{member.email || '-'}</TableCell>
-                    <TableCell>{member.role}</TableCell>
+                    <TableCell>
+                      {canEditThisMemberRole ? (
+                        <Select
+                          value={member.role}
+                          onValueChange={(newRole) =>
+                            handleRoleChange(member.userId, newRole as TeamRole)
+                          }
+                          disabled={processingId === member.userId}
+                        >
+                          <SelectTrigger className="h-8 w-[120px]">
+                            <SelectValue placeholder="Cambiar rol..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ASSIGNABLE_ROLES.map((roleValue) =>
+                              currentUserRole === 'ADMIN' &&
+                              roleValue === 'ADMIN' ? null : (
+                                <SelectItem key={roleValue} value={roleValue}>
+                                  {roleValue}
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span>{member.role}</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {member.joinedAt
                         ? new Date(member.joinedAt).toLocaleDateString()
                         : '-'}
                     </TableCell>
+                    {/* Celda de Acciones */}
                     {canManageTeam && (
-                      <TableCell className="text-right space-x-1">
-                        {canPerformActionsOnMember && (
+                      <TableCell className="text-right">
+                        {/* Botón Eliminar (si aplica) */}
+                        {canDeleteThisMember && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -519,7 +624,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
                             )}
                           </Button>
                         )}
-                        {/* TODO: Añadir botón/modal para cambiar rol si canPerformActionsOnMember es true */}
                       </TableCell>
                     )}
                   </TableRow>

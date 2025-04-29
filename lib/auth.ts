@@ -14,6 +14,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens
   }),
+  // @ts-ignore
+  allowDangerousEmailAccountLinking: true,
   providers: [
     GitHub({
       clientId: process.env.GITHUB_ID!,
@@ -67,7 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.businessId = pendingInvite.businessId;
             token.role = pendingInvite.role as TeamRole;
 
-            await db.transaction(async (tx) => {
+            await db.transaction(async (tx: any) => {
               await tx
                 .insert(teamMembers)
                 .values({

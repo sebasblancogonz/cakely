@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(invitations.createdAt));
 
     const invitationsList: PendingInvitationResponse[] =
-      pendingInvitationsData.map((inv) => ({
+      pendingInvitationsData.map((inv: PendingInvitationResponse) => ({
         ...inv
       }));
 

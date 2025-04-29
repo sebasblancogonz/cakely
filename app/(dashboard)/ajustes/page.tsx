@@ -1,51 +1,75 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { toast } from '@/hooks/use-toast';
+
 import OperativeSettings from '@/components/settings/OperativeSettings';
 import IngredientsSettings from '@/components/settings/IngredientsSettings';
 import RecipeSettings from '@/components/settings/RecipeSettings';
-import { IngredientPrice, Recipe, RecipeWithIngredients } from '@/types/types';
-import { IngredientFormData } from '@/lib/validators/ingredients';
-import { RecipeFormData } from '@/lib/validators/recipes';
-import { toast } from '@/hooks/use-toast';
-import { BusinessProfileFormData } from '@/lib/validators/business';
 import BusinessProfileSettings from '@/components/settings/BusinessProfileSettings';
+import TeamManagementSettings from '@/components/settings/TeamManagementSettings';
+
+import type {
+  IngredientPrice,
+  Recipe,
+  RecipeWithIngredients
+} from '@/types/types';
+import type { IngredientFormData } from '@/lib/validators/ingredients';
+import type { RecipeFormData } from '@/lib/validators/recipes';
+import type { TeamRole } from '@/types/next-auth';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
 import { useBusinessProfile } from '@/hooks/use-business-profile';
 import { useSession } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
-import TeamManagementSettings from '@/components/settings/TeamManagementSettings';
+import UserProfileSettings from '@/components/settings/UserProfileSettings';
 
 type BusinessNameUpdateData = { name: string };
 
 export default function SettingsPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const { profile, isLoadingProfile, mutateProfile } = useBusinessProfile();
+
+  const currentUserRole = session?.user?.role as TeamRole | undefined | null;
+  const currentUserId = session?.user?.id;
+  const businessId = session?.user?.businessId;
+  const isLoadingSession = sessionStatus === 'loading';
+  const currentUserName = session?.user?.name;
+
   const [loadingIngredients, setLoadingIngredients] = useState(false);
   const [ingredients, setIngredients] = useState<IngredientPrice[]>([]);
   const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
+  const [editingIngredient, setEditingIngredient] =
+    useState<Partial<IngredientPrice> | null>(null);
+
+  const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loadingRecipes, setLoadingRecipes] = useState(true);
   const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] =
     useState<Partial<RecipeWithIngredients> | null>(null);
-  const [editingIngredient, setEditingIngredient] =
-    useState<Partial<IngredientPrice> | null>(null);
-  const { mutateProfile, profile, isLoadingProfile } = useBusinessProfile();
-  const { data: session, status: sessionStatus } = useSession();
-  const currentUserRole = session?.user?.role;
-  const currentUserId = session?.user?.id;
-  const businessId = session?.user?.businessId;
 
   useEffect(() => {
     let isMounted = true;
-    async function loadData() {
-      if (!businessId) {
+
+    async function loadOperationalData() {
+      const canLoadOpData =
+        currentUserRole &&
+        ['OWNER', 'ADMIN', 'EDITOR'].includes(currentUserRole);
+
+      if (!businessId || !canLoadOpData) {
         console.log(
-          'SettingsPage: No businessId found in session yet, skipping data load.'
+          'SettingsPage: Skipping operational data load (no businessId or permission). Role:',
+          currentUserRole
         );
         setLoadingIngredients(false);
         setLoadingRecipes(false);
         return;
       }
 
+      console.log(
+        'SettingsPage: Loading operational data for business:',
+        businessId
+      );
       setLoadingIngredients(true);
       setLoadingRecipes(true);
       try {
@@ -53,12 +77,14 @@ export default function SettingsPage() {
           fetch('/api/ingredient-prices'),
           fetch('/api/recipes')
         ]);
+
         let ingredientsData: IngredientPrice[] = [];
         let recipesData: Recipe[] = [];
         let fetchOk = true;
 
         if (ingredientsRes.status === 'fulfilled' && ingredientsRes.value.ok) {
-          ingredientsData = await ingredientsRes.value.json();
+          ingredientsData =
+            (await ingredientsRes.value.json()).ingredients || [];
         } else {
           fetchOk = false;
           console.error(
@@ -68,8 +94,9 @@ export default function SettingsPage() {
               : ingredientsRes.reason
           );
         }
+
         if (recipesRes.status === 'fulfilled' && recipesRes.value.ok) {
-          recipesData = await recipesRes.value.json();
+          recipesData = (await recipesRes.value.json()).recipes || [];
         } else {
           fetchOk = false;
           console.error(
@@ -83,21 +110,21 @@ export default function SettingsPage() {
         if (isMounted) {
           if (!fetchOk) {
             toast({
-              title: 'Error',
-              description: 'No se pudieron cargar todos los datos.',
+              title: 'Error de Carga',
+              description:
+                'No se pudieron cargar algunos datos operativos (ingredientes/recetas).',
               variant: 'destructive'
             });
-            setLoadingIngredients(false);
           }
-          setIngredients(ingredientsData || []);
-          setRecipes(recipesData || []);
+          setIngredients(ingredientsData);
+          setRecipes(recipesData);
         }
       } catch (error) {
-        console.error('Error loading page data:', error);
+        console.error('Error loading operational data:', error);
         if (isMounted) {
           toast({
             title: 'Error',
-            description: 'Error general al cargar datos.',
+            description: 'Error general al cargar datos operativos.',
             variant: 'destructive'
           });
           setIngredients([]);
@@ -110,141 +137,26 @@ export default function SettingsPage() {
         }
       }
     }
+
     if (sessionStatus === 'authenticated' && businessId) {
-      loadData();
+      loadOperationalData();
     } else if (sessionStatus !== 'loading') {
       setLoadingIngredients(false);
       setLoadingRecipes(false);
     }
-
     return () => {
       isMounted = false;
     };
-  }, [sessionStatus, businessId]);
+  }, [sessionStatus, businessId, currentUserRole]);
 
-  const handleSaveIngredient = async (data: IngredientFormData) => {
-    const isEditing = !!data.id;
-    const url = isEditing
-      ? `/api/ingredient-prices/${data.id}`
-      : '/api/ingredient-prices';
-    const method = isEditing ? 'PUT' : 'POST';
-    console.log('Saving ingredient:', data);
-    try {
-      const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'API error');
-      }
-      const savedIngredient = await response.json();
-      setIngredients((prev) =>
-        isEditing
-          ? prev.map((ing) =>
-              ing.id === savedIngredient.id ? savedIngredient : ing
-            )
-          : [...prev, savedIngredient]
-      );
-      toast({
-        title: 'Éxito',
-        description: `Ingrediente ${isEditing ? 'actualizado' : 'añadido'}.`
-      });
-    } catch (error) {
-      console.error('Error saving ingredient:', error);
-      toast({
-        title: 'Error',
-        description: `No se pudo guardar el ingrediente: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleDeleteIngredient = async (id: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este ingrediente?'))
-      return;
-    console.log('Deleting ingredient:', id);
-    try {
-      const response = await fetch(`/api/ingredient-prices/${id}`, {
-        method: 'DELETE'
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'API error');
-      }
-      setIngredients((prev) => prev.filter((ing) => ing.id !== id));
-      toast({ title: 'Éxito', description: 'Ingrediente eliminado.' });
-    } catch (error) {
-      console.error('Error deleting ingredient:', error);
-      toast({
-        title: 'Error',
-        description: `No se pudo eliminar el ingrediente: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleSaveRecipe = async (data: RecipeFormData) => {
-    const isEditing = !!data.id;
-    const url = isEditing ? `/api/recipes/${data.id}` : '/api/recipes';
-    const method = isEditing ? 'PUT' : 'POST';
-    console.log('Saving recipe:', data);
-    try {
-      const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'API error');
-      }
-      const savedRecipe = await response.json();
-      setRecipes((prev) =>
-        isEditing
-          ? prev.map((r) => (r.id === savedRecipe.id ? savedRecipe : r))
-          : [...prev, savedRecipe]
-      );
-      toast({
-        title: 'Éxito',
-        description: `Receta ${isEditing ? 'actualizada' : 'creada'}.`
-      });
-    } catch (error) {
-      console.error('Error saving recipe:', error);
-      toast({
-        title: 'Error',
-        description: `No se pudo guardar la receta: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleDeleteRecipe = async (id: number) => {
-    if (
-      !confirm(
-        '¿Estás seguro de que quieres eliminar esta receta? Se borrarán también sus ingredientes asociados.'
-      )
-    )
-      return;
-    console.log('Deleting recipe:', id);
-    try {
-      const response = await fetch(`/api/recipes/${id}`, { method: 'DELETE' });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'API error');
-      }
-      setRecipes((prev) => prev.filter((r) => r.id !== id));
-      toast({ title: 'Éxito', description: 'Receta eliminada.' });
-    } catch (error) {
-      console.error('Error deleting recipe:', error);
-      toast({
-        title: 'Error',
-        description: `No se pudo eliminar la receta: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-        variant: 'destructive'
-      });
-    }
-  };
+  const handleSaveIngredient = async (data: IngredientFormData) => {};
+  const handleDeleteIngredient = async (id: number) => {};
+  const openIngredientDialog = (
+    ingredient: Partial<IngredientPrice> | null = null
+  ) => {};
+  const handleSaveRecipe = async (data: RecipeFormData) => {};
+  const handleDeleteRecipe = async (id: number) => {};
+  const openRecipeDialog = async (recipe: Partial<Recipe> | null = null) => {};
 
   const handleSaveProfileName = async (data: BusinessNameUpdateData) => {
     console.log('Saving business profile name:', data);
@@ -276,98 +188,119 @@ export default function SettingsPage() {
     }
   };
 
-  const openIngredientDialog = (
-    ingredient: Partial<IngredientPrice> | null = null
-  ) => {
-    setEditingIngredient(ingredient);
-    setIsIngredientDialogOpen(true);
-  };
-
-  const openRecipeDialog = async (recipe: Partial<Recipe> | null = null) => {
-    setIsRecipeDialogOpen(true);
-    setEditingRecipe(null);
-    if (recipe && recipe.id) {
-      try {
-        const res = await fetch(`/api/recipes/${recipe.id}`);
-        if (!res.ok) throw new Error('Failed to fetch recipe details');
-        const fullRecipeData = await res.json();
-        setEditingRecipe(fullRecipeData);
-      } catch (error) {
-        console.error('Error fetching recipe details:', error);
-        toast({
-          title: 'Error',
-          description: 'No se pudo cargar detalles de la receta.',
-          variant: 'destructive'
-        });
-        setIsRecipeDialogOpen(false);
-      }
-    }
-  };
-
   if (
-    sessionStatus === 'loading' ||
+    isLoadingSession ||
     (sessionStatus === 'authenticated' && isLoadingProfile)
   ) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex justify-center items-center min-h-[calc(100vh-theme(space.14))]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  // Estado No Autenticado o sin Business ID/Rol (después de cargar)
   if (sessionStatus !== 'authenticated' || !businessId || !currentUserRole) {
     return (
-      <div className="p-4 text-center text-destructive">
-        Error: Acceso no autorizado o falta información del negocio/rol.
+      <div className="flex justify-center items-center min-h-[calc(100vh-theme(space.14))]">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Acceso Denegado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive">
+              No estás autorizado para ver esta página o falta información
+              esencial de la sesión.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
+  const canEditProfile =
+    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const canEditOperationalSettings =
+    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const canManageTeam =
+    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const canAccessIngredients =
+    currentUserRole === 'OWNER' ||
+    currentUserRole === 'ADMIN' ||
+    currentUserRole === 'EDITOR';
+  const canAccessRecipes =
+    currentUserRole === 'OWNER' ||
+    currentUserRole === 'ADMIN' ||
+    currentUserRole === 'EDITOR';
+
   return (
-    <div className="p-4 md:p-6 space-y-6 overflow-hidden">
-      <h1 className="text-2xl font-bold">Ajustes del Negocio</h1>
+    <div className="p-4 md:p-6 space-y-6 lg:space-y-8 pb-16">
+      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Ajustes</h1>
 
-      <BusinessProfileSettings
-        currentLogoUrl={profile.logoUrl}
-        currentName={profile.name}
-        loadingProfile={isLoadingProfile}
-        onSaveProfile={handleSaveProfileName}
-        businessId={businessId}
-        mutateProfile={mutateProfile}
-      />
+      <UserProfileSettings currentUserName={currentUserName} />
 
-      <OperativeSettings />
-
-      <TeamManagementSettings
-        currentUserId={currentUserId}
-        currentUserRole={currentUserRole}
-        businessId={businessId}
-      />
-
-      <IngredientsSettings
-        ingredients={ingredients}
-        loadingIngredients={loadingIngredients}
-        isIngredientDialogOpen={isIngredientDialogOpen}
-        editingIngredient={editingIngredient}
-        setIsIngredientDialogOpen={setIsIngredientDialogOpen}
-        handleDeleteIngredient={handleDeleteIngredient}
-        openIngredientDialog={openIngredientDialog}
-        handleSaveIngredient={handleSaveIngredient}
-      />
-
-      <RecipeSettings
-        recipes={recipes}
-        loadingRecipes={loadingRecipes}
-        isRecipeDialogOpen={isRecipeDialogOpen}
-        editingRecipe={editingRecipe}
-        setIsRecipeDialogOpen={setIsRecipeDialogOpen}
-        handleDeleteRecipe={handleDeleteRecipe}
-        ingredients={ingredients}
-        loadingIngredients={loadingIngredients}
-        openRecipeDialog={openRecipeDialog}
-        handleSaveRecipe={handleSaveRecipe}
-      />
+      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+        Ajustes del Negocio
+      </h1>
+      {canEditProfile && (
+        <BusinessProfileSettings
+          currentName={profile?.name ?? null}
+          currentLogoUrl={profile?.logoUrl ?? null}
+          loadingProfile={isLoadingProfile}
+          onSaveProfile={handleSaveProfileName}
+          businessId={businessId}
+          mutateProfile={mutateProfile}
+        />
+      )}
+      {canEditOperationalSettings && <OperativeSettings />}
+      {canManageTeam && (
+        <TeamManagementSettings
+          currentUserRole={currentUserRole}
+          currentUserId={currentUserId}
+          businessId={businessId}
+        />
+      )}
+      {canAccessIngredients && (
+        <IngredientsSettings
+          ingredients={ingredients}
+          loadingIngredients={loadingIngredients}
+          isIngredientDialogOpen={isIngredientDialogOpen}
+          editingIngredient={editingIngredient}
+          setIsIngredientDialogOpen={setIsIngredientDialogOpen}
+          handleDeleteIngredient={handleDeleteIngredient}
+          openIngredientDialog={openIngredientDialog}
+          handleSaveIngredient={handleSaveIngredient}
+        />
+      )}
+      {canAccessRecipes && (
+        <RecipeSettings
+          recipes={recipes}
+          loadingRecipes={loadingRecipes}
+          isRecipeDialogOpen={isRecipeDialogOpen}
+          editingRecipe={editingRecipe}
+          setIsRecipeDialogOpen={setIsRecipeDialogOpen}
+          handleDeleteRecipe={handleDeleteRecipe}
+          ingredients={ingredients}
+          loadingIngredients={loadingIngredients}
+          openRecipeDialog={openRecipeDialog}
+          handleSaveRecipe={handleSaveRecipe}
+        />
+      )}
+      {!canEditProfile &&
+        !canEditOperationalSettings &&
+        !canManageTeam &&
+        !canAccessIngredients &&
+        !canAccessRecipes && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ajustes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                No tienes permiso para acceder a la configuración.
+              </p>
+            </CardContent>
+          </Card>
+        )}
     </div>
   );
 }

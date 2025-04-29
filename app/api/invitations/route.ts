@@ -8,81 +8,77 @@ import {
   users,
   teamRoleEnum
 } from '@/lib/db';
-import { auth } from '@/lib/auth';
-import { eq, and, or } from 'drizzle-orm';
+import { eq, and, gt } from 'drizzle-orm';
 import { sendInvitationEmail } from '@/lib/email';
+
+import { getSessionInfo, checkPermission } from '@/lib/auth/utils';
 
 const inviteSchema = z.object({
   email: z.string().email('Email inválido.'),
-  role: z.enum([teamRoleEnum.enumValues[1], teamRoleEnum.enumValues[2]])
+
+  role: z.enum([teamRoleEnum.enumValues[1], teamRoleEnum.enumValues[2]], {
+    required_error: 'Debes seleccionar un rol.'
+  })
 });
 
 export async function POST(request: NextRequest) {
+  const sessionInfo = await getSessionInfo(request);
+  if (sessionInfo instanceof NextResponse) {
+    return sessionInfo;
+  }
+
+  const { session, userId: inviterUserId, businessId } = sessionInfo;
+  const inviterName = session.user?.name;
+
+  const permissionCheck = await checkPermission(inviterUserId, businessId, [
+    'OWNER',
+    'ADMIN'
+  ]);
+  if (permissionCheck instanceof NextResponse) {
+    return permissionCheck;
+  }
+
+  let body;
   try {
-    const session = await auth();
-    const inviterUserId = session?.user?.id;
-    const businessId = session?.user?.businessId;
+    body = await request.json();
+  } catch (e) {
+    return NextResponse.json(
+      { message: 'Cuerpo de solicitud inválido (JSON mal formado)' },
+      { status: 400 }
+    );
+  }
 
-    if (!inviterUserId || !businessId) {
-      return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
-    }
+  const validation = inviteSchema.safeParse(body);
+  if (!validation.success) {
+    return NextResponse.json(
+      {
+        message: 'Datos de invitación inválidos',
+        errors: validation.error.format()
+      },
+      { status: 400 }
+    );
+  }
+  const { email: invitedEmail, role: invitedRole } = validation.data;
+  const lowerCaseInvitedEmail = invitedEmail.toLowerCase();
 
-    const inviterMembership = await db.query.teamMembers.findFirst({
-      where: and(
-        eq(teamMembers.userId, inviterUserId),
-        eq(teamMembers.businessId, businessId),
-        or(eq(teamMembers.role, 'OWNER'), eq(teamMembers.role, 'ADMIN'))
-      ),
-      columns: { role: true }
-    });
-
-    if (!inviterMembership) {
-      return NextResponse.json(
-        { message: 'No tienes permiso para invitar miembros' },
-        { status: 403 }
-      );
-    }
-
-    let body;
-    try {
-      body = await request.json();
-    } catch (e) {
-      return NextResponse.json(
-        { message: 'Cuerpo de solicitud inválido' },
-        { status: 400 }
-      );
-    }
-
-    const validation = inviteSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { message: 'Datos inválidos', errors: validation.error.format() },
-        { status: 400 }
-      );
-    }
-
-    const { email: invitedEmail, role: invitedRole } = validation.data;
-    const lowerCaseInvitedEmail = invitedEmail.toLowerCase();
-
+  try {
     const business = await db.query.businesses.findFirst({
       where: eq(businesses.id, businessId),
       columns: { ownerId: true, name: true }
     });
     if (!business) {
       return NextResponse.json(
-        { message: 'Negocio no encontrado' },
+        { message: 'Negocio asociado no encontrado' },
         { status: 404 }
       );
     }
-    if (
-      business.ownerId === inviterUserId &&
-      inviterMembership.role !== 'OWNER'
-    ) {
-      const owner = await db.query.users.findFirst({
+
+    if (business.ownerId === inviterUserId) {
+      const ownerUser = await db.query.users.findFirst({
         where: eq(users.id, business.ownerId),
         columns: { email: true }
       });
-      if (owner?.email?.toLowerCase() === lowerCaseInvitedEmail) {
+      if (ownerUser?.email?.toLowerCase() === lowerCaseInvitedEmail) {
         return NextResponse.json(
           { message: 'No puedes invitar al propietario del negocio.' },
           { status: 400 }
@@ -90,13 +86,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const existingMember = await db.query.teamMembers.findFirst({
-      where: and(eq(teamMembers.businessId, businessId))
-    });
     const invitedUser = await db.query.users.findFirst({
       where: eq(users.email, lowerCaseInvitedEmail),
       columns: { id: true }
     });
+
     if (invitedUser) {
       const isAlreadyMember = await db.query.teamMembers.findFirst({
         where: and(
@@ -116,20 +110,24 @@ export async function POST(request: NextRequest) {
       where: and(
         eq(invitations.email, lowerCaseInvitedEmail),
         eq(invitations.businessId, businessId),
-        eq(invitations.status, 'PENDING')
+        eq(invitations.status, 'PENDING'),
+        gt(invitations.expiresAt, new Date())
       )
     });
 
     if (existingInvitation) {
       return NextResponse.json(
-        { message: 'Ya existe una invitación pendiente para este email.' },
+        {
+          message:
+            'Ya existe una invitación pendiente y válida para este email.'
+        },
         { status: 409 }
       );
     }
 
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
-    const token = Buffer.from(randomBytes).toString('base64url');
+    const randomBytesArray = new Uint8Array(32);
+    crypto.getRandomValues(randomBytesArray);
+    const token = Buffer.from(randomBytesArray).toString('base64url');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -159,10 +157,10 @@ export async function POST(request: NextRequest) {
       token: token,
       businessName: business.name ?? 'tu negocio',
       role: newInvitation.role,
-      inviterName: session?.user?.name
+      inviterName: inviterName
     }).catch((emailError) => {
       console.error(
-        `[BACKGROUND_EMAIL_ERROR] Failed to send invitation email to ${newInvitation.email}:`,
+        `[BACKGROUND_EMAIL_ERROR] Failed to send invitation email to ${newInvitation.email} for business ${businessId}:`,
         emailError
       );
     });
@@ -172,9 +170,13 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('[INVITATIONS_POST]', error);
+    console.error(
+      '[INVITATIONS_POST] Error during business logic/DB operation:',
+      error
+    );
+
     return NextResponse.json(
-      { message: 'Error interno del servidor al enviar la invitación.' },
+      { message: 'Error interno del servidor al procesar la invitación.' },
       { status: 500 }
     );
   }
