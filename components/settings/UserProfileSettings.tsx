@@ -78,7 +78,23 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
         description: 'Tu nombre ha sido actualizado.'
       });
 
-      await updateSession({ name: updatedUser.name });
+      try {
+        await updateSession({ name: updatedUser.name });
+
+        console.log('UserProfileSettings: updateSession call completed.');
+      } catch (updateError) {
+        console.error(
+          'UserProfileSettings: Error calling updateSession:',
+          updateError
+        );
+
+        toast({
+          title: 'Info',
+          description:
+            'Nombre guardado, pero la sesión no pudo refrescarse automáticamente.',
+          variant: 'default'
+        });
+      }
 
       reset({ name: updatedUser.name });
     } catch (error) {

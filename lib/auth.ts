@@ -31,9 +31,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user, trigger, account, profile }) {
+    async jwt({ token, user, trigger, session }) {
       const currentUserId = (token.id as string) ?? user?.id;
       const currentUserEmail = (token.email as string) ?? user?.email;
+
+      if (trigger === 'update' && session) {
+        console.log(
+          'AUTH_CALLBACK JWT: Update trigger detected. Merging session data:',
+          session
+        );
+        if (session.name) {
+          token.name = session.name;
+        }
+        if (session.image) {
+          token.image = session.image;
+        }
+      }
 
       if (!currentUserId || !currentUserEmail) {
         console.log('AUTH_CALLBACK JWT: Falta userId o user.email.');
@@ -142,6 +155,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
+      token.name = token.name ?? null;
+      token.picture = token.picture ?? null;
       token.businessId = token.businessId ?? null;
       token.role = token.role ?? null;
 

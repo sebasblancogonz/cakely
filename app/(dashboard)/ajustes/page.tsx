@@ -18,11 +18,14 @@ import type { IngredientFormData } from '@/lib/validators/ingredients';
 import type { RecipeFormData } from '@/lib/validators/recipes';
 import type { TeamRole } from '@/types/next-auth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useBusinessProfile } from '@/hooks/use-business-profile';
 import { useSession } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
 import UserProfileSettings from '@/components/settings/UserProfileSettings';
+
+import { motion } from 'framer-motion';
 
 type BusinessNameUpdateData = { name: string };
 
@@ -217,7 +220,8 @@ export default function SettingsPage() {
     );
   }
 
-  const canEditProfile =
+  const canEditUserProfile = true;
+  const canEditBusinessProfile =
     currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
   const canEditOperationalSettings =
     currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
@@ -232,75 +236,170 @@ export default function SettingsPage() {
     currentUserRole === 'ADMIN' ||
     currentUserRole === 'EDITOR';
 
+  const hasAnyBusinessAccess =
+    canEditBusinessProfile ||
+    canEditOperationalSettings ||
+    canManageTeam ||
+    canAccessIngredients ||
+    canAccessRecipes;
+
+  let defaultTabValue = 'user-profile';
+  if (!canEditUserProfile) {
+    if (canEditBusinessProfile || canEditOperationalSettings)
+      defaultTabValue = 'business';
+    else if (canManageTeam) defaultTabValue = 'team';
+    else if (canAccessIngredients) defaultTabValue = 'ingredients';
+    else if (canAccessRecipes) defaultTabValue = 'recipes';
+    else defaultTabValue = 'no-access';
+  }
+
   return (
-    <div className="p-4 md:p-6 space-y-6 lg:space-y-8 pb-16">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 pb-16">
       <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Ajustes</h1>
 
-      <UserProfileSettings currentUserName={currentUserName} />
+      {!canEditUserProfile && !hasAnyBusinessAccess ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ajustes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              No tienes permiso para acceder a la configuración.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue={defaultTabValue} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+            {canEditUserProfile && (
+              <TabsTrigger value="user-profile">Tu Perfil</TabsTrigger>
+            )}
+            {(canEditBusinessProfile || canEditOperationalSettings) && (
+              <TabsTrigger value="business">Negocio</TabsTrigger>
+            )}
+            {canManageTeam && <TabsTrigger value="team">Equipo</TabsTrigger>}
+            {canAccessIngredients && (
+              <TabsTrigger value="ingredients">Ingredientes</TabsTrigger>
+            )}
+            {canAccessRecipes && (
+              <TabsTrigger value="recipes">Recetas</TabsTrigger>
+            )}
+          </TabsList>
 
-      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-        Ajustes del Negocio
-      </h1>
-      {canEditProfile && (
-        <BusinessProfileSettings
-          currentName={profile?.name ?? null}
-          currentLogoUrl={profile?.logoUrl ?? null}
-          loadingProfile={isLoadingProfile}
-          onSaveProfile={handleSaveProfileName}
-          businessId={businessId}
-          mutateProfile={mutateProfile}
-        />
+          {canEditUserProfile && (
+            <TabsContent value="user-profile">
+              <motion.div
+                key="user-profile"
+                initial={{ x: 10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <UserProfileSettings currentUserName={currentUserName} />
+              </motion.div>
+            </TabsContent>
+          )}
+
+          {(canEditBusinessProfile || canEditOperationalSettings) && (
+            <TabsContent value="business">
+              <motion.div
+                key="business"
+                initial={{ x: 10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="space-y-6"
+              >
+                {canEditBusinessProfile && (
+                  <BusinessProfileSettings
+                    currentName={profile?.name ?? null}
+                    currentLogoUrl={profile?.logoUrl ?? null}
+                    loadingProfile={isLoadingProfile}
+                    onSaveProfile={handleSaveProfileName}
+                    businessId={businessId}
+                    mutateProfile={mutateProfile}
+                  />
+                )}
+                {canEditOperationalSettings && <OperativeSettings />}
+              </motion.div>
+            </TabsContent>
+          )}
+
+          {canManageTeam && (
+            <TabsContent value="team">
+              <motion.div
+                key="team"
+                initial={{ x: 10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <TeamManagementSettings
+                  currentUserRole={currentUserRole}
+                  currentUserId={currentUserId}
+                  businessId={businessId}
+                />
+              </motion.div>
+            </TabsContent>
+          )}
+
+          {canAccessIngredients && (
+            <TabsContent value="ingredients">
+              <motion.div
+                key="ingredients"
+                initial={{ x: 10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <IngredientsSettings
+                  ingredients={ingredients}
+                  loadingIngredients={loadingIngredients}
+                  isIngredientDialogOpen={isIngredientDialogOpen}
+                  editingIngredient={editingIngredient}
+                  setIsIngredientDialogOpen={setIsIngredientDialogOpen}
+                  handleDeleteIngredient={handleDeleteIngredient}
+                  openIngredientDialog={openIngredientDialog}
+                  handleSaveIngredient={handleSaveIngredient}
+                />
+              </motion.div>
+            </TabsContent>
+          )}
+
+          {canAccessRecipes && (
+            <TabsContent value="recipes">
+              <motion.div
+                key="recipes"
+                initial={{ x: 10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <RecipeSettings
+                  recipes={recipes}
+                  loadingRecipes={loadingRecipes}
+                  isRecipeDialogOpen={isRecipeDialogOpen}
+                  editingRecipe={editingRecipe}
+                  setIsRecipeDialogOpen={setIsRecipeDialogOpen}
+                  handleDeleteRecipe={handleDeleteRecipe}
+                  ingredients={ingredients}
+                  loadingIngredients={loadingIngredients}
+                  openRecipeDialog={openRecipeDialog}
+                  handleSaveRecipe={handleSaveRecipe}
+                />
+              </motion.div>
+            </TabsContent>
+          )}
+
+          <TabsContent value="no-access">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ajustes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  No tienes permiso para acceder a la configuración.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       )}
-      {canEditOperationalSettings && <OperativeSettings />}
-      {canManageTeam && (
-        <TeamManagementSettings
-          currentUserRole={currentUserRole}
-          currentUserId={currentUserId}
-          businessId={businessId}
-        />
-      )}
-      {canAccessIngredients && (
-        <IngredientsSettings
-          ingredients={ingredients}
-          loadingIngredients={loadingIngredients}
-          isIngredientDialogOpen={isIngredientDialogOpen}
-          editingIngredient={editingIngredient}
-          setIsIngredientDialogOpen={setIsIngredientDialogOpen}
-          handleDeleteIngredient={handleDeleteIngredient}
-          openIngredientDialog={openIngredientDialog}
-          handleSaveIngredient={handleSaveIngredient}
-        />
-      )}
-      {canAccessRecipes && (
-        <RecipeSettings
-          recipes={recipes}
-          loadingRecipes={loadingRecipes}
-          isRecipeDialogOpen={isRecipeDialogOpen}
-          editingRecipe={editingRecipe}
-          setIsRecipeDialogOpen={setIsRecipeDialogOpen}
-          handleDeleteRecipe={handleDeleteRecipe}
-          ingredients={ingredients}
-          loadingIngredients={loadingIngredients}
-          openRecipeDialog={openRecipeDialog}
-          handleSaveRecipe={handleSaveRecipe}
-        />
-      )}
-      {!canEditProfile &&
-        !canEditOperationalSettings &&
-        !canManageTeam &&
-        !canAccessIngredients &&
-        !canAccessRecipes && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Ajustes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                No tienes permiso para acceder a la configuración.
-              </p>
-            </CardContent>
-          </Card>
-        )}
     </div>
   );
 }
