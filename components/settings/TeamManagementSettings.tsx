@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,8 +9,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
-  CardFooter
+  CardTitle
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,7 +32,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import {
   Loader2,
-  UserPlus,
   Users,
   MailWarning,
   Send,
@@ -42,7 +40,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-import type { TeamMemberWithUser, PendingInvitation, TeamRole } from '@types';
+import type { TeamRole } from '@types';
+import { useTeamMembers } from '@/hooks/use-team-members';
+import { usePendingInvitations } from '@/hooks/use-pending-invitations';
 
 const ROLES_ALLOWED_TO_INVITE = ['ADMIN', 'EDITOR'] as const;
 const ASSIGNABLE_ROLES: TeamRole[] = ['ADMIN', 'EDITOR'];
@@ -64,20 +64,21 @@ interface TeamManagementSettingsProps {
 
 const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
   currentUserRole,
-  currentUserId,
-  businessId
+  currentUserId
 }) => {
   const { toast } = useToast();
   const canManageTeam =
     currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
 
-  const [teamMembers, setTeamMembers] = useState<TeamMemberWithUser[]>([]);
-  const [pendingInvitations, setPendingInvitations] = useState<
-    PendingInvitation[]
-  >([]);
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true);
-  const [isLoadingInvitations, setIsLoadingInvitations] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { teamMembers, isLoadingMembers, isErrorMembers, mutateMembers } =
+    useTeamMembers();
+  const {
+    pendingInvitations,
+    isLoadingInvitations,
+    isErrorInvitations,
+    mutatePendingInvitations
+  } = usePendingInvitations(canManageTeam);
+
   const [processingId, setProcessingId] = useState<string | number | null>(
     null
   );
@@ -95,72 +96,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
       role: undefined
     }
   });
-
-  const fetchTeamMembers = useCallback(async () => {
-    setIsLoadingMembers(true);
-    setLoadError(null);
-    try {
-      const response = await fetch('/api/team-members');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `Error ${response.status} al cargar miembros`
-        );
-      }
-      const data = await response.json();
-      setTeamMembers(data.members || []);
-    } catch (error) {
-      console.error('Error fetching team members:', error);
-      const message =
-        error instanceof Error ? error.message : 'Error desconocido.';
-      setLoadError(`Error al cargar miembros del equipo: ${message}`);
-    } finally {
-      setIsLoadingMembers(false);
-    }
-  }, []);
-
-  const fetchPendingInvitations = useCallback(async () => {
-    if (!canManageTeam) {
-      setIsLoadingInvitations(false);
-      setPendingInvitations([]);
-      return;
-    }
-
-    setIsLoadingInvitations(true);
-    setLoadError(null);
-    try {
-      const response = await fetch('/api/invitations/pending');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-
-        if (response.status === 403) {
-          console.warn(
-            "User doesn't have permission to view pending invitations."
-          );
-        } else {
-          throw new Error(
-            errorData.message ||
-              `Error ${response.status} al cargar invitaciones`
-          );
-        }
-        setPendingInvitations([]);
-      } else {
-        const data = await response.json();
-        setPendingInvitations(data.invitations || []);
-      }
-    } catch (error) {
-      console.error('Error fetching pending invitations:', error);
-      const message =
-        error instanceof Error ? error.message : 'Error desconocido.';
-    } finally {
-      setIsLoadingInvitations(false);
-    }
-  }, [canManageTeam]);
-
-  useEffect(() => {
-    fetchTeamMembers();
-    fetchPendingInvitations();
-  }, [fetchTeamMembers, fetchPendingInvitations]);
 
   const onInviteSubmit = async (data: InviteMemberFormData) => {
     try {
@@ -180,7 +115,7 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
         description: `Invitación enviada a ${data.email}.`
       });
       resetInviteForm();
-      fetchPendingInvitations();
+      await mutatePendingInvitations();
     } catch (error) {
       console.error('Error sending invitation:', error);
       toast({
@@ -217,8 +152,13 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
       }
 
       toast({ title: 'Éxito', description: 'Invitación cancelada.' });
-      setPendingInvitations((prev) =>
-        prev.filter((inv) => inv.id !== invitationId)
+      mutatePendingInvitations(
+        (currentData) => ({
+          invitations:
+            currentData?.invitations.filter((inv) => inv.id !== invitationId) ??
+            []
+        }),
+        { revalidate: false }
       );
     } catch (error) {
       console.error('Error cancelling invitation:', error);
@@ -289,7 +229,13 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
         title: 'Éxito',
         description: `Miembro ${memberToRemove.name || memberToRemove.email} eliminado.`
       });
-      setTeamMembers((prev) => prev.filter((m) => m.userId !== memberUserId));
+      mutateMembers(
+        (currentData) => ({
+          members:
+            currentData?.members.filter((m) => m.userId !== memberUserId) ?? []
+        }),
+        { revalidate: false }
+      );
     } catch (error) {
       console.error('Error removing member:', error);
       toast({
@@ -360,10 +306,12 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
         description: `Rol actualizado a ${updatedMember.role}.`
       });
 
-      setTeamMembers((prev) =>
-        prev.map((m) =>
-          m.userId === memberUserId ? { ...m, role: updatedMember.role } : m
-        )
+      mutateMembers(
+        (currentData) => ({
+          members:
+            currentData?.members.filter((m) => m.userId !== memberUserId) ?? []
+        }),
+        { revalidate: false }
       );
     } catch (error) {
       console.error('Error changing role:', error);
@@ -390,7 +338,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
         </CardDescription>
       </CardHeader>
 
-      {/* --- Sección para Invitar --- */}
       {canManageTeam && (
         <>
           <CardContent>
@@ -399,7 +346,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
                 Invitar Nuevo Miembro
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                {/* Email Input */}
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="invite-email">Email del Colaborador</Label>
                   <Input
@@ -480,6 +426,10 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
             <div className="flex justify-center items-center h-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
+          ) : isErrorInvitations ? (
+            <p className="text-destructive text-center py-4">
+              Error al cargar invitaciones.
+            </p>
           ) : pendingInvitations.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               No hay invitaciones pendientes.
@@ -539,6 +489,10 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
           <div className="flex justify-center items-center h-10">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
+        ) : isErrorMembers ? (
+          <p className="text-destructive text-center py-4">
+            Error al cargar miembros.
+          </p>
         ) : teamMembers.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             No hay miembros en el equipo.
@@ -631,11 +585,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
               })}
             </TableBody>
           </Table>
-        )}
-        {loadError && (
-          <p className="text-sm text-destructive mt-4 text-center">
-            {loadError}
-          </p>
         )}
       </CardContent>
     </Card>

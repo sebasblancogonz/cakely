@@ -7,43 +7,40 @@ import {
   SelectOrder as DbSelectOrder,
   SelectCustomer as DbSelectCustomer
 } from '@/lib/db';
-import { teamRoleEnum, invitationStatusEnum } from '@/lib/db'; // Ajusta ruta a tu schema
+import { teamRoleEnum, invitationStatusEnum } from '@/lib/db';
 
 export type InvitationStatus = (typeof invitationStatusEnum.enumValues)[number];
 
 export type PendingInvitation = {
-  id: number; // O string si usas UUID
+  id: number;
   email: string;
-  role: TeamRole; // Usa el tipo alias o directo del enum
-  status: InvitationStatus; // Añade status si tu API lo devuelve
-  expiresAt: Date | null; // El tipo Date es correcto si la API devuelve objetos Date o strings ISO 8601 parseables
+  role: TeamRole;
+  status: InvitationStatus;
+  expiresAt: Date | null;
   createdAt: Date | null;
 };
 
-// Define aquí también TeamMemberWithUser si lo usas en el mismo componente
 export type TeamMemberUser = {
-  id: string; // Asumiendo UUID string
+  id: string;
   name: string | null;
   email: string;
   image: string | null;
 };
 export type TeamMemberWithUser = {
-  userId: string; // Asumiendo UUID string
+  userId: string;
   role: TeamRole;
   joinedAt: Date | null;
   name: string;
-  email: string; // Asegúrate que el JOIN no permita user null o ajústalo
+  email: string;
 };
 
 export type TeamRole = (typeof teamRoleEnum.enumValues)[number];
 
-// --- Core Database Entity Types ---
 export type Setting = SelectSetting;
 export type IngredientPrice = SelectIngredientPrice;
 export type Recipe = SelectRecipe;
 export type RecipeIngredient = SelectRecipeIngredient;
 
-// --- Frontend-Specific Types ---
 export type Customer = DbSelectCustomer & {
   orders?: Order[];
 };
@@ -54,7 +51,6 @@ export type Order = DbSelectOrder & {
   images?: OrderImage[];
 };
 
-// --- Enums ---
 export enum OrderStatus {
   pending = 'Pendiente',
   processing = 'Preparando',
