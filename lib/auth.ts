@@ -17,10 +17,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   // @ts-ignore
   allowDangerousEmailAccountLinking: true,
   providers: [
-    GitHub({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!
-    }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!
@@ -36,10 +32,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const currentUserEmail = (token.email as string) ?? user?.email;
 
       if (trigger === 'update' && session) {
-        console.log(
-          'AUTH_CALLBACK JWT: Update trigger detected. Merging session data:',
-          session
-        );
         if (session.name) {
           token.name = session.name;
         }
@@ -49,7 +41,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       if (!currentUserId || !currentUserEmail) {
-        console.log('AUTH_CALLBACK JWT: Falta userId o user.email.');
         return {
           ...token,
           businessId: token.businessId ?? null,
@@ -76,9 +67,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (pendingInvite && pendingInvite.businessId) {
-            console.log(
-              `AUTH_CALLBACK: SignUp - Invitación pendiente encontrada para ${userEmailLower}. Aceptando automáticamente.`
-            );
             token.businessId = pendingInvite.businessId;
             token.role = pendingInvite.role as TeamRole;
 
@@ -97,21 +85,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 .set({ status: 'ACCEPTED' })
                 .where(eq(invitations.id, pendingInvite.id));
             });
-            console.log(
-              `AUTH_CALLBACK: SignUp - Usuario ${currentUserId} añadido al equipo ${pendingInvite.businessId} como ${pendingInvite.role}.`
-            );
           } else {
-            console.log(
-              `AUTH_CALLBACK: SignUp - No se encontró invitación pendiente para ${userEmailLower}. No se asocia negocio.`
-            );
             token.businessId = null;
             token.role = null;
           }
         } catch (error) {
-          console.error(
-            'AUTH_CALLBACK: SignUp - Error durante el procesamiento:',
-            error
-          );
           token.businessId = null;
           token.role = null;
         }
@@ -123,10 +101,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.role === null;
 
         if (needsDbCheck) {
-          console.log(
-            `AUTH_CALLBACK: Login/Update - Buscando info de equipo para user: ${currentUserId}. Token actual:`,
-            { bId: token.businessId, role: token.role }
-          );
           const membership = await db.query.teamMembers.findFirst({
             where: eq(teamMembers.userId, currentUserId),
             columns: { businessId: true, role: true },
@@ -136,22 +110,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (membership) {
             token.businessId = membership.businessId;
             token.role = membership.role as TeamRole;
-            console.log(
-              `AUTH_CALLBACK: Login/Update - Info encontrada en DB:`,
-              { bId: token.businessId, role: token.role }
-            );
           } else {
-            console.log(
-              `AUTH_CALLBACK: Login/Update - User ${currentUserId} no encontrado en ningún equipo. Asignando null.`
-            );
             token.businessId = null;
             token.role = null;
           }
-        } else {
-          console.log(
-            `AUTH_CALLBACK: Login/Update - Info ya presente en token:`,
-            { bId: token.businessId, role: token.role }
-          );
         }
       }
 
@@ -171,7 +133,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.businessId = Number(token.businessId) ?? null;
         session.user.role = (token.role as TeamRole) ?? null;
       }
-      console.log('AUTH_CALLBACK: Session created/updated:', session.user);
       return session;
     }
   }

@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils';
 import type { TeamRole } from '@types';
 import { useTeamMembers } from '@/hooks/use-team-members';
 import { usePendingInvitations } from '@/hooks/use-pending-invitations';
+import TableSkeleton from '../common/TableSkeleton';
 
 const ROLES_ALLOWED_TO_INVITE = ['ADMIN', 'EDITOR'] as const;
 const ASSIGNABLE_ROLES: TeamRole[] = ['ADMIN', 'EDITOR'];
@@ -330,12 +331,14 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Gestión de Equipo</CardTitle>
-        <CardDescription>
-          Invita y administra los miembros de tu equipo que pueden acceder a
-          este negocio.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle className="mr-2">Gestión de Equipo</CardTitle>
+          <CardDescription>
+            Invita y administra los miembros de tu equipo que pueden acceder a
+            este negocio.
+          </CardDescription>
+        </div>
       </CardHeader>
 
       {canManageTeam && (
@@ -423,9 +426,7 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
             Invitaciones Pendientes
           </h3>
           {isLoadingInvitations ? (
-            <div className="flex justify-center items-center h-10">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
+            <TableSkeleton rows={3} cols={4} />
           ) : isErrorInvitations ? (
             <p className="text-destructive text-center py-4">
               Error al cargar invitaciones.

@@ -25,6 +25,9 @@ import { useSession } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
 import UserProfileSettings from '@/components/settings/UserProfileSettings';
 
+import { useIngredients } from '@/hooks/use-ingredients';
+import { useRecipes } from '@/hooks/use-recipes';
+
 import { motion } from 'framer-motion';
 
 type BusinessNameUpdateData = { name: string };
@@ -39,127 +42,196 @@ export default function SettingsPage() {
   const isLoadingSession = sessionStatus === 'loading';
   const currentUserName = session?.user?.name;
 
-  const [loadingIngredients, setLoadingIngredients] = useState(false);
-  const [ingredients, setIngredients] = useState<IngredientPrice[]>([]);
+  const canEditUserProfile = true;
+  const canEditBusinessProfile =
+    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const canEditOperationalSettings =
+    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const canManageTeam =
+    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const canAccessIngredients =
+    currentUserRole === 'OWNER' ||
+    currentUserRole === 'ADMIN' ||
+    currentUserRole === 'EDITOR';
+  const canAccessRecipes =
+    currentUserRole === 'OWNER' ||
+    currentUserRole === 'ADMIN' ||
+    currentUserRole === 'EDITOR';
+
+  const hasAnyBusinessAccess =
+    canEditBusinessProfile ||
+    canEditOperationalSettings ||
+    canManageTeam ||
+    canAccessIngredients ||
+    canAccessRecipes;
+
+  const {
+    ingredients,
+    isLoadingIngredients,
+    isErrorIngredients,
+    mutateIngredients
+  } = useIngredients(canAccessIngredients);
+  const { recipes, isLoadingRecipes, isErrorRecipes, mutateRecipes } =
+    useRecipes(canAccessRecipes);
+
   const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] =
     useState<Partial<IngredientPrice> | null>(null);
-
-  const [loadingRecipes, setLoadingRecipes] = useState(false);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] =
     useState<Partial<RecipeWithIngredients> | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadOperationalData() {
-      const canLoadOpData =
-        currentUserRole &&
-        ['OWNER', 'ADMIN', 'EDITOR'].includes(currentUserRole);
-
-      if (!businessId || !canLoadOpData) {
-        console.log(
-          'SettingsPage: Skipping operational data load (no businessId or permission). Role:',
-          currentUserRole
-        );
-        setLoadingIngredients(false);
-        setLoadingRecipes(false);
-        return;
+  const handleSaveIngredient = async (data: IngredientFormData) => {
+    const isEditing = !!data.id;
+    const url = isEditing
+      ? `/api/ingredient-prices/${data.id}`
+      : '/api/ingredient-prices';
+    const method = isEditing ? 'PUT' : 'POST';
+    console.log('Saving ingredient:', data);
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'API error');
       }
 
-      console.log(
-        'SettingsPage: Loading operational data for business:',
-        businessId
+      await mutateIngredients();
+      setIsIngredientDialogOpen(false);
+      toast({
+        title: 'Éxito',
+        description: `Ingrediente ${isEditing ? 'actualizado' : 'añadido'}.`
+      });
+    } catch (error) {
+      console.error('Error saving ingredient:', error);
+      toast({
+        title: 'Error',
+        description: `No se pudo guardar el ingrediente: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDeleteIngredient = async (id: number) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este ingrediente?'))
+      return;
+    console.log('Deleting ingredient:', id);
+    try {
+      const response = await fetch(`/api/ingredient-prices/${id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'API error');
+      }
+
+      mutateIngredients(
+        (currentData) => currentData?.filter((ing) => ing.id !== id) ?? [],
+        { revalidate: false }
       );
-      setLoadingIngredients(true);
-      setLoadingRecipes(true);
-      try {
-        const [ingredientsRes, recipesRes] = await Promise.allSettled([
-          fetch('/api/ingredient-prices'),
-          fetch('/api/recipes')
-        ]);
 
-        let ingredientsData: IngredientPrice[] = [];
-        let recipesData: Recipe[] = [];
-        let fetchOk = true;
+      toast({ title: 'Éxito', description: 'Ingrediente eliminado.' });
+    } catch (error) {
+      console.error('Error deleting ingredient:', error);
+      toast({
+        title: 'Error',
+        description: `No se pudo eliminar el ingrediente: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: 'destructive'
+      });
+    }
+  };
 
-        if (ingredientsRes.status === 'fulfilled' && ingredientsRes.value.ok) {
-          ingredientsData =
-            (await ingredientsRes.value.json()).ingredients || [];
-        } else {
-          fetchOk = false;
-          console.error(
-            'Failed to fetch ingredients:',
-            ingredientsRes.status === 'fulfilled'
-              ? await ingredientsRes.value.text()
-              : ingredientsRes.reason
-          );
-        }
-
-        if (recipesRes.status === 'fulfilled' && recipesRes.value.ok) {
-          recipesData = (await recipesRes.value.json()).recipes || [];
-        } else {
-          fetchOk = false;
-          console.error(
-            'Failed to fetch recipes:',
-            recipesRes.status === 'fulfilled'
-              ? await recipesRes.value.text()
-              : recipesRes.reason
-          );
-        }
-
-        if (isMounted) {
-          if (!fetchOk) {
-            toast({
-              title: 'Error de Carga',
-              description:
-                'No se pudieron cargar algunos datos operativos (ingredientes/recetas).',
-              variant: 'destructive'
-            });
-          }
-          setIngredients(ingredientsData);
-          setRecipes(recipesData);
-        }
-      } catch (error) {
-        console.error('Error loading operational data:', error);
-        if (isMounted) {
-          toast({
-            title: 'Error',
-            description: 'Error general al cargar datos operativos.',
-            variant: 'destructive'
-          });
-          setIngredients([]);
-          setRecipes([]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoadingIngredients(false);
-          setLoadingRecipes(false);
-        }
+  const handleSaveRecipe = async (data: RecipeFormData) => {
+    const isEditing = !!data.id;
+    const url = isEditing ? `/api/recipes/${data.id}` : '/api/recipes';
+    const method = isEditing ? 'PUT' : 'POST';
+    console.log('Saving recipe:', data);
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'API error');
       }
-    }
 
-    if (sessionStatus === 'authenticated' && businessId) {
-      loadOperationalData();
-    } else if (sessionStatus !== 'loading') {
-      setLoadingIngredients(false);
-      setLoadingRecipes(false);
+      await mutateRecipes();
+      setIsRecipeDialogOpen(false);
+      toast({
+        title: 'Éxito',
+        description: `Receta ${isEditing ? 'actualizada' : 'creada'}.`
+      });
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      toast({
+        title: 'Error',
+        description: `No se pudo guardar la receta: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: 'destructive'
+      });
     }
-    return () => {
-      isMounted = false;
-    };
-  }, [sessionStatus, businessId, currentUserRole]);
+  };
+  const handleDeleteRecipe = async (id: number) => {
+    if (
+      !confirm(
+        '¿Estás seguro de que quieres eliminar esta receta? Se borrarán también sus ingredientes asociados.'
+      )
+    )
+      return;
+    console.log('Deleting recipe:', id);
+    try {
+      const response = await fetch(`/api/recipes/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'API error');
+      }
 
-  const handleSaveIngredient = async (data: IngredientFormData) => {};
-  const handleDeleteIngredient = async (id: number) => {};
+      mutateRecipes(
+        (currentData) => currentData?.filter((r) => r.id !== id) ?? [],
+        { revalidate: false }
+      );
+
+      toast({ title: 'Éxito', description: 'Receta eliminada.' });
+    } catch (error) {
+      console.error('Error deleting recipe:', error);
+      toast({
+        title: 'Error',
+        description: `No se pudo eliminar la receta: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: 'destructive'
+      });
+    }
+  };
   const openIngredientDialog = (
     ingredient: Partial<IngredientPrice> | null = null
-  ) => {};
-  const handleSaveRecipe = async (data: RecipeFormData) => {};
-  const handleDeleteRecipe = async (id: number) => {};
-  const openRecipeDialog = async (recipe: Partial<Recipe> | null = null) => {};
+  ) => {
+    setEditingIngredient(ingredient);
+    setIsIngredientDialogOpen(true);
+  };
+
+  const openRecipeDialog = async (recipe: Partial<Recipe> | null = null) => {
+    setIsRecipeDialogOpen(true);
+    setEditingRecipe(null);
+    if (recipe?.id) {
+      try {
+        const res = await fetch(`/api/recipes/${recipe.id}`);
+        if (!res.ok) throw new Error('Failed to fetch recipe details');
+        const fullRecipeData = await res.json();
+        setEditingRecipe(fullRecipeData);
+      } catch (error) {
+        console.error('Error fetching recipe details:', error);
+        toast({
+          title: 'Error',
+          description: 'No se pudo cargar detalles de la receta.',
+          variant: 'destructive'
+        });
+        setIsRecipeDialogOpen(false);
+      }
+    }
+  };
 
   const handleSaveProfileName = async (data: BusinessNameUpdateData) => {
     console.log('Saving business profile name:', data);
@@ -219,29 +291,6 @@ export default function SettingsPage() {
       </div>
     );
   }
-
-  const canEditUserProfile = true;
-  const canEditBusinessProfile =
-    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
-  const canEditOperationalSettings =
-    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
-  const canManageTeam =
-    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
-  const canAccessIngredients =
-    currentUserRole === 'OWNER' ||
-    currentUserRole === 'ADMIN' ||
-    currentUserRole === 'EDITOR';
-  const canAccessRecipes =
-    currentUserRole === 'OWNER' ||
-    currentUserRole === 'ADMIN' ||
-    currentUserRole === 'EDITOR';
-
-  const hasAnyBusinessAccess =
-    canEditBusinessProfile ||
-    canEditOperationalSettings ||
-    canManageTeam ||
-    canAccessIngredients ||
-    canAccessRecipes;
 
   let defaultTabValue = 'user-profile';
   if (!canEditUserProfile) {
@@ -350,7 +399,7 @@ export default function SettingsPage() {
               >
                 <IngredientsSettings
                   ingredients={ingredients}
-                  loadingIngredients={loadingIngredients}
+                  loadingIngredients={isLoadingIngredients}
                   isIngredientDialogOpen={isIngredientDialogOpen}
                   editingIngredient={editingIngredient}
                   setIsIngredientDialogOpen={setIsIngredientDialogOpen}
@@ -372,13 +421,13 @@ export default function SettingsPage() {
               >
                 <RecipeSettings
                   recipes={recipes}
-                  loadingRecipes={loadingRecipes}
+                  loadingRecipes={isLoadingRecipes}
                   isRecipeDialogOpen={isRecipeDialogOpen}
                   editingRecipe={editingRecipe}
                   setIsRecipeDialogOpen={setIsRecipeDialogOpen}
                   handleDeleteRecipe={handleDeleteRecipe}
                   ingredients={ingredients}
-                  loadingIngredients={loadingIngredients}
+                  loadingIngredients={isLoadingIngredients}
                   openRecipeDialog={openRecipeDialog}
                   handleSaveRecipe={handleSaveRecipe}
                 />

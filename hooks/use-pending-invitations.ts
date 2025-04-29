@@ -11,7 +11,7 @@ export function usePendingInvitations(canFetch: boolean = true) {
     useSWR<PendingInvitationsApiResponse>(
       canFetch ? '/api/invitations/pending' : null,
       fetcher,
-      {}
+      { revalidateOnFocus: false }
     );
 
   const isLoadingFinal = !canFetch ? false : isLoading;
