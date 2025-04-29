@@ -14,8 +14,8 @@ import { cn } from '@/lib/utils';
 
 const customerFormSchema = z.object({
   name: z.string().trim().min(1, { message: 'El nombre es requerido' }),
-  email: z.string().email({ message: 'Email inválido' }),
-  phone: z.string().trim().min(1, { message: 'El teléfono es requerido' }),
+  email: z.string().email({ message: 'Email inválido' }).optional(),
+  phone: z.string().trim().optional(),
   instagramHandle: z.string().optional(),
   notes: z.string().optional()
 });
@@ -60,8 +60,8 @@ const CustomerForm = ({
     if (customerToEdit) {
       reset({
         name: customerToEdit.name,
-        email: customerToEdit.email,
-        phone: customerToEdit.phone,
+        email: customerToEdit.email || '',
+        phone: customerToEdit.phone || '',
         instagramHandle: customerToEdit.instagramHandle || '',
         notes: customerToEdit.notes || ''
       });
@@ -119,8 +119,8 @@ const CustomerForm = ({
           'id' | 'registrationDate' | 'orders'
         > = {
           name: data.name,
-          email: data.email,
-          phone: data.phone,
+          email: data.email || null,
+          phone: data.phone || null,
           instagramHandle: data.instagramHandle || null,
           notes: data.notes || null
         };

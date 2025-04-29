@@ -179,8 +179,8 @@ export const recipeIngredients = pgTable('recipe_ingredients', {
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
-  email: text('email').notNull(),
-  phone: text('phone').notNull(),
+  email: text('email'),
+  phone: text('phone'),
   registrationDate: timestamp('registration_date', {
     withTimezone: false,
     mode: 'date'
