@@ -49,7 +49,7 @@ const CustomerForm = ({
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
       name: customerToEdit?.name || '',
-      email: customerToEdit?.email || '',
+      email: customerToEdit?.email || undefined,
       phone: customerToEdit?.phone || '',
       instagramHandle: customerToEdit?.instagramHandle || '',
       notes: customerToEdit?.notes || ''
@@ -60,7 +60,7 @@ const CustomerForm = ({
     if (customerToEdit) {
       reset({
         name: customerToEdit.name,
-        email: customerToEdit.email || '',
+        email: customerToEdit.email || undefined,
         phone: customerToEdit.phone || '',
         instagramHandle: customerToEdit.instagramHandle || '',
         notes: customerToEdit.notes || ''
@@ -68,7 +68,7 @@ const CustomerForm = ({
     } else {
       reset({
         name: '',
-        email: '',
+        email: undefined,
         phone: '',
         instagramHandle: '',
         notes: ''
