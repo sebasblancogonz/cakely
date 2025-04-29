@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 const customerFormSchema = z.object({
   name: z.string().trim().min(1, { message: 'El nombre es requerido' }),
-  email: z.string().email({ message: 'Email inválido' }).optional(),
+  email: z.string().email({ message: 'Email inválido' }).nullable().optional(),
   phone: z.string().trim().optional(),
   instagramHandle: z.string().optional(),
   notes: z.string().optional()
