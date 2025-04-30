@@ -11,26 +11,28 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { Github, Chrome } from 'lucide-react';
+import Image from 'next/image';
+import { Chrome } from 'lucide-react';
 
 export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     await signIn('google', { callbackUrl: '/' });
   };
 
-  const handleGitHubSignIn = async () => {
-    await signIn('github', { callbackUrl: '/' });
-  };
-
   return (
     <div className="min-h-screen flex justify-center items-start md:items-center p-4 sm:p-8">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          {/* TODO: Add logo here */}
-          {/* <img src="/logo.png" alt="Logo" className="w-20 h-20 mx-auto mb-4" /> */}
+          <Image
+            src="/logo.webp"
+            width={80}
+            height={80}
+            alt="Cakely"
+            className="mx-auto mb-4 rounded-lg"
+          />
           <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
           <CardDescription>
-            Accede a tu panel de control de Aura Bakery.
+            Accede al panel de control de tu negocio.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
