@@ -110,10 +110,7 @@ const updateRoleSchema = z.object({
   })
 });
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { memberUserId: string } }
-) {
+export async function PATCH(request: NextRequest) {
   const sessionInfo = await getSessionInfo(request);
   if (sessionInfo instanceof NextResponse) return sessionInfo;
   const { userId: requestingUserId, businessId, session } = sessionInfo;
