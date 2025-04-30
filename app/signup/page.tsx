@@ -11,8 +11,9 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { signIn } from 'next-auth/react';
-import { Chrome, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Google } from '@/components/icons';
 
 function SignUpForm() {
   const router = useRouter();
@@ -58,7 +59,7 @@ function SignUpForm() {
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-4">
           <Button onClick={handleGoogleSignUp} className="w-full">
-            <Chrome className="mr-2 h-4 w-4" />
+            <Google />
             Continuar con Google
           </Button>
           <Button

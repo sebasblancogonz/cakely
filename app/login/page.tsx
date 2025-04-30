@@ -12,7 +12,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import Image from 'next/image';
-import { Chrome } from 'lucide-react';
+import { Google } from '@/components/icons';
 
 export default function LoginPage() {
   const handleGoogleSignIn = async () => {
@@ -41,7 +41,7 @@ export default function LoginPage() {
             variant="outline"
             className="w-full"
           >
-            <Chrome className="mr-2 h-4 w-4" />
+            <Google />
             Continuar con Google
           </Button>
         </CardContent>
