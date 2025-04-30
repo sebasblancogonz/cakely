@@ -16,7 +16,6 @@ import {
   UpdateCustomerFormData
 } from '@/lib/validators/customers';
 
-
 interface CustomerFormProps {
   setIsModalOpen: (value: boolean) => void;
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
@@ -45,7 +44,7 @@ const CustomerForm = ({
     defaultValues: {
       name: customerToEdit?.name || '',
       email: customerToEdit?.email || undefined,
-      phone: customerToEdit?.phone || '',
+      phone: customerToEdit?.phone || undefined,
       instagramHandle: customerToEdit?.instagramHandle || '',
       notes: customerToEdit?.notes || ''
     }
@@ -56,7 +55,7 @@ const CustomerForm = ({
       reset({
         name: customerToEdit.name || '',
         email: customerToEdit.email || undefined,
-        phone: customerToEdit.phone || '',
+        phone: customerToEdit.phone || undefined,
         instagramHandle: customerToEdit.instagramHandle || '',
         notes: customerToEdit.notes || ''
       });
@@ -80,8 +79,8 @@ const CustomerForm = ({
 
         const customerDataToUpdate: Partial<UpdateCustomerFormData> = {
           name: data.name,
-          email: data.email,
-          phone: data.phone,
+          email: data.email || undefined,
+          phone: data.phone || undefined,
           instagramHandle: data.instagramHandle || undefined,
           notes: data.notes || undefined
         };
