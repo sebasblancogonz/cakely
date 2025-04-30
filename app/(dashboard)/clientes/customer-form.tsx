@@ -16,6 +16,7 @@ import {
   UpdateCustomerFormData
 } from '@/lib/validators/customers';
 
+
 interface CustomerFormProps {
   setIsModalOpen: (value: boolean) => void;
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
@@ -115,7 +116,7 @@ const CustomerForm = ({
         > = {
           name: data.name,
           email: data.email || null,
-          phone: data.phone,
+          phone: data.phone || null,
           instagramHandle: data.instagramHandle || null,
           notes: data.notes || null
         };
