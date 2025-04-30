@@ -18,8 +18,9 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 import { useSession } from 'next-auth/react';
+
+import ProfilePictureUploadForm from '../forms/ProfilePictureUploadForm';
 
 const userNameSchema = z.object({
   name: z.string().trim().min(1, 'El nombre es requerido.')
@@ -28,13 +29,14 @@ type UserNameFormData = z.infer<typeof userNameSchema>;
 
 interface UserProfileSettingsProps {
   currentUserName: string | null | undefined;
+  currentUserImage: string | null | undefined;
 }
 
 const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
-  currentUserName
+  currentUserName,
+  currentUserImage
 }) => {
   const { toast } = useToast();
-
   const { update: updateSession } = useSession();
 
   const {
@@ -44,16 +46,14 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
     formState: { errors, isSubmitting, isDirty }
   } = useForm<UserNameFormData>({
     resolver: zodResolver(userNameSchema),
-    defaultValues: {
-      name: currentUserName ?? ''
-    }
+    defaultValues: { name: currentUserName ?? '' }
   });
 
   useEffect(() => {
     reset({ name: currentUserName ?? '' });
   }, [currentUserName, reset]);
 
-  const onSubmit = async (data: UserNameFormData) => {
+  const onSubmitName = async (data: UserNameFormData) => {
     if (!isDirty) {
       toast({ description: 'No has modificado tu nombre.' });
       return;
@@ -107,13 +107,30 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
     }
   };
 
+  const handlePictureUpdateSuccess = async (newImageUrl: string | null) => {
+    console.log('UserProfileSettings: Received new image URL:', newImageUrl);
+
+    try {
+      await updateSession({ image: newImageUrl });
+      toast({ description: 'Sesión actualizada con la nueva foto.' });
+    } catch (error) {
+      console.error('Error updating session with new image:', error);
+      toast({
+        description:
+          'Foto guardada, pero hubo un problema al refrescar tu sesión.',
+        variant: 'default'
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Tu Perfil</CardTitle>
-        <CardDescription>Actualiza tu nombre.</CardDescription>
+        <CardDescription>Actualiza tu nombre y foto de perfil.</CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
+
+      <form onSubmit={handleSubmit(onSubmitName)}>
         <CardContent>
           <div className="space-y-1.5">
             <Label htmlFor="user-profile-name">Tu Nombre</Label>
@@ -122,6 +139,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
               placeholder="Tu nombre completo"
               {...register('name')}
               className={cn(errors.name && 'border-destructive')}
+              disabled={isSubmitting}
             />
             {errors.name && (
               <p className="text-xs text-destructive mt-1">
@@ -137,6 +155,22 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
           </Button>
         </CardFooter>
       </form>
+
+      <CardContent>
+        <hr className="my-6" />
+        <div className="space-y-2">
+          <Label className="text-base font-medium">Foto de Perfil</Label>
+          <p className="text-sm text-muted-foreground">
+            Sube o cambia tu foto (PNG, JPG, WEBP, GIF).
+          </p>
+        </div>
+        <div className="mt-4">
+          <ProfilePictureUploadForm
+            currentImageUrl={currentUserImage}
+            onUploadSuccess={handlePictureUpdateSuccess}
+          />
+        </div>
+      </CardContent>
     </Card>
   );
 };

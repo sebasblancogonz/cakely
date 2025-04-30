@@ -5,15 +5,22 @@ import { users } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { getSessionInfo } from '@/lib/auth/utils';
 
-const updateProfileSchema = z.object({
-  name: z.string().trim().min(1, 'El nombre no puede estar vacío.')
-});
+const updateProfileSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, 'El nombre no puede estar vacío.')
+      .optional(),
+    image: z.string().url('URL de imagen inválida').nullable().optional()
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Nada que actualizar.'
+  });
 
 export async function PATCH(request: NextRequest) {
   const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) {
-    return sessionInfo;
-  }
+  if (sessionInfo instanceof NextResponse) return sessionInfo;
   const { userId } = sessionInfo;
 
   let body;
@@ -30,15 +37,37 @@ export async function PATCH(request: NextRequest) {
       { status: 400 }
     );
   }
-  const { name: newName } = validation.data;
+
+  const dataToUpdate = validation.data;
 
   try {
+    const setData: Partial<{
+      name: string;
+      image: string | null;
+      updatedAt: Date;
+    }> = {};
+    if (dataToUpdate.name !== undefined) {
+      setData.name = dataToUpdate.name;
+    }
+
+    if (dataToUpdate.image !== undefined) {
+      setData.image = dataToUpdate.image;
+    }
+    setData.updatedAt = new Date();
+
+    if (Object.keys(setData).length <= 1) {
+      const currentUser = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { id: true, name: true, email: true, image: true }
+      });
+      return NextResponse.json(
+        currentUser ?? { message: 'No se realizaron cambios.' }
+      );
+    }
+
     const [updatedUser] = await db
       .update(users)
-      .set({
-        name: newName,
-        updatedAt: new Date()
-      })
+      .set(setData)
       .where(eq(users.id, userId))
       .returning({
         id: users.id,
@@ -49,14 +78,12 @@ export async function PATCH(request: NextRequest) {
 
     if (!updatedUser) {
       return NextResponse.json(
-        { message: 'Usuario no encontrado para actualizar' },
+        { message: 'Usuario no encontrado' },
         { status: 404 }
       );
     }
 
-    console.log(
-      `User <span class="math-inline">\{userId\} updated their name to "</span>{newName}"`
-    );
+    console.log(`User ${userId} updated profile.`);
     return NextResponse.json(updatedUser);
   } catch (error) {
     console.error(

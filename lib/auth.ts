@@ -1,5 +1,4 @@
 import NextAuth from 'next-auth';
-import GitHub from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db, invitations, teamMembers } from '@/lib/db';
@@ -30,13 +29,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, trigger, session }) {
       const currentUserId = (token.id as string) ?? user?.id;
       const currentUserEmail = (token.email as string) ?? user?.email;
+      const currentUserImage = (token.picture as string) ?? user?.image;
 
       if (trigger === 'update' && session) {
         if (session.name) {
           token.name = session.name;
         }
         if (session.image) {
-          token.image = session.image;
+          token.picture = session.image;
         }
       }
 
@@ -130,8 +130,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
       }
       if (session.user) {
-        session.user.businessId = Number(token.businessId) ?? null;
+        session.user.businessId = token.businessId ?? null;
         session.user.role = (token.role as TeamRole) ?? null;
+        session.user.image = token.picture ?? null;
+        session.user.name = token.name ?? null;
       }
       return session;
     }

@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const businessId = session?.user?.businessId;
   const isLoadingSession = sessionStatus === 'loading';
   const currentUserName = session?.user?.name;
+  const currentUserImage = session?.user?.image;
 
   const canEditUserProfile = true;
   const canEditBusinessProfile =
@@ -343,7 +344,10 @@ export default function SettingsPage() {
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
               >
-                <UserProfileSettings currentUserName={currentUserName} />
+                <UserProfileSettings
+                  currentUserImage={currentUserImage}
+                  currentUserName={currentUserName}
+                />
               </motion.div>
             </TabsContent>
           )}
