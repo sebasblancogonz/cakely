@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +12,15 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, LogIn, UserPlus } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle,
+  XCircle,
+  LogIn,
+  UserPlus,
+  AlertTriangle
+} from 'lucide-react';
+
 import { useSession, signIn, signOut } from 'next-auth/react';
 
 interface InvitationDetails {
@@ -61,7 +70,6 @@ function AcceptInvitationClientContent() {
         if (!response.ok) {
           throw new Error(data.message || 'Error al verificar la invitación.');
         }
-
         setInvitationDetails(data as InvitationDetails);
       } catch (error) {
         console.error('Verification error:', error);
@@ -94,7 +102,6 @@ function AcceptInvitationClientContent() {
 
     setIsProcessingAction(true);
     setActionError(null);
-
     try {
       const response = await fetch('/api/invitations/accept', {
         method: 'POST',
@@ -102,10 +109,7 @@ function AcceptInvitationClientContent() {
         body: JSON.stringify({ token })
       });
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al aceptar la invitación.');
-      }
+      if (!response.ok) throw new Error(data.message || 'Error al aceptar');
 
       toast({
         title: '¡Invitación Aceptada!',
@@ -115,9 +119,7 @@ function AcceptInvitationClientContent() {
     } catch (error) {
       console.error('Acceptance error:', error);
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Error desconocido al aceptar.';
+        error instanceof Error ? error.message : 'Error desconocido';
       setActionError(message);
       toast({
         title: 'Error al Aceptar',
@@ -159,7 +161,7 @@ function AcceptInvitationClientContent() {
   if (isLoadingVerify || isLoadingSession) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -167,13 +169,19 @@ function AcceptInvitationClientContent() {
   if (verificationError) {
     return (
       <div className="flex justify-center items-center min-h-screen p-4">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md text-center">
           <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
+            <CardTitle className="flex items-center justify-center gap-2 text-destructive">
+              <AlertTriangle className="h-6 w-6" /> Error
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p>{verificationError}</p>
-            <Button onClick={() => router.push('/')} className="mt-4">
+            <Button
+              onClick={() => router.push('/')}
+              className="mt-4"
+              variant="outline"
+            >
               Volver al inicio
             </Button>
           </CardContent>
@@ -196,12 +204,12 @@ function AcceptInvitationClientContent() {
       invitationDetails.email.toLowerCase()
   ) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-4">
+      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>¡Has sido invitado!</CardTitle>
             <CardDescription>
-              Has sido invitado a unirte a{' '}
+              {session?.user?.name || 'Alguien'} te ha invitado a unirte a{' '}
               <strong className="font-semibold">
                 {invitationDetails.businessName}
               </strong>{' '}
@@ -219,8 +227,12 @@ function AcceptInvitationClientContent() {
             {actionError && (
               <p className="text-sm text-destructive">{actionError}</p>
             )}
-            <div className="flex justify-center gap-4">
-              <Button onClick={handleAccept} disabled={isProcessingAction}>
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              <Button
+                onClick={handleAccept}
+                disabled={isProcessingAction}
+                className="w-full sm:w-auto"
+              >
                 {isProcessingAction ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -232,6 +244,7 @@ function AcceptInvitationClientContent() {
                 variant="outline"
                 onClick={handleDecline}
                 disabled={isProcessingAction}
+                className="w-full sm:w-auto"
               >
                 <XCircle className="mr-2 h-4 w-4" />
                 Rechazar
@@ -249,10 +262,10 @@ function AcceptInvitationClientContent() {
       invitationDetails.email.toLowerCase()
   ) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-4">
+      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
-            <CardTitle>Invitación para otro email</CardTitle>
+            <CardTitle>Cuenta Incorrecta</CardTitle>
             <CardDescription>
               Esta invitación es para{' '}
               <strong className="font-semibold">
@@ -264,11 +277,11 @@ function AcceptInvitationClientContent() {
           <CardContent className="space-y-4">
             <p className="text-sm">
               Actualmente has iniciado sesión como{' '}
-              <strong className="font-semibold">{session.user?.email}</strong>.
+              <strong className="font-semibold">{session?.user?.email}</strong>.
             </p>
             <p className="text-sm text-muted-foreground">
               Por favor, cierra sesión y vuelve a entrar o regístrate con la
-              cuenta de email correcta para aceptar la invitación.
+              cuenta de email correcta para aceptar.
             </p>
             <Button
               onClick={() =>
@@ -276,7 +289,7 @@ function AcceptInvitationClientContent() {
               }
               variant="outline"
             >
-              Cerrar sesión
+              Cerrar sesión e intentar de nuevo
             </Button>
           </CardContent>
         </Card>
@@ -286,12 +299,12 @@ function AcceptInvitationClientContent() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-4">
+      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>¡Has sido invitado!</CardTitle>
             <CardDescription>
-              Has sido invitado a unirte a{' '}
+              A unirte a{' '}
               <strong className="font-semibold">
                 {invitationDetails.businessName}
               </strong>{' '}
@@ -308,23 +321,32 @@ function AcceptInvitationClientContent() {
               email:
             </p>
             <p className="font-semibold">{invitationDetails.email}</p>
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              {/* Botón Iniciar Sesión */}
               <Button
                 onClick={() =>
                   signIn(undefined, {
                     callbackUrl: `/accept-invitation?token=${token}`
                   })
                 }
+                className="w-full sm:w-auto"
               >
                 <LogIn className="mr-2 h-4 w-4" /> Iniciar Sesión
               </Button>
+              {/* Botón Crear Cuenta (CORREGIDO) */}
               <Button
-                onClick={() =>
-                  router.push(
-                    `/signup?email=<span class="math-inline">\{encodeURIComponent\(invitationDetails\.email\)\}&callbackUrl\=/accept\-invitation?token\=</span>{token}`
-                  )
-                }
+                onClick={() => {
+                  const emailToEncode = invitationDetails?.email ?? '';
+                  const currentToken = token ?? '';
+
+                  const callbackUrl = `/accept-invitation?token=${currentToken}`;
+
+                  const targetUrl = `/signup?email=${encodeURIComponent(emailToEncode)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
+                  console.log('Redirigiendo a Signup URL:', targetUrl);
+                  router.push(targetUrl);
+                }}
                 variant="outline"
+                className="w-full sm:w-auto"
               >
                 <UserPlus className="mr-2 h-4 w-4" /> Crear Cuenta
               </Button>
@@ -337,7 +359,7 @@ function AcceptInvitationClientContent() {
 
   return (
     <div className="flex justify-center items-center min-h-screen">
-      <p>Cargando estado...</p>
+      <p>Estado inesperado.</p>
     </div>
   );
 }
@@ -347,7 +369,7 @@ export default function AcceptInvitationPage() {
     <Suspense
       fallback={
         <div className="flex justify-center items-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       }
     >

@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import postgres from 'postgres';
 import { drizzle as drizzlePg } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/neon-serverless';

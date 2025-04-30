@@ -26,10 +26,62 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      if (account?.provider === 'google') {
+        const userEmail = profile?.email;
+        if (!userEmail) {
+          console.log(
+            `AUTH SIGNIN: OAuth (${account.provider}) sin email. Denegado.`
+          );
+          return false;
+        }
+        const userEmailLower = userEmail.toLowerCase();
+
+        console.log(
+          `AUTH SIGNIN: Verificando usuario existente para ${userEmailLower}`
+        );
+        const existingUser = await db.query.users.findFirst({
+          where: eq(users.email, userEmailLower),
+          columns: { id: true }
+        });
+
+        if (existingUser) {
+          console.log(
+            `AUTH SIGNIN: Usuario existente (${existingUser.id}) encontrado. Permitiendo inicio de sesión.`
+          );
+          return true;
+        }
+
+        console.log(
+          `AUTH SIGNIN: Usuario NO existente. Buscando invitación pendiente para ${userEmailLower}...`
+        );
+        const pendingInvite = await db.query.invitations.findFirst({
+          where: and(
+            eq(invitations.email, userEmailLower),
+            eq(invitations.status, 'PENDING'),
+            gt(invitations.expiresAt, new Date())
+          ),
+          columns: { id: true }
+        });
+
+        if (pendingInvite) {
+          console.log(
+            `AUTH SIGNIN: Invitación pendiente encontrada para ${userEmailLower}. Permitiendo registro...`
+          );
+          return true;
+        } else {
+          console.log(
+            `AUTH SIGNIN: Usuario ${userEmailLower} NO existente y SIN invitación válida. Denegando acceso.`
+          );
+          return '/auth/denied?error=NoInvitation';
+        }
+      }
+
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       const currentUserId = (token.id as string) ?? user?.id;
       const currentUserEmail = (token.email as string) ?? user?.email;
-      const currentUserImage = (token.picture as string) ?? user?.image;
 
       if (trigger === 'update' && session) {
         if (session.name) {
