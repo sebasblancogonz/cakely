@@ -130,7 +130,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
       }
       if (session.user) {
-        session.user.businessId = token.businessId ?? null;
+        session.user.businessId = Number(token.businessId) ?? null;
         session.user.role = (token.role as TeamRole) ?? null;
         session.user.image = token.picture ?? null;
         session.user.name = token.name ?? null;
