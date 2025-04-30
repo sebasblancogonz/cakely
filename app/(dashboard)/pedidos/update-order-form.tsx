@@ -5,13 +5,10 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Order,
-  Customer,
   OrderImage,
   ProductType,
   PaymentMethod,
-  PaymentStatus,
-  updateOrderFormSchema,
-  UpdateOrderFormData
+  PaymentStatus
 } from '@types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +24,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Loader2, Trash2 } from 'lucide-react';
+import {
+  UpdateOrderFormData,
+  updateOrderFormSchema
+} from '@/lib/validators/orders';
 
 const defaultOrderFormValues: Partial<UpdateOrderFormData> = {
   description: '',
@@ -65,7 +66,7 @@ const UpdateOrderForm = ({
     handleSubmit,
     control,
     reset,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting, isDirty }
   } = useForm<UpdateOrderFormData>({
     resolver: zodResolver(updateOrderFormSchema),
     defaultValues: defaultOrderFormValues
@@ -97,6 +98,18 @@ const UpdateOrderForm = ({
   }, [orderToEdit, reset]);
 
   const onSubmit = async (data: UpdateOrderFormData) => {
+    if (!isDirty) {
+      toast({
+        title: 'Sin cambios',
+        description: 'No has modificado ningún dato del pedido.',
+        variant: 'default'
+      });
+      setIsModalOpen(false);
+      setIsEditing(false);
+      setImagesToDelete([]);
+      setImageUrls([]);
+      return;
+    }
     console.log('Form Data Submitted:', data);
 
     const apiData = {

@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ingredientPrices } from '@/lib/db';
-import { UpdateIngredientPriceSchema } from '@/lib/validators/ingredients';
-import { eq } from 'drizzle-orm';
+import { updateIngredientSchema } from '@/lib/validators/ingredients';
+import { eq, and } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
   const { pathname } = req.nextUrl;
   const id = Number(pathname.split('/').pop());
 
@@ -15,10 +26,17 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
+
     const ingredient = await db
       .select()
       .from(ingredientPrices)
-      .where(eq(ingredientPrices.id, id));
+      .where(
+        and(
+          eq(ingredientPrices.id, id),
+          eq(ingredientPrices.businessId, businessId)
+        )
+      );
+
     if (ingredient.length === 0) {
       return NextResponse.json(
         { message: 'Ingredient not found' },
@@ -27,7 +45,10 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json(ingredient[0]);
   } catch (error) {
-    console.error(`API Error fetching ingredient ${id}:`, error);
+    console.error(
+      `API Error fetching ingredient ${id} for business ${businessId}:`,
+      error
+    );
     return NextResponse.json(
       { message: 'Failed to fetch ingredient' },
       { status: 500 }
@@ -36,6 +57,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
   const { pathname } = req.nextUrl;
   const id = Number(pathname.split('/').pop());
 
@@ -48,7 +79,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const validation = UpdateIngredientPriceSchema.safeParse(body);
+    const validation = updateIngredientSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -63,22 +94,30 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const dataToSet: Record<string, string | Date | undefined> = {};
+    const dataToSet: Record<string, string | number | Date | undefined> = {};
     for (const [key, value] of Object.entries(validation.data)) {
-      if (value !== undefined) {
-        if (key === 'pricePerUnit') {
-          dataToSet[key] = (value as number).toString();
+      if (value !== undefined && key !== 'id' && key !== 'businessId') {
+        if (key === 'pricePerUnit' && typeof value === 'number') {
+          dataToSet[key] = value.toString();
         } else {
           dataToSet[key] = value as string;
         }
       }
     }
-    dataToSet.updatedAt = new Date();
+
+    if ('updatedAt' in ingredientPrices) {
+      dataToSet.updatedAt = new Date();
+    }
 
     const updatedIngredient = await db
       .update(ingredientPrices)
       .set(dataToSet)
-      .where(eq(ingredientPrices.id, id))
+      .where(
+        and(
+          eq(ingredientPrices.id, id),
+          eq(ingredientPrices.businessId, businessId)
+        )
+      )
       .returning();
 
     if (updatedIngredient.length === 0) {
@@ -90,13 +129,20 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(updatedIngredient[0]);
   } catch (error: any) {
-    console.error(`API Error updating ingredient ${id}:`, error);
+    console.error(
+      `API Error updating ingredient ${id} for business ${businessId}:`,
+      error
+    );
+
     if (
       error.code === '23505' &&
-      error.constraint === 'ingredient_prices_name_key'
+      error.constraint === 'business_ingredient_name_idx'
     ) {
       return NextResponse.json(
-        { message: 'An ingredient with this name already exists' },
+        {
+          message:
+            'An ingredient with this name already exists for your business'
+        },
         { status: 409 }
       );
     }
@@ -108,6 +154,16 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
   const { pathname } = req.nextUrl;
   const id = Number(pathname.split('/').pop());
 
@@ -118,10 +174,17 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
+
     const deletedIngredient = await db
       .delete(ingredientPrices)
-      .where(eq(ingredientPrices.id, id))
+      .where(
+        and(
+          eq(ingredientPrices.id, id),
+          eq(ingredientPrices.businessId, businessId)
+        )
+      )
       .returning({ deletedId: ingredientPrices.id });
+
     if (deletedIngredient.length === 0) {
       return NextResponse.json(
         { message: 'Ingredient not found for deletion' },
@@ -133,7 +196,10 @@ export async function DELETE(req: NextRequest) {
       id: deletedIngredient[0].deletedId
     });
   } catch (error) {
-    console.error(`API Error deleting ingredient ${id}:`, error);
+    console.error(
+      `API Error deleting ingredient ${id} for business ${businessId}:`,
+      error
+    );
     return NextResponse.json(
       { message: 'Failed to delete ingredient' },
       { status: 500 }

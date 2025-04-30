@@ -1,19 +1,35 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
-import { auth, signOut } from '@/lib/auth';
-import Image from 'next/image';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuTrigger,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuItem
 } from '@/components/ui/dropdown-menu';
+import { LifeBuoy, Loader2, LogIn, LogOut, Settings } from 'lucide-react';
+import { signOut, useSession } from 'next-auth/react';
+import Image from 'next/image';
 import Link from 'next/link';
 
-export async function User() {
-  let session = await auth();
-  let user = session?.user;
+export function User() {
+  const { data: session, status } = useSession();
+  const user = session?.user;
+
+  if (status === 'loading') {
+    return (
+      <Button
+        variant="outline"
+        size="icon"
+        className="overflow-hidden rounded-full"
+        disabled
+      >
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
@@ -22,36 +38,57 @@ export async function User() {
           variant="outline"
           size="icon"
           className="overflow-hidden rounded-full"
+          disabled={status !== 'authenticated'}
         >
           <Image
-            src={user?.image ?? '/placeholder-user.jpg'}
+            src={user?.image ?? '/img/placeholder-user.webp'}
             width={36}
             height={36}
-            alt="Avatar"
-            className="overflow-hidden rounded-full"
+            alt={user?.name ?? 'Avatar'}
+            className="overflow-hidden rounded-full object-cover"
+            key={user?.image ?? 'placeholder'}
           />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>My Account</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>Settings</DropdownMenuItem>
-        <DropdownMenuItem>Support</DropdownMenuItem>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent align="end" className="w-56">
         {user ? (
-          <DropdownMenuItem>
-            <form
-              action={async () => {
-                'use server';
-                await signOut();
-              }}
+          <>
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">
+                  {user.name || 'Mi Cuenta'}
+                </p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/ajustes" className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Ajustes</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled>
+              <LifeBuoy className="mr-2 h-4 w-4" />
+              <span>Soporte</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+              onClick={() => signOut({ callbackUrl: '/' })}
             >
-              <button type="submit">Sign Out</button>
-            </form>
-          </DropdownMenuItem>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Cerrar sesión</span>
+            </DropdownMenuItem>
+          </>
         ) : (
-          <DropdownMenuItem>
-            <Link href="/login">Sign In</Link>
+          <DropdownMenuItem asChild>
+            <Link href="/api/auth/signin" className="cursor-pointer">
+              <LogIn className="mr-2 h-4 w-4" />
+              <span>Iniciar sesión</span>
+            </Link>
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>

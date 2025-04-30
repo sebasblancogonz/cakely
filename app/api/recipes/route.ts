@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
-import { NewRecipeInputSchema } from '@/lib/validators/recipes';
-import { asc, eq } from 'drizzle-orm';
+import { recipeFormSchema } from '@/lib/validators/recipes';
+import { asc, eq, and } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
   try {
     const recipeListWithDetails = await db.query.recipes.findMany({
+      where: eq(recipes.businessId, businessId),
       orderBy: [asc(recipes.name)],
       with: {
         recipeIngredients: {
@@ -18,7 +30,10 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json(recipeListWithDetails);
   } catch (error) {
-    console.error('API Error fetching recipes with details:', error);
+    console.error(
+      `API Error fetching recipes for business ${businessId}:`,
+      error
+    );
     return NextResponse.json(
       { message: 'Failed to fetch recipes' },
       { status: 500 }
@@ -27,9 +42,19 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
-    const validation = NewRecipeInputSchema.safeParse(body);
+    const validation = recipeFormSchema.safeParse(body);
 
     if (!validation.success) {
       console.error(
@@ -46,13 +71,12 @@ export async function POST(request: NextRequest) {
       validation.data;
 
     const dataToInsert = {
-      name: recipeData.name,
-      productType: recipeData.productType,
-      baseLaborHours: recipeData.baseLaborHours.toString(),
-      notes: recipeData.notes
+      ...recipeData,
+      businessId: businessId,
+      baseLaborHours: recipeData.baseLaborHours.toString()
     };
 
-    const newRecipe = await db.transaction(async (tx) => {
+    const newRecipe = await db.transaction(async (tx: any) => {
       const insertedRecipe = await tx
         .insert(recipes)
         .values(dataToInsert)
@@ -78,18 +102,40 @@ export async function POST(request: NextRequest) {
       if (ingredientsToInsert.length > 0) {
         await tx.insert(recipeIngredients).values(ingredientsToInsert);
       }
-      return insertedRecipe[0];
+
+      const finalNewRecipe = await tx.query.recipes.findFirst({
+        where: eq(recipes.id, newRecipeId),
+        with: {
+          recipeIngredients: {
+            with: { ingredient: true }
+          }
+        }
+      });
+
+      if (!finalNewRecipe) {
+        throw new Error('Failed to fetch newly created recipe with details.');
+      }
+
+      return finalNewRecipe;
     });
 
     return NextResponse.json(newRecipe, { status: 201 });
   } catch (error: any) {
-    console.error('API Error creating recipe:', error);
-    if (error.code === '23505' && error.constraint === 'recipes_name_key') {
+    console.error(
+      `API Error creating recipe for business ${businessId}:`,
+      error
+    );
+
+    if (
+      error.code === '23505' &&
+      error.constraint === 'business_recipe_name_idx'
+    ) {
       return NextResponse.json(
-        { message: 'A recipe with this name already exists' },
+        { message: 'A recipe with this name already exists for your business' },
         { status: 409 }
       );
     }
+
     if (error.code === '23503') {
       return NextResponse.json(
         { message: 'Invalid ingredient ID provided' },

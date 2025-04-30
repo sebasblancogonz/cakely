@@ -32,6 +32,7 @@ import { OrderStatus, Order as OrderType } from '@types';
 import { JSX } from 'react';
 import { Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useBusinessProfile } from '@/hooks/use-business-profile';
 
 interface OrdersTableProps {
   orders: OrderType[];
@@ -66,7 +67,7 @@ const availableColumns: {
     defaultVisible: true,
     canHide: true,
     className: 'hidden md:table-cell'
-  }, // Use totalPrice
+  },
   {
     id: 'productType',
     label: 'Producto',
@@ -87,7 +88,7 @@ const availableColumns: {
     defaultVisible: false,
     canHide: true,
     className: 'hidden lg:table-cell'
-  }, // Default hidden example
+  },
   { id: 'actions', label: 'Acciones', defaultVisible: true, canHide: false }
 ];
 
@@ -113,6 +114,7 @@ export function OrdersTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { profile } = useBusinessProfile();
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >(getDefaultVisibility());
@@ -187,7 +189,9 @@ export function OrdersTable({
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle>Pedidos</CardTitle>
-          <CardDescription>Gestiona los pedidos de Aura Bakery</CardDescription>
+          <CardDescription>
+            Gestiona los pedidos de {profile?.name ?? 'tu negocio'}
+          </CardDescription>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

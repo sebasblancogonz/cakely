@@ -1,17 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { orders, customers, ingredientPrices } from '@/lib/db';
-import { ilike, or, eq } from 'drizzle-orm';
+import { orders, customers, ingredientPrices, recipes } from '@/lib/db';
+import { ilike, or, eq, and, SQL } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
 
 interface SearchResult {
   id: number;
-  type: 'order' | 'customer' | 'ingredient';
+  type: 'order' | 'customer' | 'ingredient' | 'recipe';
   title: string;
   description?: string;
   url: string;
 }
 
+interface Select {
+  id: number;
+  title: string;
+  customerName: string;
+  description: string;
+}
+
 export async function GET(request: NextRequest) {
+  const session = await auth();
+  const businessId = session?.user?.businessId;
+
+  if (!businessId) {
+    return NextResponse.json(
+      { message: 'Not authorized or no business associated' },
+      { status: 403 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q')?.trim();
 
@@ -24,13 +42,23 @@ export async function GET(request: NextRequest) {
   const limitPerType = 10;
 
   try {
-    const orderCondition = or(
+    const baseBusinessCondition = (table: any) =>
+      eq(table.businessId, businessId);
+
+    const orderSearchFields = or(
       ilike(orders.description, searchTerm),
       ilike(orders.notes, searchTerm),
       ilike(orders.flavor, searchTerm),
       ilike(orders.customizationDetails, searchTerm),
-      ilike(orders.sizeOrWeight, searchTerm)
+      ilike(orders.sizeOrWeight, searchTerm),
+      ilike(customers.name, searchTerm),
+      ilike(orders.productType, searchTerm)
     );
+    const orderCondition = and(
+      baseBusinessCondition(orders),
+      orderSearchFields
+    );
+
     const foundOrders = await db
       .select({
         id: orders.id,
@@ -43,7 +71,7 @@ export async function GET(request: NextRequest) {
       .limit(limitPerType);
 
     results.push(
-      ...foundOrders.map((o) => ({
+      ...foundOrders.map((o: Select) => ({
         id: o.id,
         type: 'order' as const,
         title: o.title || `Pedido #${o.id}`,
@@ -52,13 +80,18 @@ export async function GET(request: NextRequest) {
       }))
     );
 
-    const customerCondition = or(
+    const customerSearchFields = or(
       ilike(customers.name, searchTerm),
       ilike(customers.email, searchTerm),
       ilike(customers.phone, searchTerm),
       ilike(customers.instagramHandle, searchTerm),
       ilike(customers.notes, searchTerm)
     );
+    const customerCondition = and(
+      baseBusinessCondition(customers),
+      customerSearchFields
+    );
+
     const foundCustomers = await db
       .select({
         id: customers.id,
@@ -70,7 +103,7 @@ export async function GET(request: NextRequest) {
       .limit(limitPerType);
 
     results.push(
-      ...foundCustomers.map((c) => ({
+      ...foundCustomers.map((c: Select) => ({
         id: c.id,
         type: 'customer' as const,
         title: c.title,
@@ -79,10 +112,15 @@ export async function GET(request: NextRequest) {
       }))
     );
 
-    const ingredientCondition = or(
+    const ingredientSearchFields = or(
       ilike(ingredientPrices.name, searchTerm),
       ilike(ingredientPrices.supplier, searchTerm)
     );
+    const ingredientCondition = and(
+      baseBusinessCondition(ingredientPrices),
+      ingredientSearchFields
+    );
+
     const foundIngredients = await db
       .select({
         id: ingredientPrices.id,
@@ -94,7 +132,7 @@ export async function GET(request: NextRequest) {
       .limit(limitPerType);
 
     results.push(
-      ...foundIngredients.map((i) => ({
+      ...foundIngredients.map((i: Select) => ({
         id: i.id,
         type: 'ingredient' as const,
         title: i.title,
@@ -103,11 +141,43 @@ export async function GET(request: NextRequest) {
       }))
     );
 
+    const recipeSearchFields = or(
+      ilike(recipes.name, searchTerm),
+      ilike(recipes.notes, searchTerm)
+    );
+    const recipeCondition = and(
+      baseBusinessCondition(recipes),
+      recipeSearchFields
+    );
+
+    const foundRecipes = await db
+      .select({
+        id: recipes.id,
+        title: recipes.name,
+        description: recipes.productType
+      })
+      .from(recipes)
+      .where(recipeCondition)
+      .limit(limitPerType);
+
+    results.push(
+      ...foundRecipes.map((r: Select) => ({
+        id: r.id,
+        type: 'recipe' as const,
+        title: r.title,
+        description: r.description ? `Tipo: ${r.description}` : undefined,
+        url: `/ajustes#recipe-${r.id}`
+      }))
+    );
+
     results.sort((a, b) => a.type.localeCompare(b.type));
 
     return NextResponse.json({ results });
   } catch (error) {
-    console.error('API Error during global search:', error);
+    console.error(
+      `API Error during global search for business ${businessId}:`,
+      error
+    );
     return NextResponse.json(
       { message: 'Search failed', error: (error as Error).message },
       { status: 500 }

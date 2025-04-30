@@ -7,14 +7,40 @@ import {
   SelectOrder as DbSelectOrder,
   SelectCustomer as DbSelectCustomer
 } from '@/lib/db';
+import { teamRoleEnum, invitationStatusEnum } from '@/lib/db';
 
-// --- Core Database Entity Types ---
+export type InvitationStatus = (typeof invitationStatusEnum.enumValues)[number];
+
+export type PendingInvitation = {
+  id: number;
+  email: string;
+  role: TeamRole;
+  status: InvitationStatus;
+  expiresAt: Date | null;
+  createdAt: Date | null;
+};
+
+export type TeamMemberUser = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+};
+export type TeamMemberWithUser = {
+  userId: string;
+  role: TeamRole;
+  joinedAt: Date | null;
+  name: string;
+  email: string;
+};
+
+export type TeamRole = (typeof teamRoleEnum.enumValues)[number];
+
 export type Setting = SelectSetting;
 export type IngredientPrice = SelectIngredientPrice;
 export type Recipe = SelectRecipe;
 export type RecipeIngredient = SelectRecipeIngredient;
 
-// --- Frontend-Specific Types ---
 export type Customer = DbSelectCustomer & {
   orders?: Order[];
 };
@@ -25,7 +51,6 @@ export type Order = DbSelectOrder & {
   images?: OrderImage[];
 };
 
-// --- Enums ---
 export enum OrderStatus {
   pending = 'Pendiente',
   processing = 'Preparando',
@@ -101,76 +126,7 @@ export interface DashboardBreadcrumbProps {
   items: BreadcrumbItem[];
 }
 
-export const recipeFormSchema = z.object({
-  id: z.coerce.number().optional(),
-  name: z.string().min(1, 'Nombre de receta requerido'),
-  productType: z.nativeEnum(ProductType, {
-    errorMap: () => ({ message: 'Selecciona un tipo de producto' })
-  }),
-  baseLaborHours: z.coerce.number().min(0, 'Horas deben ser >= 0'),
-  notes: z.string().optional(),
-  recipeIngredients: z
-    .array(
-      z.object({
-        ingredientId: z.coerce
-          .number()
-          .int()
-          .positive('Selecciona un ingrediente'),
-        quantity: z.coerce.number().positive('Cantidad debe ser positiva'),
-        unit: z.string().min(1, 'Unidad requerida')
-      })
-    )
-    .min(1, 'Añade al menos un ingrediente')
-});
-export type RecipeFormData = z.infer<typeof recipeFormSchema>;
-
-export const createOrderFormSchema = z.object({
-  customerId: z.coerce
-    .number()
-    .int()
-    .positive({ message: 'Selecciona un cliente' }),
-  description: z
-    .string()
-    .trim()
-    .min(1, { message: 'La descripción es requerida' }),
-  amount: z.coerce
-    .number()
-    .positive({ message: 'Importe original debe ser positivo' }),
-  deliveryDate: z.coerce
-    .date({ invalid_type_error: 'Fecha de entrega inválida' })
-    .nullable()
-    .optional(),
-  productType: z.nativeEnum(ProductType),
-  customizationDetails: z.string().optional(),
-  quantity: z.coerce
-    .number()
-    .int()
-    .positive({ message: 'Cantidad debe ser positiva' }),
-  sizeOrWeight: z.string().min(1, { message: 'Tamaño/Peso es requerido' }),
-  flavor: z.string().min(1, { message: 'Sabor es requerido' }),
-  allergyInformation: z.string().optional(),
-  totalPrice: z.coerce
-    .number()
-    .positive({ message: 'Precio total debe ser positivo' }),
-  paymentStatus: z.nativeEnum(PaymentStatus),
-  paymentMethod: z.nativeEnum(PaymentMethod),
-  depositAmount: z.coerce
-    .number()
-    .min(0, { message: 'La señal no puede ser negativa' })
-    .optional(),
-  notes: z.string().optional()
-});
-
-export const updateOrderFormSchema = createOrderFormSchema
-  .omit({ customerId: true })
-  .partial()
-  .refine(
-    (data) => Object.keys(data).length > 0,
-
-    {
-      message: 'Al menos un campo debe ser proporcionado'
-    }
-  );
-
-export type OrderFormData = z.infer<typeof createOrderFormSchema>;
-export type UpdateOrderFormData = z.infer<typeof updateOrderFormSchema>;
+export interface BusinessProfileData {
+  name: string | null;
+  logoUrl: string | null;
+}

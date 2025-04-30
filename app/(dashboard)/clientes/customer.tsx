@@ -66,7 +66,6 @@ export function Customer({
                 onClick={async () => {
                   try {
                     await deleteCustomer(customer.id);
-
                     setCustomers((customers) =>
                       customers.filter((c) => c.id !== c.id)
                     );

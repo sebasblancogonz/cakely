@@ -221,7 +221,7 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
           close={() => setLightboxOpen(false)}
           index={selectedIndex}
           slides={slides}
-          styles={{ container: { backgroundColor: 'rgba(0, 0, 0, 0.8)' } }} // Darker background
+          styles={{ container: { backgroundColor: 'rgba(0, 0, 0, 0.8)' } }}
         />
       )}
     </>

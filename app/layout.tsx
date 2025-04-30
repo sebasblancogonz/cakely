@@ -2,11 +2,12 @@ import { Suspense } from 'react';
 import './globals.css';
 
 import { Analytics } from '@vercel/analytics/react';
+import { SessionProvider } from 'next-auth/react';
 
 export const metadata = {
-  title: 'Aura Bakery - Panel de control',
+  title: 'Cakely - Panel de control',
   description:
-    'Un panel de control para administrar pedidos, clientes y productos de Aura Bakery.'
+    'Un panel de control para administrar pedidos, clientes y productos de tu negocio.'
 };
 
 export default function RootLayout({
@@ -17,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="flex min-h-screen w-full flex-col">
-        <Suspense fallback={<div>Cargando...</div>}>{children}</Suspense>
+        <SessionProvider>
+          <Suspense fallback={<div>Cargando...</div>}>{children}</Suspense>
+        </SessionProvider>
       </body>
       <Analytics />
     </html>
