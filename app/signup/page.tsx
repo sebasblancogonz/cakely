@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
@@ -14,6 +15,7 @@ import { signIn } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Google } from '@/components/icons';
+import Image from 'next/image';
 
 function SignUpForm() {
   const router = useRouter();
@@ -47,10 +49,17 @@ function SignUpForm() {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex justify-center items-start md:items-center p-4 sm:p-8">
+      <Card className="w-full max-w-sm border-none shadow-none">
         <CardHeader className="text-center">
-          <CardTitle>Crear Cuenta</CardTitle>
+          <Image
+            src="/logo.webp"
+            width={80}
+            height={80}
+            alt="Cakely"
+            className="mx-auto mb-4 rounded-lg"
+          />
+          <CardTitle className="text-2xl">Crear Cuenta</CardTitle>
           <CardDescription>
             {emailHint
               ? `Usa Google con ${emailHint} para crear tu cuenta y aceptar la invitación.`
@@ -58,10 +67,17 @@ function SignUpForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-4">
-          <Button onClick={handleGoogleSignUp} className="w-full">
+          <Button
+            onClick={handleGoogleSignUp}
+            variant="outline"
+            className="w-full"
+          >
             <Google />
             Continuar con Google
           </Button>
+          <CardFooter className="text-xs text-center text-muted-foreground">
+            Al continuar, aceptas nuestros Términos y Política de Privacidad.
+          </CardFooter>
           <Button
             variant="link"
             size="sm"

@@ -1,8 +1,15 @@
 import { z } from 'zod';
 
+const emailSchema = z
+  .string()
+  .max(0)
+  .or(z.string().email({ message: 'Email inválido' }))
+  .nullable()
+  .optional();
+
 export const customerSchema = z.object({
   name: z.string().trim().min(1, { message: 'El nombre es requerido' }),
-  email: z.string().email({ message: 'Email inválido' }).nullable().optional(),
+  email: emailSchema,
   phone: z
     .string()
     .trim()
@@ -21,7 +28,7 @@ export const updateCustomerSchema = z.object({
     .trim()
     .min(1, 'El nombre no puede quedar vacío si se modifica')
     .optional(),
-  email: z.string().email('Email inválido').nullable().optional(),
+  email: emailSchema,
   phone: z
     .string()
     .trim()
