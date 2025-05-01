@@ -44,13 +44,13 @@ const availableColumns: {
 ];
 
 const columnRenderOrder: (keyof OrderType | 'actions' | 'customer')[] = [
+  'deliveryDate',
   'customer',
   'description',
   'orderStatus',
   'totalPrice',
   'productType',
   'orderDate',
-  'deliveryDate',
   'actions'
 ];
 
@@ -88,7 +88,7 @@ export function Order({
   ): React.ReactNode => {
     switch (key) {
       case 'customer':
-        return order.customer?.name ?? 'N/A';
+        return order.customer?.name;
       case 'orderDate':
       case 'deliveryDate':
         const dateValue = order[key];

@@ -32,6 +32,7 @@ const defaultOrderFormValues: Partial<OrderFormData> = {
   customerId: undefined,
   description: '',
   amount: undefined,
+  deliveryTime: '',
   deliveryDate: null,
   productType: ProductType.Tarta,
   customizationDetails: '',
@@ -111,7 +112,8 @@ const OrderForm = ({
       amount: data.amount?.toString(),
       totalPrice: data.totalPrice?.toString(),
       depositAmount: (data.depositAmount ?? 0).toString(),
-      deliveryDate: data.deliveryDate ? data.deliveryDate : null
+      deliveryDate: data.deliveryDate ? data.deliveryDate : null,
+      deliveryTime: data.deliveryTime || null
     };
 
     try {
@@ -243,22 +245,36 @@ const OrderForm = ({
             </p>
           )}
         </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="deliveryDate">Fecha Entrega</Label>
-          <Input
-            id="deliveryDate"
-            type="date"
-            {...register('deliveryDate', { valueAsDate: true })}
-            className={cn(errors.deliveryDate && 'border-destructive')}
-          />
-          {errors.deliveryDate && (
-            <p className="text-xs text-destructive mt-1">
-              {errors.deliveryDate.message}
-            </p>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="deliveryDate">Fecha Entrega</Label>
+            <Input
+              id="deliveryDate"
+              type="date"
+              {...register('deliveryDate', { valueAsDate: true })}
+              className={cn(errors.deliveryDate && 'border-destructive')}
+            />
+            {errors.deliveryDate && (
+              <p className="text-xs text-destructive mt-1">
+                {errors.deliveryDate.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="deliveryTime">Hora Entrega (Opcional)</Label>
+            <Input
+              id="deliveryTime"
+              type="time"
+              {...register('deliveryTime')}
+              className={cn(errors.deliveryTime && 'border-destructive')}
+            />
+            {errors.deliveryTime && (
+              <p className="text-xs text-destructive mt-1">
+                {errors.deliveryTime.message}
+              </p>
+            )}
+          </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="productType">Tipo Producto</Label>

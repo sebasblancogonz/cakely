@@ -65,80 +65,111 @@ export async function POST(request: NextRequest) {
 
   if (!userId || !userEmail || !businessId) {
     return NextResponse.json(
-      {
-        message:
-          'No autenticado o falta información requerida (userId, userEmail, businessId)'
-      },
+      { message: 'No autenticado o falta información requerida' },
       { status: 401 }
     );
   }
 
   try {
     const orderInput: unknown = await request.json();
+
     const validationResult = createOrderFormSchema.safeParse(orderInput);
 
     if (!validationResult.success) {
+      console.error(
+        'API Order POST Validation Error:',
+        validationResult.error.format()
+      );
       return NextResponse.json(
-        {
-          message: 'Invalid input data',
-          errors: validationResult.error.format()
-        },
+        { message: 'Datos inválidos', errors: validationResult.error.format() },
         { status: 400 }
       );
     }
+    const validatedData = validationResult.data;
 
-    const dataToSave: OrderFormData & {
-      businessId: number;
-      orderStatus: OrderStatus;
-    } = {
-      ...validationResult.data,
+    let finalDeliveryDateTime: Date | null = null;
+    if (validatedData.deliveryDate) {
+      const combinedDate = new Date(validatedData.deliveryDate);
+
+      if (
+        validatedData.deliveryTime &&
+        typeof validatedData.deliveryTime === 'string' &&
+        /^\d{2}:\d{2}$/.test(validatedData.deliveryTime)
+      ) {
+        const [hours, minutes] = validatedData.deliveryTime
+          .split(':')
+          .map(Number);
+
+        combinedDate.setHours(hours, minutes, 0, 0);
+        console.log(
+          `[Order POST] Combined DateTime created: ${combinedDate.toISOString()}`
+        );
+      } else {
+        console.log(
+          `[Order POST] Only Date provided. Using Date object default time: ${combinedDate.toISOString()}`
+        );
+      }
+
+      if (!isNaN(combinedDate.getTime())) {
+        finalDeliveryDateTime = combinedDate;
+      } else {
+        console.warn(
+          '[Order POST] Invalid date created after combining date/time.'
+        );
+      }
+    }
+
+    const dataToSaveInDb = {
+      ...validatedData,
+      deliveryDate: finalDeliveryDateTime,
       businessId: businessId,
-      orderStatus: OrderStatus.pending,
-      deliveryDate:
-        validationResult.data.deliveryDate instanceof Date
-          ? validationResult.data.deliveryDate
-          : null
+      orderStatus: OrderStatus.pending
     };
 
-    console.log('Received and validated order data for save:', dataToSave);
+    delete (dataToSaveInDb as any).deliveryTime;
 
-    const orderCreated = await saveOrder(dataToSave);
+    console.log('Data prepared for DB save:', dataToSaveInDb);
+
+    const [orderCreated] = await db
+      .insert(orders)
+      .values(dataToSaveInDb)
+      .returning();
+
     const orderId = orderCreated.id;
     console.log(`Pedido ${orderId} guardado en BBDD.`);
 
     let googleEventId: string | null = null;
 
-    if (orderCreated.deliveryDate) {
+    if (finalDeliveryDateTime) {
       try {
         const authClient = await getGoogleAuthClient(userId);
 
         if (authClient) {
           console.log(
-            `Cliente Google Auth obtenido para usuario ${userId}. Preparando evento...`
+            `Cliente Google Auth obtenido para ${userId}. Preparando evento...`
           );
+
           const customer = await db.query.customers.findFirst({
             where: eq(customers.id, orderCreated.customerId)
           });
           const customerName = customer?.name || 'Cliente Desconocido';
           const eventTitle = `Entrega Pedido #${orderId} - ${customerName}`;
-          const eventDescription = `Producto: ${orderCreated.description || 'Sin descripción'}\nVer en App: https://tu-app.com/pedidos/${orderId}`;
+          const eventDescription = `Producto: ${orderCreated.description || 'Sin descripción'}\nVer en App: ${process.env.NEXT_PUBLIC_APP_URL}/pedidos/${orderId}`;
 
           const teamMembersWithData = await db
             .select({ user: { email: users.email } })
             .from(teamMembers)
             .innerJoin(users, eq(teamMembers.userId, users.id))
             .where(eq(teamMembers.businessId, businessId));
-
           const collaboratorEmails = teamMembersWithData
-            .map((member: TeamMemberWithUser) => member.user?.email)
-            .filter((email: string) => !!email);
-
+            .map((m: TeamMemberWithUser) => m.user?.email)
+            .filter((e: string) => !!e);
           const allAttendees = Array.from(
             new Set([userEmail, ...collaboratorEmails])
           );
 
-          const startDateTime = new Date(orderCreated.deliveryDate);
-          const duration = '15m';
+          const startDateTime = finalDeliveryDateTime;
+          const duration = '1h';
           const endDateTime = calculateEndTime(startDateTime, duration);
 
           const calendarResult = await callCreateCalendarEvent({
@@ -157,7 +188,7 @@ export async function POST(request: NextRequest) {
             );
             await db
               .update(orders)
-              .set({ googleCalendarEventId: googleEventId }) // Asegúrate que esta columna exista
+              .set({ googleCalendarEventId: googleEventId })
               .where(eq(orders.id, orderId));
           } else {
             console.warn(
@@ -166,20 +197,21 @@ export async function POST(request: NextRequest) {
           }
         } else {
           console.warn(
-            `Usuario ${userId} no tiene credenciales Google válidas recuperables. No se crea evento.`
+            `Usuario ${userId} sin credenciales Google válidas. No se crea evento.`
           );
         }
       } catch (calendarError) {
         console.error(
-          `Error general durante la integración de calendario para pedido ${orderId}:`,
+          `Error bloque Google Calendar para pedido ${orderId}:`,
           calendarError
         );
       }
     } else {
       console.log(
-        `Pedido ${orderId} no tiene fecha de entrega válida, no se crea evento de calendario.`
+        `Pedido ${orderId} no tiene fecha/hora de entrega, no se crea evento.`
       );
     }
+
     const finalOrderResponse = {
       ...orderCreated,
       googleCalendarEventId: googleEventId

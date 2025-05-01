@@ -64,6 +64,18 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
     }
   };
 
+  const formatTime = (date: Date | string | null | undefined): string => {
+    if (!date) return '-';
+    try {
+      return new Date(date).toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return 'Hora inválida';
+    }
+  };
+
   const imagesArray: OrderImage[] = Array.isArray(order.images)
     ? order.images
     : [];
@@ -76,6 +88,11 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
       label: 'Fecha de entrega',
       value: formatDate(order.deliveryDate),
       key: 'deliveryDate'
+    },
+    {
+      label: 'Hora de entrega',
+      value: formatTime(order.deliveryDate),
+      key: 'deliveryTime'
     },
     {
       label: 'Cliente',

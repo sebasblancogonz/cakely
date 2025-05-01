@@ -1,6 +1,8 @@
 import { PaymentMethod, PaymentStatus, ProductType } from '@/types/types';
 import { z } from 'zod';
 
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
 export const createOrderFormSchema = z.object({
   customerId: z.coerce
     .number()
@@ -17,6 +19,12 @@ export const createOrderFormSchema = z.object({
     .date({ invalid_type_error: 'Fecha de entrega inválida' })
     .nullable()
     .optional(),
+  deliveryTime: z
+    .string()
+    .regex(timeRegex, { message: 'Hora inválida (formato HH:MM)' })
+    .nullable()
+    .optional()
+    .or(z.literal('')),
   productType: z.nativeEnum(ProductType),
   customizationDetails: z.string().optional(),
   quantity: z.coerce
