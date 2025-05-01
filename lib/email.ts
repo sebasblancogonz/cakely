@@ -78,7 +78,7 @@ export async function sendInvitationEmail({
       html: htmlBody,
       tags: [
         { name: 'category', value: 'invitation' },
-        { name: 'businessName', value: String(businessName) }
+        { name: 'businessName', value: businessName }
       ]
     });
 
