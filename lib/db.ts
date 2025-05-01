@@ -27,7 +27,13 @@ import {
   relations,
   SQL
 } from 'drizzle-orm';
-import { OrderStatus, PaymentMethod, PaymentStatus, ProductType } from '@types';
+import {
+  OrderImage,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  ProductType
+} from '@types';
 import { OrderFormData, UpdateOrderFormData } from './validators/orders';
 import { UpdateCustomerFormData } from './validators/customers';
 import { Pool } from '@neondatabase/serverless';
@@ -960,14 +966,14 @@ export async function deleteOrderById(
 export async function saveImageUrlsForOrder(
   businessId: number,
   orderId: number,
-  imageUrls: string[]
+  images: OrderImage[]
 ): Promise<void> {
   if (!businessId) throw new Error('Business ID is required');
   if (!orderId) throw new Error('Order ID is required');
   try {
     const result = await db
       .update(orders)
-      .set({ images: imageUrls })
+      .set({ images: images })
       .where(and(eq(orders.id, orderId), eq(orders.businessId, businessId)));
 
     if (result.rowCount === 0) {

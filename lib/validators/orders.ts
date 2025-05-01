@@ -49,6 +49,16 @@ export const createOrderFormSchema = z.object({
 export const updateOrderFormSchema = createOrderFormSchema
   .omit({ customerId: true })
   .partial()
+  .extend({
+    images: z
+      .array(
+        z.object({
+          id: z.string(), // Asume que 'id' es el fileId de ImageKit
+          url: z.string().url()
+        })
+      )
+      .optional()
+  })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'Al menos un campo debe ser proporcionado'
   });

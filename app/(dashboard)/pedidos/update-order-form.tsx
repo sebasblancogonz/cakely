@@ -71,6 +71,27 @@ const formatTimeForInput = (date: Date | string | null | undefined): string => {
   }
 };
 
+const areImageArraysEqual = (
+  arr1: OrderImage[],
+  arr2: OrderImage[]
+): boolean => {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+  const ids1 = new Set(arr1.map((img) => img.id));
+  const ids2 = new Set(arr2.map((img) => img.id));
+  if (ids1.size !== ids2.size) {
+    // Extra check si un array tuviera duplicados
+    return false;
+  }
+  for (const id of ids1) {
+    if (!ids2.has(id)) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const UpdateOrderForm = ({
   setIsModalOpen,
   setOrders,
@@ -80,6 +101,7 @@ const UpdateOrderForm = ({
   const { toast } = useToast();
   const [imageUrls, setImageUrls] = useState<OrderImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<OrderImage[]>([]);
+  const [initialImageUrls, setInitialImageUrls] = useState<OrderImage[]>([]);
   const {
     register,
     handleSubmit,
@@ -109,12 +131,16 @@ const UpdateOrderForm = ({
         : undefined,
       paymentStatus: orderToEdit.paymentStatus as PaymentStatus,
       paymentMethod: orderToEdit.paymentMethod as PaymentMethod,
-      notes: orderToEdit.notes ?? ''
+      notes: orderToEdit.notes ?? '',
+      images: orderToEdit.images ?? []
     }
   });
 
   useEffect(() => {
     const dateForInputReset = formatDateForInput(orderToEdit.deliveryDate);
+    const initialImages = Array.isArray(orderToEdit.images)
+      ? orderToEdit.images
+      : [];
 
     reset({
       description: orderToEdit.description,
@@ -134,14 +160,18 @@ const UpdateOrderForm = ({
       depositAmount: orderToEdit.depositAmount
         ? Number(orderToEdit.depositAmount)
         : undefined,
-      notes: orderToEdit.notes || ''
+      notes: orderToEdit.notes || '',
+      images: initialImages
     });
-    setImageUrls(Array.isArray(orderToEdit.images) ? orderToEdit.images : []);
+    setImageUrls(initialImages);
+    setInitialImageUrls(initialImages);
     setImagesToDelete([]);
   }, [orderToEdit, reset]);
 
   const onSubmit = async (data: UpdateOrderFormData) => {
-    if (!isDirty) {
+    const imagesChanged = !areImageArraysEqual(initialImageUrls, imageUrls);
+
+    if (!isDirty && !imagesChanged) {
       toast({
         title: 'Sin cambios',
         description: 'No has modificado ningún dato del pedido.',
@@ -160,7 +190,8 @@ const UpdateOrderForm = ({
       amount: data.amount?.toString(),
       totalPrice: data.totalPrice?.toString(),
       depositAmount: (data.depositAmount ?? 0).toString(),
-      deliveryDate: data.deliveryDate ? data.deliveryDate : null
+      deliveryDate: data.deliveryDate ? data.deliveryDate : null,
+      images: imageUrls
     };
 
     delete (apiData as any).customerId;
@@ -184,14 +215,24 @@ const UpdateOrderForm = ({
           o.id === savedOrUpdatedOrder.id ? savedOrUpdatedOrder : o
         )
       );
+
+      if (imagesToDelete.length > 0) {
+        await Promise.all(
+          imagesToDelete.map(async (img) => {
+            const response = await fetch(`/api/images/${img.id}`, {
+              method: 'DELETE'
+            });
+            if (!response.ok) {
+              console.warn('Failed to delete image with ID:', img.id);
+            }
+          })
+        );
+      }
+
       toast({
         title: 'Éxito',
         description: 'Pedido actualizado correctamente.'
       });
-
-      if (imagesToDelete.length > 0) {
-        console.log('Deleting images:', imagesToDelete);
-      }
 
       closeModal();
     } catch (error) {

@@ -6,7 +6,8 @@ import {
   customers,
   teamMembers,
   users,
-  TeamMemberWithUser
+  TeamMemberWithUser,
+  SelectOrder
 } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
@@ -23,6 +24,7 @@ import {
 import { getGoogleAuthClient } from '@/lib/auth/google-auth';
 import { format } from 'date-fns';
 import { checkPermission, getSessionInfo } from '@/lib/auth/utils';
+import { OrderImage } from '@/types/types';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -142,7 +144,7 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  const [currentOrder] = await db
+  const [currentOrder]: SelectOrder[] = await db
     .select({
       deliveryDate: orders.deliveryDate,
       googleCalendarEventId: orders.googleCalendarEventId
@@ -160,7 +162,6 @@ export async function PATCH(request: NextRequest) {
 
   const dataToUpdateInDb = {
     ...validatedData,
-
     ...(dateUpdated && { deliveryDate: finalDeliveryDateTime }),
     updatedAt: new Date()
   };

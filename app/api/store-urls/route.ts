@@ -47,15 +47,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const urlStrings = urls.map((url) =>
-      typeof url === 'string' ? url : url.url
-    );
-
     console.log(
       `📦 Storing images for business ${businessId}, order ${orderId}:`
     );
 
-    await saveImageUrlsForOrder(businessId, orderId, urlStrings);
+    await saveImageUrlsForOrder(businessId, orderId, urls);
 
     return NextResponse.json({ message: 'URLs saved successfully' });
   } catch (error: any) {

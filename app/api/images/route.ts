@@ -11,7 +11,9 @@ const imagekit = new ImageKit({
 export async function DELETE(req: NextRequest) {
   const images: OrderImage[] = await req.json();
 
-  images.map(async (img) => await imagekit.deleteFile(img.id));
+  await Promise.all(
+    images.map(async (img) => await imagekit.deleteFile(img.id))
+  );
 
   return NextResponse.json({ message: 'Images deleted successfully' });
 }
