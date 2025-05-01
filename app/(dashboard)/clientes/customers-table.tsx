@@ -93,6 +93,7 @@ export function CustomersTable({
         <TableHead className="hidden lg:table-cell">Email</TableHead>
         <TableHead>Teléfono</TableHead>
         <TableHead>Fecha de alta</TableHead>
+        <TableHead>Conversación</TableHead>
         <TableHead className="hidden md:table-cell">Notas</TableHead>
         <TableHead>
           <span className="sr-only">Acciones</span>
@@ -101,7 +102,7 @@ export function CustomersTable({
     </TableHeader>
   );
 
-  const visibleColumnCount = 6;
+  const visibleColumnCount = 7;
 
   return (
     <Card>

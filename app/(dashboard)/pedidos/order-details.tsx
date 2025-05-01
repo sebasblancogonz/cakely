@@ -11,6 +11,7 @@ const Lightbox = dynamic(() => import('yet-another-react-lightbox'), {
 
 import 'yet-another-react-lightbox/styles.css';
 import Link from 'next/link';
+import { label } from 'yet-another-react-lightbox';
 
 interface OrderDetailsProps {
   order: Order;
@@ -72,6 +73,11 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
 
   const orderDetails: OrderDetailUIItem[] = [
     {
+      label: 'Fecha de entrega',
+      value: formatDate(order.deliveryDate),
+      key: 'deliveryDate'
+    },
+    {
       label: 'Cliente',
       value: order.customer?.name ?? 'N/A',
       key: 'customerName'
@@ -120,11 +126,6 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
       key: 'amount'
     },
     { label: 'Tipo de producto', value: order.productType, key: 'productType' },
-    {
-      label: 'Fecha de entrega',
-      value: formatDate(order.deliveryDate),
-      key: 'deliveryDate'
-    },
     {
       label: 'Estado del pedido',
       value: order.orderStatus,

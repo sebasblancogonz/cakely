@@ -10,6 +10,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { deleteCustomer } from '../actions';
 import { Customer as CustomerType } from '@types';
+import Link from 'next/link';
 
 export function Customer({
   customer,
@@ -29,8 +30,33 @@ export function Customer({
       <TableCell>{customer.phone}</TableCell>
 
       <TableCell className="hidden md:table-cell">
-        {' '}
         {new Date(customer.registrationDate).toLocaleDateString('es-ES')}
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <>
+          <Link
+            className="text-blue-500"
+            target="_blank"
+            rel="noreferrer noopener"
+            href={'https://wa.me/' + customer.phone}
+          >
+            WhatsApp
+          </Link>
+          {customer.instagramHandle && (
+            <>
+              {' '}
+              |{' '}
+              <Link
+                target="_blank"
+                className="text-blue-500"
+                rel="noreferrer noopener"
+                href={'https://ig.me/m/' + customer.instagramHandle}
+              >
+                Instagram
+              </Link>
+            </>
+          )}
+        </>
       </TableCell>
       <TableCell className="hidden md:table-cell">{customer.notes}</TableCell>
       <TableCell>

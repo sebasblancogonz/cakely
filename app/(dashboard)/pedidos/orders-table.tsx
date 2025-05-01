@@ -53,6 +53,12 @@ const availableColumns: {
   canHide: boolean;
   className?: string;
 }[] = [
+  {
+    id: 'deliveryDate',
+    label: 'Fecha Entrega',
+    defaultVisible: true,
+    canHide: true
+  },
   { id: 'customer', label: 'Cliente', defaultVisible: true, canHide: false },
   {
     id: 'description',
@@ -74,20 +80,6 @@ const availableColumns: {
     defaultVisible: true,
     canHide: true,
     className: 'hidden md:table-cell'
-  },
-  {
-    id: 'orderDate',
-    label: 'Fecha Pedido',
-    defaultVisible: true,
-    canHide: true,
-    className: 'hidden md:table-cell'
-  },
-  {
-    id: 'deliveryDate',
-    label: 'Fecha Entrega',
-    defaultVisible: false,
-    canHide: true,
-    className: 'hidden lg:table-cell'
   },
   { id: 'actions', label: 'Acciones', defaultVisible: true, canHide: false }
 ];
