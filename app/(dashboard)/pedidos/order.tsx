@@ -29,6 +29,7 @@ const availableColumns: {
   label: string;
   className?: string;
 }[] = [
+  { id: 'deliveryDate', label: 'Fecha de entrega' },
   { id: 'customer', label: 'Cliente' },
   { id: 'description', label: 'Descripción' },
   { id: 'orderStatus', label: 'Estado' },
@@ -39,11 +40,6 @@ const availableColumns: {
   },
   { id: 'productType', label: 'Producto', className: 'hidden md:table-cell' },
   { id: 'orderDate', label: 'Fecha Pedido', className: 'hidden md:table-cell' },
-  {
-    id: 'deliveryDate',
-    label: 'Fecha Entrega',
-    className: 'hidden lg:table-cell'
-  },
   { id: 'actions', label: 'Acciones' }
 ];
 
