@@ -78,9 +78,14 @@ export async function sendInvitationEmail({
       html: htmlBody,
       tags: [
         { name: 'category', value: 'invitation' },
-        { name: 'businessName', value: businessName }
+        { name: 'businessName', value: businessName.split(' ').join('_') }
       ]
     });
+
+    console.log('Tags sent: ', [
+      { name: 'category', value: 'invitation' },
+      { name: 'businessName', value: businessName.split(' ').join('_') }
+    ]);
 
     if (error) {
       console.error(
