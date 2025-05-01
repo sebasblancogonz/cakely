@@ -113,7 +113,8 @@ export const orders = pgTable('orders', {
   ),
   notes: text('notes'),
   orderHistory: jsonb('order_history').default('[]'),
-  images: jsonb('images').default('[]')
+  images: jsonb('images').default('[]'),
+  googleCalendarEventId: text('google_calendar_event_id')
 });
 
 export const businessSettings = pgTable('business_settings', {

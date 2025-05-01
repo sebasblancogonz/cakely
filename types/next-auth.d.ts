@@ -8,6 +8,8 @@ declare module 'next-auth' {
       id: string;
       businessId?: number | null;
       role: TeamRole | null;
+      accessToken?: string;
+      accessTokenExpires?: number;
     } & DefaultSession['user'];
   }
 

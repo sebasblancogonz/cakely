@@ -82,11 +82,6 @@ export async function sendInvitationEmail({
       ]
     });
 
-    console.log('Tags sent: ', [
-      { name: 'category', value: 'invitation' },
-      { name: 'businessName', value: businessName.split(' ').join('_') }
-    ]);
-
     if (error) {
       console.error(
         `[Resend Error] Failed to send invitation email to ${to}:`,
