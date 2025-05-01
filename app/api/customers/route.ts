@@ -15,15 +15,18 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const { search = '', offset = '0' } = Object.fromEntries(
-    req.nextUrl.searchParams
-  );
+  const {
+    search = '',
+    offset = '0',
+    limit = '5'
+  } = Object.fromEntries(req.nextUrl.searchParams);
 
   try {
     const { customers, newOffset, totalCustomers } = await getCustomers(
       businessId,
       search as string,
-      Number(offset)
+      Number(offset),
+      Number(limit)
     );
 
     return NextResponse.json({ customers, newOffset, totalCustomers });
