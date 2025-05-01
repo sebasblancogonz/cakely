@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, updateOrder, orders } from '@/lib/db';
+import {
+  db,
+  updateOrder,
+  orders,
+  customers,
+  teamMembers,
+  users,
+  TeamMemberWithUser
+} from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import {
   UpdateOrderFormData,
   updateOrderFormSchema
 } from '@/lib/validators/orders';
+import {
+  calculateEndTime,
+  callCreateCalendarEvent,
+  callDeleteCalendarEvent,
+  callModifyCalendarEvent
+} from '@/lib/calendar-integration';
+import { getGoogleAuthClient } from '@/lib/auth/google-auth';
+import { format } from 'date-fns';
+import { checkPermission, getSessionInfo } from '@/lib/auth/utils';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -54,73 +71,254 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+  const sessionInfo = await getSessionInfo(request);
+  if (sessionInfo instanceof NextResponse) return sessionInfo;
+  const { userId, businessId, session } = sessionInfo;
+  const userEmail = session.user?.email;
 
-  if (!businessId) {
+  const permissionCheck = await checkPermission(userId, businessId, [
+    'OWNER',
+    'ADMIN',
+    'EDITOR'
+  ]);
+  if (permissionCheck instanceof NextResponse) return permissionCheck;
+
+  const { pathname } = request.nextUrl;
+  const orderIdNum = Number(pathname.split('/').pop());
+
+  if (isNaN(orderIdNum)) {
     return NextResponse.json(
-      { message: 'Not authorized or no business associated' },
-      { status: 403 }
+      { message: 'ID de pedido inválido' },
+      { status: 400 }
     );
   }
 
-  const { pathname } = request.nextUrl;
-  const orderId = Number(pathname.split('/').pop());
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return NextResponse.json({ message: 'Cuerpo inválido' }, { status: 400 });
+  }
+
+  const validationResult = updateOrderFormSchema.safeParse(body);
+  if (!validationResult.success) {
+    return NextResponse.json(
+      { message: 'Datos inválidos', errors: validationResult.error.format() },
+      { status: 400 }
+    );
+  }
+  const validatedData = validationResult.data;
+
+  let finalDeliveryDateTime: Date | null = null;
+  let dateUpdated = false;
+  if (
+    validatedData.deliveryDate !== undefined ||
+    validatedData.deliveryTime !== undefined
+  ) {
+    dateUpdated = true;
+    const datePart = validatedData.deliveryDate
+      ? format(validatedData.deliveryDate, 'yyyy-MM-dd')
+      : null;
+    const timePart = validatedData.deliveryTime || null;
+
+    if (datePart) {
+      const dateTimeString = timePart
+        ? `${datePart}T${timePart}:00`
+        : `${datePart}T00:00:00`;
+
+      const combinedDate = new Date(dateTimeString);
+      if (!isNaN(combinedDate.getTime())) {
+        finalDeliveryDateTime = combinedDate;
+      } else {
+        console.warn(
+          `[Order PATCH] Invalid date created for order ${orderIdNum}`
+        );
+
+        finalDeliveryDateTime = null;
+        dateUpdated = false;
+      }
+    } else {
+      finalDeliveryDateTime = null;
+    }
+  }
+
+  const [currentOrder] = await db
+    .select({
+      deliveryDate: orders.deliveryDate,
+      googleCalendarEventId: orders.googleCalendarEventId
+    })
+    .from(orders)
+    .where(and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId)))
+    .limit(1);
+
+  if (!currentOrder) {
+    return NextResponse.json(
+      { message: 'Pedido no encontrado o no pertenece a este negocio' },
+      { status: 404 }
+    );
+  }
+
+  const dataToUpdateInDb = {
+    ...validatedData,
+
+    ...(dateUpdated && { deliveryDate: finalDeliveryDateTime }),
+    updatedAt: new Date()
+  };
+
+  delete (dataToUpdateInDb as any).deliveryTime;
+
+  Object.keys(dataToUpdateInDb).forEach((key) => {
+    if (dataToUpdateInDb[key as keyof typeof dataToUpdateInDb] === undefined) {
+      delete dataToUpdateInDb[key as keyof typeof dataToUpdateInDb];
+    }
+  });
 
   try {
-    if (isNaN(orderId)) {
-      return NextResponse.json(
-        { message: 'Invalid Order ID' },
-        { status: 400 }
+    const [updatedOrderDb] = await db
+      .update(orders)
+      .set(dataToUpdateInDb)
+      .where(and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId)))
+      .returning();
+
+    if (!updatedOrderDb) {
+      throw new Error('No se pudo actualizar el pedido en la base de datos.');
+    }
+    console.log(`Pedido ${orderIdNum} actualizado en BBDD.`);
+
+    let finalGoogleEventId = currentOrder.googleCalendarEventId;
+
+    const oldDeliveryTime = currentOrder.deliveryDate
+      ? new Date(currentOrder.deliveryDate).getTime()
+      : null;
+    const newDeliveryTime = finalDeliveryDateTime
+      ? finalDeliveryDateTime.getTime()
+      : null;
+    const calendarNeedsUpdate =
+      dateUpdated && oldDeliveryTime !== newDeliveryTime;
+
+    if (calendarNeedsUpdate) {
+      console.log(
+        `Cambio detectado en fecha/hora para pedido ${orderIdNum}. Actualizando GCal...`
       );
+      const authClient = await getGoogleAuthClient(userId);
+
+      if (authClient) {
+        const customer = await db.query.customers.findFirst({
+          where: eq(customers.id, updatedOrderDb.customerId)
+        });
+        const customerName = customer?.name || 'Cliente Desconocido';
+        const eventTitle = `Entrega Pedido #${orderIdNum} - ${customerName}`;
+        const eventDescription = `Producto: ${updatedOrderDb.description || ''}\nVer: ${process.env.NEXT_PUBLIC_APP_URL}/pedidos/${orderIdNum}`;
+
+        const teamMembersWithData = await db
+          .select({ user: { email: users.email } })
+          .from(teamMembers)
+          .innerJoin(users, eq(teamMembers.userId, users.id))
+          .where(eq(teamMembers.businessId, businessId));
+        const collaboratorEmails = teamMembersWithData
+          .map((m: TeamMemberWithUser) => m.user?.email)
+          .filter((e: string) => !!e);
+
+        const attendees = Array.from(
+          new Set([userEmail, ...collaboratorEmails])
+        );
+
+        if (finalDeliveryDateTime && currentOrder.googleCalendarEventId) {
+          console.log(
+            `Modificando evento GCal ID: ${currentOrder.googleCalendarEventId}`
+          );
+          const startDateTime = finalDeliveryDateTime;
+          const endDateTime = calculateEndTime(startDateTime, '1h');
+          const modifyResult = await callModifyCalendarEvent({
+            authClient,
+            eventId: currentOrder.googleCalendarEventId,
+            title: eventTitle,
+            description: eventDescription,
+            startDateTime,
+            endDateTime,
+            attendees
+          });
+          if (!modifyResult.success)
+            console.warn(
+              `Fallo al modificar evento GCal ${currentOrder.googleCalendarEventId}: ${modifyResult.error}`
+            );
+
+          finalGoogleEventId = currentOrder.googleCalendarEventId;
+        } else if (
+          finalDeliveryDateTime &&
+          !currentOrder.googleCalendarEventId
+        ) {
+          console.log(`Creando nuevo evento GCal para pedido ${orderIdNum}`);
+          const startDateTime = finalDeliveryDateTime;
+          const endDateTime = calculateEndTime(startDateTime, '1h');
+          const createResult = await callCreateCalendarEvent({
+            authClient,
+            title: eventTitle,
+            description: eventDescription,
+            startDateTime,
+            endDateTime,
+            attendees
+          });
+          if (createResult.success && createResult.eventId) {
+            finalGoogleEventId = createResult.eventId;
+            console.log(
+              `Nuevo evento GCal creado: ${finalGoogleEventId}. Actualizando BBDD...`
+            );
+
+            await db
+              .update(orders)
+              .set({ googleCalendarEventId: finalGoogleEventId })
+              .where(eq(orders.id, orderIdNum));
+          } else {
+            console.warn(
+              `Fallo al crear evento GCal para pedido ${orderIdNum}: ${createResult.error}`
+            );
+          }
+        } else if (
+          !finalDeliveryDateTime &&
+          currentOrder.googleCalendarEventId
+        ) {
+          console.log(
+            `Eliminando evento GCal ID: ${currentOrder.googleCalendarEventId}`
+          );
+          const deleteResult = await callDeleteCalendarEvent({
+            authClient,
+            eventId: currentOrder.googleCalendarEventId
+          });
+          if (deleteResult.success) {
+            finalGoogleEventId = null;
+            console.log(`Evento GCal eliminado. Actualizando BBDD...`);
+            await db
+              .update(orders)
+              .set({ googleCalendarEventId: null })
+              .where(eq(orders.id, orderIdNum));
+          } else {
+            console.warn(
+              `Fallo al eliminar evento GCal ${currentOrder.googleCalendarEventId}: ${deleteResult.error}`
+            );
+          }
+        }
+      } else {
+        console.warn(
+          `Usuario ${userId} sin credenciales Google válidas. No se actualiza GCal.`
+        );
+      }
     }
 
-    const orderInput: unknown = await request.json();
-
-    const validationResult = updateOrderFormSchema.safeParse(orderInput);
-
-    if (!validationResult.success) {
-      console.error(
-        'API Order PATCH Validation Error:',
-        validationResult.error.format()
-      );
-      return NextResponse.json(
-        {
-          message: 'Invalid input data',
-          errors: validationResult.error.format()
-        },
-        { status: 400 }
-      );
-    }
-
-    const validatedData: UpdateOrderFormData = validationResult.data;
-    console.log(
-      'Validated order update data for business',
-      businessId,
-      ':',
-      validatedData
-    );
-
-    const updatedOrder = await updateOrder(businessId, validatedData, orderId);
-
-    return NextResponse.json(updatedOrder);
+    const finalResponse = {
+      ...updatedOrderDb,
+      googleCalendarEventId: finalGoogleEventId
+    };
+    return NextResponse.json(finalResponse);
   } catch (error: any) {
     console.error(
-      `Error updating order ${orderId} for business ${businessId}:`,
+      `API Error actualizando pedido ${orderIdNum} para business ${businessId}:`,
       error
     );
-    let status = 500;
-    let message = 'Failed to update order';
-    if (error.message?.includes('Invalid input data')) {
-      status = 400;
-      message = 'Invalid input data provided.';
-    } else if (error.message?.includes('not found')) {
-      status = 404;
-      message = 'Order not found or not authorized.';
-    }
+
     return NextResponse.json(
-      { message: message, error: error.message },
-      { status: status }
+      { message: 'Failed to update order', error: error.message },
+      { status: 500 }
     );
   }
 }

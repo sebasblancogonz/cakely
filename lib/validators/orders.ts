@@ -49,13 +49,9 @@ export const createOrderFormSchema = z.object({
 export const updateOrderFormSchema = createOrderFormSchema
   .omit({ customerId: true })
   .partial()
-  .refine(
-    (data) => Object.keys(data).length > 0,
-
-    {
-      message: 'Al menos un campo debe ser proporcionado'
-    }
-  );
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Al menos un campo debe ser proporcionado'
+  });
 
 export type OrderFormData = z.infer<typeof createOrderFormSchema>;
 export type UpdateOrderFormData = z.infer<typeof updateOrderFormSchema>;

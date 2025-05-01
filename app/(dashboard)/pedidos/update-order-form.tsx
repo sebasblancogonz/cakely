@@ -28,6 +28,7 @@ import {
   UpdateOrderFormData,
   updateOrderFormSchema
 } from '@/lib/validators/orders';
+import { format } from 'date-fns';
 
 const defaultOrderFormValues: Partial<UpdateOrderFormData> = {
   description: '',
@@ -52,6 +53,24 @@ interface OrderFormProps {
   orderToEdit: Order;
 }
 
+const formatDateForInput = (date: Date | string | null | undefined): string => {
+  if (!date) return '';
+  try {
+    return format(new Date(date), 'yyyy-MM-dd');
+  } catch {
+    return '';
+  }
+};
+
+const formatTimeForInput = (date: Date | string | null | undefined): string => {
+  if (!date) return '';
+  try {
+    return format(new Date(date), 'HH:mm');
+  } catch {
+    return '';
+  }
+};
+
 const UpdateOrderForm = ({
   setIsModalOpen,
   setOrders,
@@ -69,16 +88,40 @@ const UpdateOrderForm = ({
     formState: { errors, isSubmitting, isDirty }
   } = useForm<UpdateOrderFormData>({
     resolver: zodResolver(updateOrderFormSchema),
-    defaultValues: defaultOrderFormValues
-  });
-
-  useEffect(() => {
-    reset({
-      description: orderToEdit.description,
-      amount: Number(orderToEdit.amount) || undefined,
+    defaultValues: {
+      description: orderToEdit.description ?? '',
+      amount: orderToEdit.amount ? Number(orderToEdit.amount) : undefined,
       deliveryDate: orderToEdit.deliveryDate
         ? new Date(orderToEdit.deliveryDate)
         : null,
+      deliveryTime: formatTimeForInput(orderToEdit.deliveryDate),
+      productType: orderToEdit.productType as ProductType,
+      customizationDetails: orderToEdit.customizationDetails ?? '',
+      quantity: orderToEdit.quantity ?? 1,
+      sizeOrWeight: orderToEdit.sizeOrWeight ?? '',
+      flavor: orderToEdit.flavor ?? '',
+      allergyInformation: orderToEdit.allergyInformation ?? '',
+      totalPrice: orderToEdit.totalPrice
+        ? Number(orderToEdit.totalPrice)
+        : undefined,
+      depositAmount: orderToEdit.depositAmount
+        ? Number(orderToEdit.depositAmount)
+        : undefined,
+      paymentStatus: orderToEdit.paymentStatus as PaymentStatus,
+      paymentMethod: orderToEdit.paymentMethod as PaymentMethod,
+      notes: orderToEdit.notes ?? ''
+    }
+  });
+
+  useEffect(() => {
+    const dateForInputReset = formatDateForInput(orderToEdit.deliveryDate);
+
+    reset({
+      description: orderToEdit.description,
+      amount: Number(orderToEdit.amount) || undefined,
+      //@ts-ignore
+      deliveryDate: dateForInputReset,
+      deliveryTime: formatTimeForInput(orderToEdit.deliveryDate),
       productType: orderToEdit.productType as ProductType,
       customizationDetails: orderToEdit.customizationDetails || '',
       quantity: orderToEdit.quantity,
@@ -207,7 +250,6 @@ const UpdateOrderForm = ({
             className="bg-muted border-muted"
           />
         </div>
-        1
         <div className="space-y-1.5">
           <Label>Cliente</Label>
           <Input
@@ -231,19 +273,35 @@ const UpdateOrderForm = ({
             </p>
           )}
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="deliveryDate">Fecha Entrega</Label>
-          <Input
-            id="deliveryDate"
-            type="date"
-            {...register('deliveryDate', { valueAsDate: true })}
-            className={cn(errors.deliveryDate && 'border-destructive')}
-          />
-          {errors.deliveryDate && (
-            <p className="text-xs text-destructive mt-1">
-              {errors.deliveryDate.message}
-            </p>
-          )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="update-deliveryDate">Fecha Entrega</Label>
+            <Input
+              id="update-deliveryDate"
+              type="date"
+              {...register('deliveryDate', { valueAsDate: true })}
+              className={cn(errors.deliveryDate && 'border-destructive')}
+            />
+            {errors.deliveryDate && (
+              <p className="text-xs text-destructive mt-1">
+                {errors.deliveryDate.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="update-deliveryTime">Hora Entrega (Opcional)</Label>
+            <Input
+              id="update-deliveryTime"
+              type="time"
+              {...register('deliveryTime')}
+              className={cn(errors.deliveryTime && 'border-destructive')}
+            />
+            {errors.deliveryTime && (
+              <p className="text-xs text-destructive mt-1">
+                {errors.deliveryTime.message}
+              </p>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">

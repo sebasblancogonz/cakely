@@ -30,12 +30,8 @@ export async function callCreateCalendarEvent(
     calendarId = 'primary'
   } = options;
 
-  // Ya no necesitas crear el cliente oauth2 ni setCredentials aquí
-
-  // Crea la instancia de Calendar API usando el cliente proporcionado
   const calendar = google.calendar({ version: 'v3', auth: authClient });
 
-  // Crea el cuerpo del evento (sin cambios respecto a tu código original)
   const event: calendar_v3.Schema$Event = {
     summary: title,
     description: description,
@@ -99,4 +95,115 @@ export function calculateEndTime(
   endDate.setHours(endDate.getHours() + hours);
   endDate.setMinutes(endDate.getMinutes() + minutes);
   return endDate;
+}
+
+interface ModifyCalendarEventOptions
+  extends Omit<CreateCalendarEventOptions, 'accessToken' | 'refreshToken'> {
+  eventId: string;
+}
+
+export async function callModifyCalendarEvent(
+  options: ModifyCalendarEventOptions
+): Promise<CreateCalendarEventResult> {
+  const {
+    authClient,
+    eventId,
+    title,
+    description,
+    startDateTime,
+    endDateTime,
+    attendees = [],
+    calendarId = 'primary'
+  } = options;
+
+  const calendar = google.calendar({ version: 'v3', auth: authClient });
+
+  const eventPatch: calendar_v3.Schema$Event = {
+    summary: title,
+    description: description,
+    start: { dateTime: startDateTime.toISOString() },
+    end: { dateTime: endDateTime.toISOString() },
+    attendees: attendees.map((email) => ({ email }))
+  };
+
+  try {
+    console.log(
+      `Intentando modificar evento GCal ID: ${eventId} en Calendario ID: ${calendarId}...`
+    );
+    const response = await calendar.events.patch({
+      calendarId: calendarId,
+      eventId: eventId,
+      requestBody: eventPatch,
+      sendNotifications: true
+    });
+
+    console.log('Evento modificado con éxito:', response.data.id);
+    return {
+      success: true,
+      eventId: response.data.id ?? undefined,
+      htmlLink: response.data.htmlLink ?? undefined
+    };
+  } catch (error: any) {
+    console.error(
+      `Error al llamar a Google Calendar API (events.patch) para evento ${eventId}:`,
+      error
+    );
+    const errorMessage =
+      error?.response?.data?.error?.message ||
+      error?.message ||
+      'Error desconocido';
+    return {
+      success: false,
+      error: `Google Calendar API Error: ${errorMessage}`
+    };
+  }
+}
+
+interface DeleteCalendarEventOptions {
+  authClient: OAuth2Client;
+  eventId: string;
+  calendarId?: string;
+}
+interface DeleteCalendarEventResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function callDeleteCalendarEvent(
+  options: DeleteCalendarEventOptions
+): Promise<DeleteCalendarEventResult> {
+  const { authClient, eventId, calendarId = 'primary' } = options;
+  const calendar = google.calendar({ version: 'v3', auth: authClient });
+
+  try {
+    console.log(
+      `Intentando eliminar evento GCal ID: ${eventId} de Calendario ID: ${calendarId}...`
+    );
+    await calendar.events.delete({
+      calendarId: calendarId,
+      eventId: eventId,
+      sendNotifications: true
+    });
+    console.log('Evento eliminado con éxito:', eventId);
+    return { success: true };
+  } catch (error: any) {
+    console.error(
+      `Error al llamar a Google Calendar API (events.delete) para evento ${eventId}:`,
+      error
+    );
+    if (error?.code === 410 || error?.response?.status === 410) {
+      console.log(
+        `Evento GCal ${eventId} ya no existía, considerado como éxito.`
+      );
+      return { success: true };
+    }
+    const errorMessage =
+      error?.response?.data?.error?.message ||
+      error?.message ||
+      'Error desconocido';
+    return {
+      success: false,
+      error: `Google Calendar API Error: ${errorMessage}`
+    };
+  }
 }
