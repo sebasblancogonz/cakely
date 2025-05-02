@@ -94,7 +94,7 @@ export function CustomersTable({
         <TableHead>Teléfono</TableHead>
         <TableHead>Fecha de alta</TableHead>
         <TableHead>Conversación</TableHead>
-        <TableHead className="hidden md:table-cell">Notas</TableHead>
+        <TableHead className="hidden lg:table-cell">Notas</TableHead>
         <TableHead>
           <span className="sr-only">Acciones</span>
         </TableHead>

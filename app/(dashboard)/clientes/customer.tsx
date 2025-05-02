@@ -29,10 +29,10 @@ export function Customer({
       <TableCell className="hidden lg:table-cell">{customer.email}</TableCell>
       <TableCell>{customer.phone}</TableCell>
 
-      <TableCell className="hidden md:table-cell">
+      <TableCell className="md:table-cell">
         {new Date(customer.registrationDate).toLocaleDateString('es-ES')}
       </TableCell>
-      <TableCell className="hidden md:table-cell">
+      <TableCell>
         <>
           <Link
             className="text-blue-500"
@@ -58,7 +58,7 @@ export function Customer({
           )}
         </>
       </TableCell>
-      <TableCell className="hidden md:table-cell">{customer.notes}</TableCell>
+      <TableCell className="hidden lg:table-cell">{customer.notes}</TableCell>
       <TableCell>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
