@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         type: 'order' as const,
         title: o.title || `Pedido #${o.id}`,
         description: o.customerName || undefined,
-        url: `/pedidos#order-${o.id}`
+        url: `/app/pedidos#order-${o.id}`
       }))
     );
 

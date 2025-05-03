@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { deleteCustomer } from '../actions';
+import { deleteCustomer } from '../../actions';
 import { Customer as CustomerType } from '@types';
 import Link from 'next/link';
 

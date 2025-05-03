@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Eye, MoreHorizontal, Pen, Trash, Upload } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { deleteOrder } from '../actions';
+import { deleteOrder } from '../../actions';
 import { OrderStatus, Order as OrderType } from '@types';
 import { Status } from '@/components/common/StatusCell';
 import { cn } from '@/lib/utils';

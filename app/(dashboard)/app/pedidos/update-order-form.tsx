@@ -8,7 +8,8 @@ import {
   OrderImage,
   ProductType,
   PaymentMethod,
-  PaymentStatus
+  PaymentStatus,
+  OrderStatus
 } from '@types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -130,6 +131,7 @@ const UpdateOrderForm = ({
         ? Number(orderToEdit.depositAmount)
         : undefined,
       paymentStatus: orderToEdit.paymentStatus as PaymentStatus,
+      orderStatus: orderToEdit.orderStatus as OrderStatus,
       paymentMethod: orderToEdit.paymentMethod as PaymentMethod,
       notes: orderToEdit.notes ?? '',
       images: orderToEdit.images ?? []
@@ -156,6 +158,7 @@ const UpdateOrderForm = ({
       allergyInformation: orderToEdit.allergyInformation || '',
       totalPrice: Number(orderToEdit.totalPrice) || undefined,
       paymentStatus: orderToEdit.paymentStatus as PaymentStatus,
+      orderStatus: orderToEdit.orderStatus as OrderStatus,
       paymentMethod: orderToEdit.paymentMethod as PaymentMethod,
       depositAmount: orderToEdit.depositAmount
         ? Number(orderToEdit.depositAmount)

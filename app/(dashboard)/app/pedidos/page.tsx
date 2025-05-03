@@ -30,6 +30,7 @@ import {
   CardHeader
 } from '@/components/ui/card';
 import UpdateOrderForm from './update-order-form';
+import { UpdateOrderFormData } from '@/lib/validators/orders';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -132,11 +133,12 @@ export default function OrdersPage() {
       console.log(
         `OrdersPage: Attempting to update order ${orderId} to status: ${newStatus}`
       );
+      const orderData: UpdateOrderFormData = { orderStatus: newStatus };
       try {
         const response = await fetch(`/api/orders/${orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderStatus: newStatus })
+          body: JSON.stringify(orderData)
         });
         if (!response.ok) {
           throw new Error(response.statusText);

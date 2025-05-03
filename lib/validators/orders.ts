@@ -1,4 +1,9 @@
-import { PaymentMethod, PaymentStatus, ProductType } from '@/types/types';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  ProductType
+} from '@/types/types';
 import { z } from 'zod';
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -53,11 +58,12 @@ export const updateOrderFormSchema = createOrderFormSchema
     images: z
       .array(
         z.object({
-          id: z.string(), // Asume que 'id' es el fileId de ImageKit
+          id: z.string(),
           url: z.string().url()
         })
       )
-      .optional()
+      .optional(),
+    orderStatus: z.nativeEnum(OrderStatus).optional()
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'Al menos un campo debe ser proporcionado'

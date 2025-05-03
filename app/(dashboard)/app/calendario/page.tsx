@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Modal from '@/components/common/Modal';
-import OrderDetails from '@/app/(dashboard)/pedidos/order-details';
+import OrderDetails from '@/app/(dashboard)/app/pedidos/order-details';
 import { cn } from '@/lib/utils';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 

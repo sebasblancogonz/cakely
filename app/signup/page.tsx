@@ -53,7 +53,7 @@ function SignUpForm() {
       <Card className="w-full max-w-sm border-none shadow-none">
         <CardHeader className="text-center">
           <Image
-            src="/logo.webp"
+            src="/img/logo.webp"
             width={80}
             height={80}
             alt="Cakely"

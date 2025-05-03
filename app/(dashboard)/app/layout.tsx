@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from './user';
+import { User } from '../user';
 import DashboardLayout from '@/components/common/DashboardClientLayout';
 import { Toaster } from '@/components/ui/toaster';
 

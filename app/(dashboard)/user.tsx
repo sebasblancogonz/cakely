@@ -41,7 +41,7 @@ export function User() {
           disabled={status !== 'authenticated'}
         >
           <Image
-            src={user?.image ?? '/img/placeholder-user.webp'}
+            src={user?.image ?? '/img/placeholder-user.jpeg'}
             width={36}
             height={36}
             alt={user?.name ?? 'Avatar'}

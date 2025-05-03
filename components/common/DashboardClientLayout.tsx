@@ -164,7 +164,7 @@ function DesktopNav({
     >
       <nav className="flex flex-col gap-4 px-2 sm:py-5">
         <Link
-          href="/"
+          href="/dashboard"
           className={cn(
             'group flex items-center justify-center gap-2 rounded-lg text-lg font-semibold text-primary-foreground',
             isExpanded
@@ -231,7 +231,7 @@ function DesktopNav({
         </Link>
 
         <NavItem
-          href="/"
+          href="/app/dashboard"
           label="Dashboard"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -239,7 +239,7 @@ function DesktopNav({
           <Home className="h-5 w-5" />
         </NavItem>
         <NavItem
-          href="/pedidos"
+          href="/app/pedidos"
           label="Pedidos"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -247,7 +247,7 @@ function DesktopNav({
           <ShoppingCart className="h-5 w-5" />
         </NavItem>
         <NavItem
-          href="/clientes"
+          href="/app/clientes"
           label="Clientes"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -255,7 +255,7 @@ function DesktopNav({
           <Users2 className="h-5 w-5" />
         </NavItem>
         <NavItem
-          href="/calendario"
+          href="/app/calendario"
           label="Calendario"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -263,7 +263,7 @@ function DesktopNav({
           <Calendar className="h-5 w-5" />
         </NavItem>
         <NavItem
-          href="/presupuesto"
+          href="/app/presupuesto"
           label="Presupuesto"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -335,7 +335,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
         <nav className="grid gap-6 text-lg font-medium mt-4">
           <SheetTrigger asChild>
             <Link
-              href="/"
+              href="/dashboard"
               className="flex items-center gap-4 px-2.5 text-foreground hover:text-foreground"
             >
               <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
@@ -369,7 +369,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/"
+              href="/app/dashboard"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Home className="h-5 w-5" /> Dashboard
@@ -377,7 +377,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/pedidos"
+              href="/app/pedidos"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <ShoppingCart className="h-5 w-5" /> Pedidos
@@ -385,7 +385,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/clientes"
+              href="/app/clientes"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Users2 className="h-5 w-5" /> Clientes
@@ -393,7 +393,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/calendario"
+              href="/app/calendario"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Calendar className="h-5 w-5" /> Calendario
@@ -401,7 +401,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/presupuesto"
+              href="/app/presupuesto"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Calculator className="h-5 w-5" /> Presupuesto
@@ -409,7 +409,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/ajustes"
+              href="/app/ajustes"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Settings className="h-5 w-5" /> Ajustes

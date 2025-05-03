@@ -27,6 +27,7 @@ import { checkPermission, getSessionInfo } from '@/lib/auth/utils';
 import { OrderImage } from '@/types/types';
 
 export async function GET(request: NextRequest) {
+  console.log(await request.text());
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -99,6 +100,7 @@ export async function PATCH(request: NextRequest) {
   try {
     body = await request.json();
   } catch (e) {
+    console.log(e);
     return NextResponse.json({ message: 'Cuerpo inválido' }, { status: 400 });
   }
 
