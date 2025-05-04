@@ -70,9 +70,9 @@ export default function HomePage() {
       </header>
 
       <main className="flex-grow">
-        <section className="w-full py-16 md:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-background to-muted/30">
-          <div className="container mx-auto px-4 md:px-6 text-center">
-            <div className="flex flex-col items-center space-y-6">
+        <section className="w-fullbg-gradient-to-br from-background to-muted/30">
+          <div className="p-0  py-16 md:py-24 lg:py-32 xl:py-40 container mx-auto px-4 md:px-6 text-center bg-[url('/img/background.svg')] bg-cover">
+            <div className="flex flex-col items-center py-12">
               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
                 ¿Cansado del caos en los pedidos?
                 <br className="hidden sm:block" />
@@ -164,7 +164,7 @@ export default function HomePage() {
 
         <section
           id="features"
-          className="w-full py-12 md:py-20 lg:py-28 bg-muted/40"
+          className="w-full py-12 md:py-20 lg:py-28 bg-muted/40  bg-[url('/img/background.svg')] bg-cover"
         >
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
@@ -320,7 +320,7 @@ export default function HomePage() {
 
         <section
           id="precios"
-          className="w-full py-12 md:py-20 lg:py-28 border-t"
+          className="w-full py-12 md:py-20 lg:py-28 border-t  bg-[url('/img/background.svg')] bg-cover"
         >
           <div className="container mx-auto px-4 md:px-6">
             <h2 className="text-3xl font-bold tracking-tighter text-center mb-10 sm:text-4xl">
