@@ -10,8 +10,9 @@ import {
 import { Eye, MoreHorizontal, Pen, Trash, Upload } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { deleteOrder } from '../../actions';
-import { OrderStatus, Order as OrderType } from '@types';
-import { Status } from '@/components/common/StatusCell';
+import { OrderStatus, Order as OrderType, PaymentStatus } from '@types';
+import { Status as OrderStatusCell } from '@/components/common/OrderStatusCell';
+import { Status as PaymentStatusCell } from '@/components/common/PaymentStatusCell';
 import { cn } from '@/lib/utils';
 
 interface OrderProps {
@@ -20,7 +21,10 @@ interface OrderProps {
   showDetails: (order: OrderType) => void;
   editOrder: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
-  onStatusChange: (orderId: number, newStatus: OrderStatus) => Promise<void>;
+  onStatusChange: (
+    orderId: number,
+    newStatus: OrderStatus | PaymentStatus
+  ) => Promise<void>;
   columnVisibility: Record<string, boolean>;
 }
 
@@ -33,13 +37,13 @@ const availableColumns: {
   { id: 'customer', label: 'Cliente' },
   { id: 'description', label: 'Descripción' },
   { id: 'orderStatus', label: 'Estado' },
+  { id: 'paymentStatus', label: 'Estado de pago' },
   {
     id: 'totalPrice',
     label: 'Precio Total',
     className: 'hidden md:table-cell'
   },
   { id: 'productType', label: 'Producto', className: 'hidden md:table-cell' },
-  { id: 'orderDate', label: 'Fecha Pedido', className: 'hidden md:table-cell' },
   { id: 'actions', label: 'Acciones' }
 ];
 
@@ -48,9 +52,9 @@ const columnRenderOrder: (keyof OrderType | 'actions' | 'customer')[] = [
   'customer',
   'description',
   'orderStatus',
+  'paymentStatus',
   'totalPrice',
   'productType',
-  'orderDate',
   'actions'
 ];
 
@@ -102,7 +106,7 @@ export function Order({
         return isNaN(numValue) ? '-' : `${numValue.toFixed(2)}€`;
       case 'orderStatus':
         return order.orderStatus ? (
-          <Status
+          <OrderStatusCell
             orderId={order.id!}
             currentStatus={order.orderStatus as OrderStatus}
             onStatusChange={onStatusChange}
@@ -111,11 +115,10 @@ export function Order({
           '-'
         );
       case 'paymentStatus':
-      case 'orderStatus':
-        return order.orderStatus ? (
-          <Status
+        return order.paymentStatus ? (
+          <PaymentStatusCell
             orderId={order.id!}
-            currentStatus={order.paymentStatus as OrderStatus}
+            currentStatus={order.paymentStatus as PaymentStatus}
             onStatusChange={onStatusChange}
           />
         ) : (

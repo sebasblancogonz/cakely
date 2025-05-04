@@ -54,20 +54,28 @@ export default {
         },
         pending: {
           DEFAULT: '#eaf0fa',
-          text: '#3579e5',
+          text: '#3579e5'
         },
         wip: {
           DEFAULT: '#fcf4e5',
-          text: '#df901b',
+          text: '#df901b'
         },
         ready: {
           DEFAULT: '#eaf9f4',
-          text: '#539e84', 
+          text: '#539e84'
         },
         delivered: {
-          DEFAULT: '#eaf9f4', 
-          text: '#539e84', 
+          DEFAULT: '#eaf9f4',
+          text: '#539e84'
         },
+        refunded: {
+          DEFAULT: '#f3f4f6',
+          text: '#6b7280'
+        },
+        cancelled: {
+          DEFAULT: '#f3f4f6',
+          text: '#6b7280'
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -89,7 +97,7 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out'
       },
       screens: {
-        "xs": "400px",
+        xs: '400px'
       }
     }
   },

@@ -28,7 +28,7 @@ import {
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Order } from './order';
-import { OrderStatus, Order as OrderType } from '@types';
+import { OrderStatus, Order as OrderType, PaymentStatus } from '@types';
 import { JSX } from 'react';
 import { Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,10 @@ interface OrdersTableProps {
   editOrder: (order: OrderType) => void;
   showDetails: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
-  onStatusChange: (orderId: number, newStatus: OrderStatus) => Promise<void>;
+  onStatusChange: (
+    orderId: number,
+    newStatus: OrderStatus | PaymentStatus
+  ) => Promise<void>;
 }
 
 const availableColumns: {
@@ -67,6 +70,12 @@ const availableColumns: {
     canHide: true
   },
   { id: 'orderStatus', label: 'Estado', defaultVisible: true, canHide: false },
+  {
+    id: 'paymentStatus',
+    label: 'Estado de pago',
+    defaultVisible: true,
+    canHide: false
+  },
   {
     id: 'totalPrice',
     label: 'Precio Total',

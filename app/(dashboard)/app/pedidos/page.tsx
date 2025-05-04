@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrdersTable } from './orders-table';
-import { Order, OrderStatus } from '@types';
+import { Order, OrderStatus, PaymentStatus } from '@types';
 import Modal from '@/components/common/Modal';
 import OrderForm from './order-form';
 import OrderDetails from './order-details';
@@ -129,11 +129,24 @@ export default function OrdersPage() {
   }, [query, offset, limit, status]);
 
   const handleUpdateStatus = useCallback(
-    async (orderId: number, newStatus: OrderStatus) => {
+    async (orderId: number, newStatus: OrderStatus | PaymentStatus) => {
+      let orderData: UpdateOrderFormData;
       console.log(
         `OrdersPage: Attempting to update order ${orderId} to status: ${newStatus}`
       );
-      const orderData: UpdateOrderFormData = { orderStatus: newStatus };
+
+      if (typeof newStatus === 'string' && newStatus in OrderStatus) {
+        orderData = {
+          orderStatus: newStatus as OrderStatus
+        };
+      } else if (typeof newStatus === 'string' && newStatus in PaymentStatus) {
+        orderData = {
+          paymentStatus: newStatus as PaymentStatus
+        };
+      } else {
+        throw new Error('Invalid status type');
+      }
+
       try {
         const response = await fetch(`/api/orders/${orderId}`, {
           method: 'PATCH',
