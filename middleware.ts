@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const publicPaths = [
   '/',
+  '/privacidad',
+  '/terminos',
+  '/contacto',
   '/login',
   '/signup',
   '/api/auth',
