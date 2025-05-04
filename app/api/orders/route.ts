@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, Order } from '@/lib/db';
 import {
   orders,
   customers,
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Data prepared for DB save:', dataToSaveInDb);
 
-    const [orderCreated] = await db
+    const [orderCreated]: Order[] = await db
       .insert(orders)
       .values(dataToSaveInDb)
       .returning();
@@ -211,9 +211,18 @@ export async function POST(request: NextRequest) {
         `Pedido ${orderId} no tiene fecha/hora de entrega, no se crea evento.`
       );
     }
-
+    const finalOrderData = await db.query.orders.findFirst({
+      where: eq(orders.id, orderCreated.id),
+      with: {
+        customer: {
+          columns: {
+            name: true
+          }
+        }
+      }
+    });
     const finalOrderResponse = {
-      ...orderCreated,
+      ...finalOrderData,
       googleCalendarEventId: googleEventId
     };
     return NextResponse.json(finalOrderResponse, { status: 201 });
