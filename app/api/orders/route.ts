@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const orderInput: unknown = await request.json();
-
     const validationResult = createOrderFormSchema.safeParse(orderInput);
 
     if (!validationResult.success) {
@@ -90,7 +89,6 @@ export async function POST(request: NextRequest) {
     let finalDeliveryDateTime: Date | null = null;
     if (validatedData.deliveryDate) {
       const combinedDate = new Date(validatedData.deliveryDate);
-
       if (
         validatedData.deliveryTime &&
         typeof validatedData.deliveryTime === 'string' &&
@@ -99,23 +97,12 @@ export async function POST(request: NextRequest) {
         const [hours, minutes] = validatedData.deliveryTime
           .split(':')
           .map(Number);
-
         combinedDate.setHours(hours, minutes, 0, 0);
-        console.log(
-          `[Order POST] Combined DateTime created: ${combinedDate.toISOString()}`
-        );
-      } else {
-        console.log(
-          `[Order POST] Only Date provided. Using Date object default time: ${combinedDate.toISOString()}`
-        );
       }
-
       if (!isNaN(combinedDate.getTime())) {
         finalDeliveryDateTime = combinedDate;
       } else {
-        console.warn(
-          '[Order POST] Invalid date created after combining date/time.'
-        );
+        console.warn('[Order POST] Invalid date created.');
       }
     }
 
@@ -125,37 +112,34 @@ export async function POST(request: NextRequest) {
       businessId: businessId,
       orderStatus: OrderStatus.pending
     };
-
     delete (dataToSaveInDb as any).deliveryTime;
+    delete (dataToSaveInDb as any).createCalendarEvent;
 
     console.log('Data prepared for DB save:', dataToSaveInDb);
 
-    const [orderCreated]: Order[] = await db
+    const [orderCreated] = await db
       .insert(orders)
       .values(dataToSaveInDb)
       .returning();
-
     const orderId = orderCreated.id;
     console.log(`Pedido ${orderId} guardado en BBDD.`);
 
-    let googleEventId: string | null = null;
+    let googleEventId: string | null =
+      orderCreated.googleCalendarEventId || null;
 
-    if (finalDeliveryDateTime) {
+    if (finalDeliveryDateTime && validatedData.createCalendarEvent) {
+      console.log(
+        `[Order Create ${orderId}] Checkbox marcado y hay fecha. Intentando crear evento GCal...`
+      );
       try {
         const authClient = await getGoogleAuthClient(userId);
-
         if (authClient) {
-          console.log(
-            `Cliente Google Auth obtenido para ${userId}. Preparando evento...`
-          );
-
           const customer = await db.query.customers.findFirst({
             where: eq(customers.id, orderCreated.customerId)
           });
           const customerName = customer?.name || 'Cliente Desconocido';
           const eventTitle = `Entrega Pedido #${orderId} - ${customerName}`;
           const eventDescription = `Producto: ${orderCreated.description || 'Sin descripción'}\nVer en App: ${process.env.NEXT_PUBLIC_APP_URL}/pedidos/${orderId}`;
-
           const teamMembersWithData = await db
             .select({ user: { email: users.email } })
             .from(teamMembers)
@@ -167,32 +151,34 @@ export async function POST(request: NextRequest) {
           const allAttendees = Array.from(
             new Set([userEmail, ...collaboratorEmails])
           );
-
           const startDateTime = finalDeliveryDateTime;
-          const duration = '1h';
+          const duration = '15m';
           const endDateTime = calculateEndTime(startDateTime, duration);
 
           const calendarResult = await callCreateCalendarEvent({
-            authClient: authClient,
+            authClient,
             title: eventTitle,
             description: eventDescription,
-            startDateTime: startDateTime,
-            endDateTime: endDateTime,
+            startDateTime,
+            endDateTime,
             attendees: allAttendees
           });
 
           if (calendarResult.success && calendarResult.eventId) {
             googleEventId = calendarResult.eventId;
             console.log(
-              `Evento creado con ID: ${googleEventId}. Actualizando pedido ${orderId}...`
+              `Evento GCal creado: ${googleEventId}. Actualizando pedido en BBDD...`
             );
             await db
               .update(orders)
-              .set({ googleCalendarEventId: googleEventId })
+              .set({
+                googleCalendarEventId: googleEventId,
+                updatedAt: new Date()
+              }) // Actualiza también updatedAt
               .where(eq(orders.id, orderId));
           } else {
             console.warn(
-              `No se pudo crear evento de Google Calendar para pedido ${orderId}: ${calendarResult.error || 'Razón desconocida.'}`
+              `No se pudo crear evento GCal para pedido ${orderId}: ${calendarResult.error || 'Razón desconocida.'}`
             );
           }
         } else {
@@ -202,30 +188,21 @@ export async function POST(request: NextRequest) {
         }
       } catch (calendarError) {
         console.error(
-          `Error bloque Google Calendar para pedido ${orderId}:`,
+          `Error en bloque Google Calendar para pedido ${orderId}:`,
           calendarError
         );
       }
     } else {
       console.log(
-        `Pedido ${orderId} no tiene fecha/hora de entrega, no se crea evento.`
+        `[Order Create ${orderId}] No se crea evento GCal (Checkbox: ${validatedData.createCalendarEvent}, Fecha Válida: ${!!finalDeliveryDateTime})`
       );
     }
     const finalOrderData = await db.query.orders.findFirst({
-      where: eq(orders.id, orderCreated.id),
-      with: {
-        customer: {
-          columns: {
-            name: true
-          }
-        }
-      }
+      where: eq(orders.id, orderId),
+      with: { customer: { columns: { name: true } } }
     });
-    const finalOrderResponse = {
-      ...finalOrderData,
-      googleCalendarEventId: googleEventId
-    };
-    return NextResponse.json(finalOrderResponse, { status: 201 });
+
+    return NextResponse.json(finalOrderData ?? orderCreated, { status: 201 });
   } catch (error: any) {
     console.error(
       `API Error creando pedido para business ${businessId}:`,

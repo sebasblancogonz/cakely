@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Loader2, Trash2 } from 'lucide-react';
 import { OrderFormData, createOrderFormSchema } from '@/lib/validators/orders';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const defaultOrderFormValues: Partial<OrderFormData> = {
   customerId: undefined,
@@ -43,7 +44,8 @@ const defaultOrderFormValues: Partial<OrderFormData> = {
   totalPrice: undefined,
   paymentStatus: PaymentStatus.Pendiente,
   paymentMethod: PaymentMethod.Efectivo,
-  notes: ''
+  notes: '',
+  createCalendarEvent: false
 };
 
 interface OrderFormProps {
@@ -60,8 +62,6 @@ const OrderForm = ({
   const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
-  const [imageUrls, setImageUrls] = useState<OrderImage[]>([]);
-  const [imagesToDelete, setImagesToDelete] = useState<OrderImage[]>([]);
 
   const {
     register,
@@ -70,6 +70,7 @@ const OrderForm = ({
     reset,
     formState: { errors, isSubmitting }
   } = useForm<OrderFormData>({
+    //@ts-ignore
     resolver: zodResolver(createOrderFormSchema),
     defaultValues: defaultOrderFormValues
   });
@@ -100,8 +101,6 @@ const OrderForm = ({
 
   useEffect(() => {
     reset(defaultOrderFormValues);
-    setImageUrls([]);
-    setImagesToDelete([]);
   }, [reset]);
 
   const onSubmit = async (data: OrderFormData) => {
@@ -167,13 +166,6 @@ const OrderForm = ({
     reset(defaultOrderFormValues);
   };
 
-  const handleImageDelete = (imgToDelete: OrderImage, index: number) => {
-    if (imgToDelete.id) {
-      setImagesToDelete([...imagesToDelete, imgToDelete]);
-    }
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
-  };
-
   return (
     <>
       <h2 className="text-lg font-semibold leading-none tracking-tight mb-4">
@@ -181,6 +173,7 @@ const OrderForm = ({
       </h2>
       <form
         className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
+        //@ts-ignore
         onSubmit={handleSubmit(onSubmit, onValidationErrors)}
       >
         <div className={cn('space-y-1.5', 'block')}>
@@ -271,6 +264,29 @@ const OrderForm = ({
             {errors.deliveryTime && (
               <p className="text-xs text-destructive mt-1">
                 {errors.deliveryTime.message}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="items-top flex space-x-2 pt-2">
+          <Checkbox
+            id="createCalendarEvent"
+            {...register('createCalendarEvent')}
+          />
+          <div className="grid gap-1.5 leading-none">
+            <label
+              htmlFor="createCalendarEvent"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Añadir entrega a Google Calendar
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Creará un evento en tu calendario y el de tus colaboradores (si
+              aplica).
+            </p>
+            {errors.createCalendarEvent && (
+              <p className="text-xs text-destructive">
+                {errors.createCalendarEvent.message}
               </p>
             )}
           </div>

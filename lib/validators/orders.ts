@@ -48,7 +48,8 @@ export const createOrderFormSchema = z.object({
     .number()
     .min(0, { message: 'La señal no puede ser negativa' })
     .optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  createCalendarEvent: z.boolean().default(false)
 });
 
 export const updateOrderFormSchema = createOrderFormSchema
