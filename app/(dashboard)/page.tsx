@@ -20,7 +20,10 @@ import {
   UsersRound,
   BarChartBig,
   CalendarCheck,
-  Calculator
+  Calculator,
+  FolderKanban,
+  ShieldCheck,
+  Clock
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
@@ -80,7 +83,7 @@ export default function HomePage() {
                 herramienta digital te ayuda a visualizar tus entregas, conocer
                 la rentabilidad de tus productos y colaborar eficientemente.
               </p>
-              <div className="space-x-4">
+              <div className="space-x-4 space-y-4">
                 <Button size="lg" asChild>
                   <Link href="/signup?source=landing_hero">
                     Prueba Gratis 14 Días
@@ -251,16 +254,66 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="benefits" className="w-full py-12 md:py-20 lg:py-28">
+        <section
+          id="benefits"
+          className="w-full py-12 md:py-20 lg:py-28 border-t bg-background"
+        >
           <div className="container mx-auto px-4 md:px-6">
-            <h2 className="text-3xl font-bold tracking-tighter text-center mb-8 sm:text-4xl">
-              Más que un Software, tu Aliado
+            <h2 className="text-3xl font-bold tracking-tighter text-center mb-10 sm:text-4xl lg:mb-12">
+              Más que un Software, tu Aliado Estratégico
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              <div> Icono + Título (Ahorra Tiempo) + Descripcion</div>
-              <div> Icono + Título (Reduce Errores) + Descripcion</div>
-              <div> Icono + Título (Maximiza Rentabilidad) + Descripcion</div>
-              <div> Icono + Título (Mejora Organización) + Descripcion</div>
+            <div className="mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-6 lg:gap-10 text-center">
+              <div className="flex flex-col items-center space-y-3">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <Clock className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Recupera Tu Tiempo</h3>
+                <p className="text-sm text-muted-foreground px-2">
+                  Deja de buscar datos en libretas o mensajes. Centraliza
+                  pedidos, clientes y recetas para dedicar tus horas a lo que
+                  realmente importa: hornear.
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center space-y-3">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <ShieldCheck className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Pedidos Sin Sorpresas</h3>
+                <p className="text-sm text-muted-foreground px-2">
+                  Alergias, detalles de decoración, fechas... Ten toda la
+                  información crítica accesible para evitar errores costosos y
+                  asegurar la satisfacción del cliente.
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center space-y-3">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <Euro className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">
+                  Controla Tu Rentabilidad
+                </h3>
+                <p className="text-sm text-muted-foreground px-2">
+                  Calcula el coste exacto de tus recetas con precios
+                  actualizados. Fija precios justos, entiende qué productos son
+                  más rentables y toma decisiones basadas en datos.
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center space-y-3">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <FolderKanban className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">
+                  Todo Tu Negocio Organizado
+                </h3>
+                <p className="text-sm text-muted-foreground px-2">
+                  Desde el primer contacto con el cliente hasta la entrega final
+                  y la gestión de tu equipo. Ten una visión clara de tu negocio
+                  en un panel de control intuitivo.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -274,9 +327,8 @@ export default function HomePage() {
               Planes simples para cada tamaño de obrador
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {/* Plan Esencial */}
               <Card className="flex flex-col">
-                <CardHeader className="pb-4">
+                <CardHeader className="pb-4 h-[112px]">
                   <CardTitle>Esencial</CardTitle>
                   <CardDescription>
                     Perfecto para empezar a organizarte.
@@ -312,8 +364,10 @@ export default function HomePage() {
                 </CardFooter>
               </Card>
               <Card className="flex flex-col border-primary shadow-lg">
-                <CardHeader className="pb-4">
-                  {/* <div className="text-xs uppercase text-primary font-semibold">Más Popular</div> */}
+                <CardHeader className="pb-4 h-[112px]">
+                  <div className="text-xs uppercase text-primary font-semibold">
+                    Más Popular
+                  </div>
                   <CardTitle>Profesional</CardTitle>
                   <CardDescription>
                     Ideal para equipos y negocios en crecimiento.
