@@ -71,7 +71,7 @@ export default function HomePage() {
 
       <main className="flex-grow">
         <section className="w-fullbg-gradient-to-br from-background to-muted/30">
-          <div className="p-0  py-16 md:py-24 lg:py-32 xl:py-40 container mx-auto px-4 md:px-6 text-center bg-[url('/img/background.svg')] bg-cover">
+          <div className="p-0 py-16 md:py-24 lg:py-32 xl:py-40 mx-auto px-4 md:px-6 text-center bg-[url('/img/background.svg')] bg-cover">
             <div className="flex flex-col items-center py-12">
               <h1 className="py-4 text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
                 ¿Cansado del caos en los pedidos?
