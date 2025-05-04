@@ -110,6 +110,17 @@ export function Order({
         ) : (
           '-'
         );
+      case 'paymentStatus':
+      case 'orderStatus':
+        return order.orderStatus ? (
+          <Status
+            orderId={order.id!}
+            currentStatus={order.paymentStatus as OrderStatus}
+            onStatusChange={onStatusChange}
+          />
+        ) : (
+          '-'
+        );
       case 'actions':
         return null;
       default:

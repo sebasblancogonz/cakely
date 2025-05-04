@@ -307,9 +307,18 @@ export async function PATCH(request: NextRequest) {
         );
       }
     }
-
+    const finalOrderData = await db.query.orders.findFirst({
+      where: eq(orders.id, orderIdNum),
+      with: {
+        customer: {
+          columns: {
+            name: true
+          }
+        }
+      }
+    });
     const finalResponse = {
-      ...updatedOrderDb,
+      ...finalOrderData,
       googleCalendarEventId: finalGoogleEventId
     };
     return NextResponse.json(finalResponse);

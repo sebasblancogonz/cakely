@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Customer } from './customer';
 import { Customer as CustomerType } from '@types';
 import { JSX, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface CustomersTableProps {
   customers: CustomerType[];
