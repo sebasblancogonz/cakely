@@ -198,8 +198,10 @@ export async function PATCH(request: NextRequest) {
       : null;
     const calendarNeedsUpdate =
       dateUpdated && oldDeliveryTime !== newDeliveryTime;
+    const existingEventId = currentOrder.googleCalendarEventId;
+    const newDateTime = finalDeliveryDateTime;
 
-    if (calendarNeedsUpdate) {
+    if (calendarNeedsUpdate && existingEventId) {
       console.log(
         `Cambio detectado en fecha/hora para pedido ${orderIdNum}. Actualizando GCal...`
       );
@@ -226,15 +228,13 @@ export async function PATCH(request: NextRequest) {
           new Set([userEmail, ...collaboratorEmails])
         );
 
-        if (finalDeliveryDateTime && currentOrder.googleCalendarEventId) {
-          console.log(
-            `Modificando evento GCal ID: ${currentOrder.googleCalendarEventId}`
-          );
-          const startDateTime = finalDeliveryDateTime;
+        if (newDateTime) {
+          console.log(`Modificando evento GCal ID: ${existingEventId}`);
+          const startDateTime = newDateTime;
           const endDateTime = calculateEndTime(startDateTime, '1h');
           const modifyResult = await callModifyCalendarEvent({
             authClient,
-            eventId: currentOrder.googleCalendarEventId,
+            eventId: existingEventId,
             title: eventTitle,
             description: eventDescription,
             startDateTime,
@@ -242,69 +242,31 @@ export async function PATCH(request: NextRequest) {
             attendees
           });
           if (!modifyResult.success)
-            console.warn(
-              `Fallo al modificar evento GCal ${currentOrder.googleCalendarEventId}: ${modifyResult.error}`
-            );
+            console.warn(`Fallo GCal Modify: ${modifyResult.error}`);
 
-          finalGoogleEventId = currentOrder.googleCalendarEventId;
-        } else if (
-          finalDeliveryDateTime &&
-          !currentOrder.googleCalendarEventId
-        ) {
-          console.log(`Creando nuevo evento GCal para pedido ${orderIdNum}`);
-          const startDateTime = finalDeliveryDateTime;
-          const endDateTime = calculateEndTime(startDateTime, '1h');
-          const createResult = await callCreateCalendarEvent({
-            authClient,
-            title: eventTitle,
-            description: eventDescription,
-            startDateTime,
-            endDateTime,
-            attendees
-          });
-          if (createResult.success && createResult.eventId) {
-            finalGoogleEventId = createResult.eventId;
-            console.log(
-              `Nuevo evento GCal creado: ${finalGoogleEventId}. Actualizando BBDD...`
-            );
-
-            await db
-              .update(orders)
-              .set({ googleCalendarEventId: finalGoogleEventId })
-              .where(eq(orders.id, orderIdNum));
-          } else {
-            console.warn(
-              `Fallo al crear evento GCal para pedido ${orderIdNum}: ${createResult.error}`
-            );
-          }
-        } else if (
-          !finalDeliveryDateTime &&
-          currentOrder.googleCalendarEventId
-        ) {
+          finalGoogleEventId = existingEventId;
+        } else {
           console.log(
-            `Eliminando evento GCal ID: ${currentOrder.googleCalendarEventId}`
+            `Eliminando evento GCal ID: ${existingEventId} porque se quitó la fecha.`
           );
           const deleteResult = await callDeleteCalendarEvent({
             authClient,
-            eventId: currentOrder.googleCalendarEventId
+            eventId: existingEventId
           });
           if (deleteResult.success) {
             finalGoogleEventId = null;
             console.log(`Evento GCal eliminado. Actualizando BBDD...`);
+
             await db
               .update(orders)
-              .set({ googleCalendarEventId: null })
+              .set({ googleCalendarEventId: null, updatedAt: new Date() })
               .where(eq(orders.id, orderIdNum));
           } else {
-            console.warn(
-              `Fallo al eliminar evento GCal ${currentOrder.googleCalendarEventId}: ${deleteResult.error}`
-            );
+            console.warn(`Fallo GCal Delete: ${deleteResult.error}`);
           }
         }
       } else {
-        console.warn(
-          `Usuario ${userId} sin credenciales Google válidas. No se actualiza GCal.`
-        );
+        console.warn(`Usuario ${userId} sin credenciales Google válidas.`);
       }
     }
     const finalOrderData = await db.query.orders.findFirst({
