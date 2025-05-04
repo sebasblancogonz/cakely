@@ -274,7 +274,7 @@ function DesktopNav({
 
       <nav className="mt-auto flex flex-col gap-4 px-2 sm:py-5">
         <NavItem
-          href="/ajustes"
+          href="/app/ajustes"
           label="Ajustes"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}

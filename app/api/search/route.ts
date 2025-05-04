@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
         type: 'ingredient' as const,
         title: i.title,
         description: i.description ? `Unidad: ${i.description}` : undefined,
-        url: `/ajustes#ingredient-${i.id}`
+        url: `/app/ajustes#ingredient-${i.id}`
       }))
     );
 
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
         type: 'recipe' as const,
         title: r.title,
         description: r.description ? `Tipo: ${r.description}` : undefined,
-        url: `/ajustes#recipe-${r.id}`
+        url: `/app/ajustes#recipe-${r.id}`
       }))
     );
 

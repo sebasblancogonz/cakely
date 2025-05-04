@@ -65,7 +65,7 @@ export function User() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/ajustes" className="cursor-pointer">
+              <Link href="/app/ajustes" className="cursor-pointer">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Ajustes</span>
               </Link>
