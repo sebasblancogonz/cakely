@@ -83,7 +83,7 @@ export default function HomePage() {
                 herramienta digital te ayuda a visualizar tus entregas, conocer
                 la rentabilidad de tus productos y colaborar eficientemente.
               </p>
-              <div className="space-x-4 py-4">
+              <div className="space-x-4 space-y-4 py-4">
                 <Button size="lg" asChild>
                   <Link href="/signup?source=landing_hero">
                     Prueba Gratis 14 Días
