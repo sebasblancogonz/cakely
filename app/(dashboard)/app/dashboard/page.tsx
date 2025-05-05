@@ -80,8 +80,8 @@ export default function StatisticsPage() {
     if (!orders) return null;
 
     const filtered = orders.filter((order) => {
-      if (!order.orderDate) return false;
-      const orderDate = new Date(order.orderDate);
+      if (!order.deliveryDate) return false;
+      const orderDate = new Date(order.deliveryDate);
       const { from, to } = dateRange;
       const startDate = from
         ? new Date(from.setHours(0, 0, 0, 0))
@@ -178,7 +178,9 @@ export default function StatisticsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Filtrar por Fecha</CardTitle>
+          <CardTitle className="text-lg">
+            Filtrar por Fecha de Entrega
+          </CardTitle>
           <CardDescription>
             Selecciona un rango de fechas para ver las estadísticas.
           </CardDescription>
