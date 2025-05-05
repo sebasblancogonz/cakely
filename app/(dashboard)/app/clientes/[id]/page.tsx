@@ -224,7 +224,7 @@ export default async function CustomerDetailPage({
               <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2">
                 {customerData.phone && (
                   <a
-                    href={`https://wa.me/${cleanPhoneNumber(customerData.phone)}`}
+                    href={`https://wa.me/${customerData.phone}`}
                     target="_blank"
                     rel="noreferrer noopener"
                     className="text-xs inline-flex items-center gap-1 text-green-600 hover:underline"
