@@ -150,8 +150,6 @@ export default async function CustomerDetailPage({
       return 'Inválida';
     }
   };
-  const cleanPhoneNumber = (phone: string | null | undefined) =>
-    phone?.replace(/\s+/g, '') || '';
   const cleanInstagramHandle = (handle: string | null | undefined) =>
     handle?.replace(/^@/, '') || '';
 
@@ -201,7 +199,7 @@ export default async function CustomerDetailPage({
                 <p className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />{' '}
                   <a
-                    href={`tel:${cleanPhoneNumber(customerData.phone)}`}
+                    href={`tel:${customerData.phone}`}
                     className="hover:underline"
                   >
                     {customerData.phone}
