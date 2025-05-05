@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +16,8 @@ import { OrderStatus, Order as OrderType, PaymentStatus } from '@types';
 import { Status as OrderStatusCell } from '@/components/common/OrderStatusCell';
 import { Status as PaymentStatusCell } from '@/components/common/PaymentStatusCell';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface OrderProps {
   order: OrderType;
@@ -67,6 +71,7 @@ export function Order({
   onStatusChange,
   columnVisibility
 }: OrderProps) {
+  const router = useRouter();
   const handleDelete = async () => {
     const customerName = order.customer?.name || `pedido ID ${order.id}`;
     if (
@@ -156,7 +161,7 @@ export function Order({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                   <DropdownMenuItem
-                    onClick={() => showDetails(order)}
+                    onClick={() => router.push(`/app/pedidos/${order.id}`)}
                     className="cursor-pointer"
                   >
                     <Eye size={15} className="mr-2" /> Ver detalles

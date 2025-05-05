@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
           });
           const customerName = customer?.name || 'Cliente Desconocido';
           const eventTitle = `Entrega Pedido #${orderId} - ${customerName}`;
-          const eventDescription = `Producto: ${orderCreated.description || 'Sin descripción'}\nVer en App: ${process.env.NEXT_PUBLIC_APP_URL}/pedidos/${orderId}`;
+          const eventDescription = `Producto: ${orderCreated.description || 'Sin descripción'}\nVer en App: ${process.env.NEXT_PUBLIC_APP_URL}/app/pedidos/${orderId}`;
           const teamMembersWithData = await db
             .select({ user: { email: users.email } })
             .from(teamMembers)

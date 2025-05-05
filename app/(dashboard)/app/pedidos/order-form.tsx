@@ -269,9 +269,16 @@ const OrderForm = ({
           </div>
         </div>
         <div className="items-top flex space-x-2 pt-2">
-          <Checkbox
-            id="createCalendarEvent"
-            {...register('createCalendarEvent')}
+          <Controller
+            name="createCalendarEvent"
+            control={control}
+            render={({ field }) => (
+              <Checkbox
+                id="createCalendarEvent"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
           />
           <div className="grid gap-1.5 leading-none">
             <label
