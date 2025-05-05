@@ -59,9 +59,9 @@ import { OrderStatusSelector } from '@/components/orders/OrderStatusSelector';
 export async function generateMetadata({
   params
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const orderId = parseInt(params.id, 10);
+  const orderId = parseInt((await params).id, 10);
   const title = `Pedido #${orderId} | Detalles | Cakely`;
   return { title, description: `Detalles completos del pedido #${orderId}.` };
 }
@@ -74,12 +74,13 @@ type OrderWithCustomer = Order & {
 export default async function OrderDetailPage({
   params
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await auth();
   const businessId = session?.user?.businessId;
   const currentUserRole = session?.user?.role as TeamRole | undefined | null;
-  const orderId = parseInt(params.id, 10);
+  const p = await params;
+  const orderId = parseInt(p.id, 10);
   if (!businessId || isNaN(orderId)) {
     notFound();
   }
@@ -344,7 +345,7 @@ export default async function OrderDetailPage({
               {order.customerId && (
                 <div className="pt-3 border-t mt-3">
                   <Button variant="secondary" size="sm" asChild>
-                    <Link href={`/app/clientes?id=${order.customerId}`}>
+                    <Link href={`/app/clientes/${order.customerId}`}>
                       Ver Ficha Cliente
                     </Link>
                   </Button>
