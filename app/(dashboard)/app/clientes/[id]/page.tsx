@@ -46,6 +46,7 @@ import {
   Eye
 } from 'lucide-react';
 import { formatCurrency, getStatusStyle } from '@/lib/utils';
+import { BackButton } from '@/components/common/BackButton';
 
 export async function generateMetadata({
   params
@@ -169,6 +170,7 @@ export default async function CustomerDetailPage({
           <Button variant="outline" disabled>
             <Pencil className="mr-2 h-4 w-4" /> Editar Cliente
           </Button>
+          <BackButton />
         </div>
       </div>
 

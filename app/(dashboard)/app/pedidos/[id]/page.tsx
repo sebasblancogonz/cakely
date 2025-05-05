@@ -55,6 +55,7 @@ import { Label } from '@/components/ui/label';
 import { Status } from '@/components/common/OrderStatusCell';
 import { PaymentStatusSelector } from '@/components/orders/PaymentStatusSelector';
 import { OrderStatusSelector } from '@/components/orders/OrderStatusSelector';
+import { BackButton } from '@/components/common/BackButton';
 
 export async function generateMetadata({
   params
@@ -184,12 +185,13 @@ export default async function OrderDetailPage({
           </div>
         </div>
         <div className="flex flex-shrink-0 gap-2">
-          <Link href="/app/pedidos">
+          <BackButton />
+          {/* <Link href="/app/pedidos">
             <Button variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Volver
             </Button>
-          </Link>
+          </Link> */}
           {/* <Button variant="outline"><Pencil className="mr-2 h-4 w-4" /> Editar</Button> */}
         </div>
       </div>

@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,6 +13,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { deleteCustomer } from '../../actions';
 import { Customer as CustomerType } from '@types';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function Customer({
   customer,
@@ -23,6 +26,8 @@ export function Customer({
   showDetails: (customer: CustomerType) => void;
   editCustomer: (customer: CustomerType) => void;
 }) {
+  const router = useRouter();
+
   return (
     <TableRow>
       <TableCell className="font-medium">{customer.name}</TableCell>
@@ -69,14 +74,11 @@ export function Customer({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem>
-              <button
-                onClick={() => {
-                  showDetails(customer);
-                }}
-              >
-                Ver detalles
-              </button>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => router.push(`/app/clientes/${customer.id}`)}
+            >
+              Ver detalles
             </DropdownMenuItem>
             <DropdownMenuItem>
               <button
