@@ -60,9 +60,10 @@ import { BackButton } from '@/components/common/BackButton';
 export async function generateMetadata({
   params
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const orderId = parseInt(params.id, 10);
+  const p = await params;
+  const orderId = parseInt(p.id, 10);
   let pageTitle = `Pedido | Detalles | Cakely`;
   try {
     const session = await auth();
