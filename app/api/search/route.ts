@@ -15,6 +15,7 @@ interface SearchResult {
 interface Select {
   id: number;
   title: string;
+  businessOrderNumber: number;
   customerName: string;
   description: string;
 }
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
     const foundOrders = await db
       .select({
         id: orders.id,
+        businessOrderNumber: orders.businessOrderNumber,
         title: orders.description,
         customerName: customers.name
       })
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
       ...foundOrders.map((o: Select) => ({
         id: o.id,
         type: 'order' as const,
-        title: o.title || `Pedido #${o.id}`,
+        title: o.title || `Pedido #${o.businessOrderNumber}`,
         description: o.customerName || undefined,
         url: `/app/pedidos#order-${o.id}`
       }))

@@ -1,7 +1,15 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import {
+  format,
+  subDays,
+  startOfMonth,
+  endOfMonth,
+  startOfToday,
+  endOfToday,
+  subMonths
+} from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import {
@@ -42,19 +50,47 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
-const COLORS_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
+const COLORS_PIE = [
+  '#0088FE',
+  '#00C49F',
+  '#FFBB28',
+  '#FF8042',
+  '#AF19FF',
+  '#FF6347'
+];
 const COLOR_BAR = '#82ca9d';
 
 type ChartData = { name: string; value: number };
 
+type SelectedRangeType =
+  | 'all'
+  | 'last7days'
+  | 'last30days'
+  | 'thisMonth'
+  | 'lastMonth'
+  | 'custom';
+
 export default function StatisticsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+
   const [loading, setLoading] = useState(true);
+
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
     from: undefined,
     to: undefined
   });
+
+  const [selectedRangeType, setSelectedRangeType] =
+    useState<SelectedRangeType>('all');
 
   useEffect(() => {
     setLoading(true);
@@ -66,8 +102,9 @@ export default function StatisticsPage() {
         }
         const data = await response.json();
         setOrders(data.orders || []);
+        console.log('Statistics: Orders fetched', data.orders?.length);
       } catch (error) {
-        console.error('Failed to fetch orders:', error);
+        console.error('Failed to fetch orders for statistics:', error);
         setOrders([]);
       } finally {
         setLoading(false);
@@ -77,18 +114,55 @@ export default function StatisticsPage() {
   }, []);
 
   const processedData = useMemo(() => {
-    if (!orders) return null;
+    console.log(
+      '[useMemo Statistics] Recalculating based on dateRange:',
+      dateRange
+    );
+    if (!orders || orders.length === 0) {
+      console.log('[useMemo Statistics] No orders available.');
+      return {
+        statusData: [],
+        productData: [],
+        paymentData: [],
+        revenue: 0,
+        pending: 0
+      };
+    }
 
-    const filtered = orders.filter((order) => {
-      if (!order.deliveryDate) return false;
-      const orderDate = new Date(order.deliveryDate);
-      const { from, to } = dateRange;
-      const startDate = from
+    const { from, to } = dateRange;
+
+    const startDate =
+      from instanceof Date && !isNaN(from.getTime())
         ? new Date(from.setHours(0, 0, 0, 0))
         : new Date('1900-01-01');
-      const endDate = to ? new Date(to.setHours(23, 59, 59, 999)) : new Date();
-      return orderDate >= startDate && orderDate <= endDate;
+    const endDate =
+      to instanceof Date && !isNaN(to.getTime())
+        ? new Date(to.setHours(23, 59, 59, 999))
+        : new Date(new Date().setHours(23, 59, 59, 999));
+
+    console.log(
+      `[useMemo Statistics] Filtering between: ${startDate.toISOString()} and ${endDate.toISOString()}`
+    );
+
+    const filtered = orders.filter((order) => {
+      const dateToCompare = order.orderDate;
+      if (!dateToCompare) return false;
+
+      let orderDateObj: Date | null = null;
+      let isValidOrderDate = false;
+      try {
+        orderDateObj = new Date(dateToCompare);
+        isValidOrderDate = !isNaN(orderDateObj.getTime());
+      } catch (e) {}
+
+      if (!isValidOrderDate) return false;
+
+      return orderDateObj! >= startDate && orderDateObj! <= endDate;
     });
+
+    console.log(
+      `[useMemo Statistics] Filtered orders count: ${filtered.length}`
+    );
 
     const statusData: ChartData[] = Object.values(OrderStatus)
       .map((status) => ({
@@ -112,26 +186,84 @@ export default function StatisticsPage() {
       .filter((item) => item.value > 0);
 
     const revenue = filtered
-      .filter(
-        (order) =>
-          order.paymentStatus === PaymentStatus.Pagado ||
-          Number(order.depositAmount) > 0
-      )
       .map((order) => {
-        if (order.paymentStatus === PaymentStatus.Pagado) return order.amount;
-        if (Number(order.depositAmount) > 0) {
-          return order.depositAmount;
-        }
-        return '';
+        if (order.paymentStatus === PaymentStatus.Pagado && order.totalPrice)
+          return Number(order.totalPrice);
+        if (order.depositAmount && Number(order.depositAmount) > 0)
+          return Number(order.depositAmount);
+        return 0;
       })
-      .reduce((sum, amount) => sum + (Number(amount) || 0), 0);
+      .reduce((sum, amount) => sum + amount, 0);
 
     const pending = filtered
-      .filter((order) => order.paymentStatus === PaymentStatus.Pendiente)
-      .reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
+      .filter(
+        (order) =>
+          order.paymentStatus !== PaymentStatus.Pagado &&
+          order.paymentStatus !== PaymentStatus.Reembolsado &&
+          order.paymentStatus !== PaymentStatus.Cancelado
+      )
+      .reduce((sum, order) => {
+        const total = Number(order.totalPrice || '0');
+        const deposit = Number(order.depositAmount || '0');
+        return sum + (total - deposit);
+      }, 0);
 
+    console.log('[useMemo Statistics] Processed Data:', {
+      statusData,
+      productData,
+      paymentData,
+      revenue,
+      pending
+    });
     return { statusData, productData, paymentData, revenue, pending };
   }, [orders, dateRange]);
+
+  const handleRangeTypeChange = useCallback((value: string) => {
+    const type = value as SelectedRangeType;
+    setSelectedRangeType(type);
+
+    const todayEnd = endOfToday();
+    let fromDate: Date | undefined = undefined;
+    let toDate: Date | undefined = undefined;
+
+    switch (type) {
+      case 'last7days':
+        fromDate = startOfToday();
+        fromDate.setDate(fromDate.getDate() - 6);
+        toDate = todayEnd;
+        break;
+      case 'last30days':
+        fromDate = startOfToday();
+        fromDate.setDate(fromDate.getDate() - 29);
+        toDate = todayEnd;
+        break;
+      case 'thisMonth':
+        fromDate = startOfMonth(todayEnd);
+        toDate = todayEnd;
+        break;
+      case 'lastMonth':
+        const startOfThisMonth = startOfMonth(todayEnd);
+        fromDate = startOfMonth(subMonths(startOfThisMonth, 1));
+        toDate = endOfMonth(subMonths(startOfThisMonth, 1));
+        break;
+      case 'all':
+        fromDate = undefined;
+        toDate = undefined;
+        break;
+      case 'custom':
+        return;
+    }
+    console.log('Setting new date range based on type:', type, {
+      from: fromDate,
+      to: toDate
+    });
+    setDateRange({ from: fromDate, to: toDate });
+  }, []);
+
+  const clearDates = () => {
+    setDateRange({ from: undefined, to: undefined });
+    setSelectedRangeType('all');
+  };
 
   if (loading) {
     return (
@@ -182,80 +314,118 @@ export default function StatisticsPage() {
             Filtrar por Fecha de Entrega
           </CardTitle>
           <CardDescription>
-            Selecciona un rango de fechas para ver las estadísticas.
+            Selecciona un periodo predefinido o un rango personalizado.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-4">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="date-from"
-                variant={'outline'}
-                className={cn(
-                  'w-full sm:w-[240px] justify-start text-left font-normal',
-                  !dateRange.from && 'text-muted-foreground'
-                )}
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+            <Label
+              htmlFor="range-select"
+              className="pt-2 sm:pt-0 whitespace-nowrap shrink-0"
+            >
+              Periodo:
+            </Label>
+            <Select
+              value={selectedRangeType}
+              onValueChange={handleRangeTypeChange}
+            >
+              <SelectTrigger
+                id="range-select"
+                className="w-full sm:w-auto flex-grow sm:flex-grow-0 sm:min-w-[180px]"
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange.from ? (
-                  format(dateRange.from, 'PPP', { locale: es })
-                ) : (
-                  <span>Fecha Inicio</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={dateRange.from}
-                onSelect={(date) =>
-                  setDateRange((prev) => ({ ...prev, from: date || undefined }))
-                }
-                initialFocus
-                locale={es}
-              />
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="date-to"
-                variant={'outline'}
-                className={cn(
-                  'w-full sm:w-[240px] justify-start text-left font-normal',
-                  !dateRange.to && 'text-muted-foreground'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange.to ? (
-                  format(dateRange.to, 'PPP', { locale: es })
-                ) : (
-                  <span>Fecha Fin</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={dateRange.to}
-                onSelect={(date) =>
-                  setDateRange((prev) => ({ ...prev, to: date || undefined }))
-                }
-                disabled={
-                  dateRange.from ? { before: dateRange.from } : undefined
-                }
-                initialFocus
-                locale={es}
-              />
-            </PopoverContent>
-          </Popover>
-          <Button
-            variant="outline"
-            onClick={() => setDateRange({ from: undefined, to: undefined })}
-            className="w-full sm:w-auto"
-          >
-            Limpiar
-          </Button>
+                <SelectValue placeholder="Selecciona periodo..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Siempre</SelectItem>
+                <SelectItem value="last7days">Últimos 7 días</SelectItem>
+                <SelectItem value="last30days">Últimos 30 días</SelectItem>
+                <SelectItem value="thisMonth">Este mes</SelectItem>
+                <SelectItem value="lastMonth">Mes anterior</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              onClick={clearDates}
+              className="w-full sm:w-auto"
+            >
+              Limpiar Filtro
+            </Button>
+          </div>
+
+          {selectedRangeType === 'custom' && (
+            <div className="flex flex-col sm:flex-row gap-4 border-t pt-4 animate-in fade-in duration-200">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date-from"
+                    variant={'outline'}
+                    className={cn(
+                      'w-full sm:w-[240px] justify-start text-left font-normal',
+                      !dateRange.from && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange.from ? (
+                      format(dateRange.from, 'PPP', { locale: es })
+                    ) : (
+                      <span>Fecha Inicio</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateRange.from}
+                    onSelect={(date) =>
+                      setDateRange((prev) => ({
+                        ...prev,
+                        from: date || undefined
+                      }))
+                    }
+                    initialFocus
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date-to"
+                    variant={'outline'}
+                    className={cn(
+                      'w-full sm:w-[240px] justify-start text-left font-normal',
+                      !dateRange.to && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange.to ? (
+                      format(dateRange.to, 'PPP', { locale: es })
+                    ) : (
+                      <span>Fecha Fin</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateRange.to}
+                    onSelect={(date) =>
+                      setDateRange((prev) => ({
+                        ...prev,
+                        to: date || undefined
+                      }))
+                    }
+                    disabled={
+                      dateRange.from ? { before: dateRange.from } : undefined
+                    }
+                    initialFocus
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -287,7 +457,9 @@ export default function StatisticsPage() {
                         />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `${value} pedidos`} />
+                    <Tooltip
+                      formatter={(value: number) => `${value} pedidos`}
+                    />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -302,9 +474,7 @@ export default function StatisticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">
-              Pedidos por Tipo de Producto
-            </CardTitle>
+            <CardTitle className="text-lg">Pedidos por Tipo</CardTitle>
           </CardHeader>
           <CardContent>
             {processedData?.productData &&
@@ -313,12 +483,14 @@ export default function StatisticsPage() {
                 <ResponsiveContainer>
                   <BarChart
                     data={processedData.productData}
-                    margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+                    margin={{ top: 5, right: 5, left: -25, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" fontSize={12} />
-                    <YAxis width={30} fontSize={12} />
-                    <Tooltip formatter={(value) => `${value} pedidos`} />
+                    <YAxis width={30} fontSize={12} allowDecimals={false} />
+                    <Tooltip
+                      formatter={(value: number) => `${value} pedidos`}
+                    />
                     <Bar
                       dataKey="value"
                       fill={COLOR_BAR}
@@ -362,7 +534,9 @@ export default function StatisticsPage() {
                         />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `${value} pedidos`} />
+                    <Tooltip
+                      formatter={(value: number) => `${value} pedidos`}
+                    />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -378,32 +552,35 @@ export default function StatisticsPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-lg">Resumen Financiero</CardTitle>
-          <CardDescription>
-            Ingresos totales y pagos pendientes para el periodo seleccionado.
-          </CardDescription>
+          <CardTitle>Resumen Financiero</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 border rounded-lg">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Ingresos Totales
+          <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-950">
+            <h3 className="text-sm font-medium text-green-800 dark:text-green-300">
+              Ingresos Registrados
             </h3>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
               {new Intl.NumberFormat('es-ES', {
                 style: 'currency',
                 currency: 'EUR'
               }).format(processedData?.revenue ?? 0)}
             </p>
+            <p className="text-xs text-muted-foreground">
+              Suma de pedidos pagados y señales recibidas.
+            </p>
           </div>
-          <div className="p-4 border rounded-lg">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Pagos Pendientes
+          <div className="p-4 border rounded-lg bg-red-50 dark:bg-red-950">
+            <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
+              Importe Pendiente
             </h3>
-            <p className="text-2xl font-bold text-red-600">
+            <p className="text-2xl font-bold text-red-600 dark:text-red-400">
               {new Intl.NumberFormat('es-ES', {
                 style: 'currency',
                 currency: 'EUR'
               }).format(processedData?.pending ?? 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Suma de lo pendiente en pedidos no pagados/parciales.
             </p>
           </div>
         </CardContent>

@@ -71,6 +71,13 @@
       "when": 1746099498810,
       "tag": "0009_fresh_magik",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1746475404716,
+      "tag": "0010_medical_slyde",
+      "breakpoints": true
     }
   ]
 }

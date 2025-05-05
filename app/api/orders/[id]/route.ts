@@ -212,7 +212,7 @@ export async function PATCH(request: NextRequest) {
           where: eq(customers.id, updatedOrderDb.customerId)
         });
         const customerName = customer?.name || 'Cliente Desconocido';
-        const eventTitle = `Entrega Pedido #${orderIdNum} - ${customerName}`;
+        const eventTitle = `Entrega Pedido #${updatedOrderDb.businessOrderNumber} - ${customerName}`;
         const eventDescription = `Producto: ${updatedOrderDb.description || ''}\nVer: ${process.env.NEXT_PUBLIC_APP_URL}/pedidos/${orderIdNum}`;
 
         const teamMembersWithData = await db

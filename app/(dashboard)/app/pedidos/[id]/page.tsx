@@ -60,11 +60,28 @@ import { BackButton } from '@/components/common/BackButton';
 export async function generateMetadata({
   params
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }): Promise<Metadata> {
-  const orderId = parseInt((await params).id, 10);
-  const title = `Pedido #${orderId} | Detalles | Cakely`;
-  return { title, description: `Detalles completos del pedido #${orderId}.` };
+  const orderId = parseInt(params.id, 10);
+  let pageTitle = `Pedido | Detalles | Cakely`;
+  try {
+    const session = await auth();
+    const businessId = session?.user?.businessId;
+    if (!isNaN(orderId) && businessId) {
+      const orderInfo = await db.query.orders.findFirst({
+        columns: { businessOrderNumber: true, customerId: true }, // Selecciona el número guardado
+        where: and(eq(orders.id, orderId), eq(orders.businessId, businessId)),
+        with: { customer: { columns: { name: true } } }
+      });
+      if (orderInfo?.businessOrderNumber) {
+        pageTitle = `Pedido #${orderInfo.businessOrderNumber}${orderInfo.customer?.name ? ` - ${orderInfo.customer.name}` : ''} | Cakely`;
+      }
+    }
+  } catch (error) {
+    console.error('Metadata generation error:', error);
+  }
+
+  return { title: pageTitle };
 }
 
 type OrderWithCustomer = Order & {
@@ -130,7 +147,8 @@ export default async function OrderDetailPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Package className="h-7 w-7 text-primary" /> Pedido #{order.id}
+            <Package className="h-7 w-7 text-primary" /> Pedido #
+            {order.businessOrderNumber}
           </h1>
           <p className="text-muted-foreground mt-1">
             Cliente:{' '}

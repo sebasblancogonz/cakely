@@ -37,6 +37,7 @@ import {
 import { OrderFormData, UpdateOrderFormData } from './validators/orders';
 import { UpdateCustomerFormData } from './validators/customers';
 import { Pool } from '@neondatabase/serverless';
+import { table } from 'console';
 
 export const orderStatusEnum = pgEnum(
   'order_status',
@@ -83,45 +84,58 @@ export const usersBusinessFk = foreignKey({
   foreignColumns: [businesses.id]
 }).onDelete('cascade');
 
-export const orders = pgTable('orders', {
-  id: serial('order_id').primaryKey(),
-  businessId: integer('business_id')
-    .notNull()
-    .references(() => businesses.id, { onDelete: 'cascade' }),
-  customerId: integer('customer_id')
-    .notNull()
-    .references(() => customers.id, {
-      onDelete: 'set null',
-      onUpdate: 'cascade'
-    }),
-  description: text('description').notNull(),
-  orderDate: timestamp('order_date', { mode: 'date' }).notNull().defaultNow(),
-  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
-  deliveryDate: timestamp('delivery_date', { mode: 'date' }),
-  orderStatus: orderStatusEnum('order_status')
-    .notNull()
-    .default(OrderStatus.pending),
-  productType: productTypeEnum('product_type').notNull(),
-  customizationDetails: text('customization_details'),
-  quantity: integer('quantity').notNull(),
-  sizeOrWeight: text('size_or_weight').notNull(),
-  flavor: text('flavor').notNull(),
-  allergyInformation: text('allergy_information'),
-  totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
-  paymentStatus: paymentStatusEnum('payment_status')
-    .notNull()
-    .default(PaymentStatus.Pendiente),
-  paymentMethod: paymentMethodEnum('payment_method')
-    .notNull()
-    .default(PaymentMethod.Efectivo),
-  depositAmount: numeric('deposit_amount', { precision: 10, scale: 2 }).default(
-    '0.00'
-  ),
-  notes: text('notes'),
-  orderHistory: jsonb('order_history').default('[]'),
-  images: jsonb('images').default('[]'),
-  googleCalendarEventId: text('google_calendar_event_id')
-});
+export const orders = pgTable(
+  'orders',
+  {
+    id: serial('order_id').primaryKey(),
+    businessId: integer('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    customerId: integer('customer_id')
+      .notNull()
+      .references(() => customers.id, {
+        onDelete: 'set null',
+        onUpdate: 'cascade'
+      }),
+    description: text('description').notNull(),
+    orderDate: timestamp('order_date', { mode: 'date' }).notNull().defaultNow(),
+    amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+    deliveryDate: timestamp('delivery_date', { mode: 'date' }),
+    orderStatus: orderStatusEnum('order_status')
+      .notNull()
+      .default(OrderStatus.pending),
+    productType: productTypeEnum('product_type').notNull(),
+    businessOrderNumber: integer('business_order_number').notNull(),
+    customizationDetails: text('customization_details'),
+    quantity: integer('quantity').notNull(),
+    sizeOrWeight: text('size_or_weight').notNull(),
+    flavor: text('flavor').notNull(),
+    allergyInformation: text('allergy_information'),
+    totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
+    paymentStatus: paymentStatusEnum('payment_status')
+      .notNull()
+      .default(PaymentStatus.Pendiente),
+    paymentMethod: paymentMethodEnum('payment_method')
+      .notNull()
+      .default(PaymentMethod.Efectivo),
+    depositAmount: numeric('deposit_amount', {
+      precision: 10,
+      scale: 2
+    }).default('0.00'),
+    notes: text('notes'),
+    orderHistory: jsonb('order_history').default('[]'),
+    images: jsonb('images').default('[]'),
+    googleCalendarEventId: text('google_calendar_event_id')
+  },
+  (table) => {
+    return {
+      businessOrderUnique: unique().on(
+        table.businessId,
+        table.businessOrderNumber
+      )
+    };
+  }
+);
 
 export const businessSettings = pgTable('business_settings', {
   businessId: integer('business_id')

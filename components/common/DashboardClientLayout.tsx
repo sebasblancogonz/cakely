@@ -86,11 +86,11 @@ export default function DashboardClientLayout({
         segments[index - 1] === 'pedidos' &&
         segments[index + 1]
       ) {
-        label = `Editar Pedido #${segments[index + 1]}`;
+        label = `Editar Pedido`;
       } else if (/^\d+$/.test(segment) && segments[index - 1] === 'pedidos') {
-        label = `Pedido #${segment}`;
+        label = `Detalles`;
       } else if (/^\d+$/.test(segment) && segments[index - 1] === 'clientes') {
-        label = `Cliente #${segment}`;
+        label = `Detalles`;
       }
       if (isLast) {
         trail.push({ label });

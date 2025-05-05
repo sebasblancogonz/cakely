@@ -1,0 +1,2 @@
+ALTER TABLE "orders" ADD COLUMN "business_order_number" integer NOT NULL;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_business_id_business_order_number_unique" UNIQUE("business_id","business_order_number");
