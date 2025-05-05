@@ -323,7 +323,7 @@ export default async function CustomerDetailPage({
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/pedidos/${order.id}`}>
+                            <Link href={`/app/pedidos/${order.id}`}>
                               <Eye className="h-4 w-4 mr-1 sm:mr-0" />{' '}
                               <span className="hidden sm:inline ml-1">Ver</span>
                             </Link>
