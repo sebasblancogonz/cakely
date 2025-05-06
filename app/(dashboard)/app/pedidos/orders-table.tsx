@@ -42,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { useDeviceType } from '@/hooks/use-device-type';
 
 interface OrdersTableProps {
   orders: OrderType[];
@@ -140,6 +141,7 @@ export function OrdersTable({
   onSortSelectChange
 }: OrdersTableProps): JSX.Element {
   const router = useRouter();
+  const device = useDeviceType();
   const searchParams = useSearchParams();
   const { profile } = useBusinessProfile();
   const [columnVisibility, setColumnVisibility] = useState<
@@ -243,38 +245,40 @@ export function OrdersTable({
             Gestiona los pedidos de {profile?.name ?? 'tu negocio'}
           </CardDescription>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-1">
-              <Settings2 className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only">Columnas</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Mostrar/Ocultar Columnas</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {availableColumns.map((column) => {
-              if (!column.canHide) return null;
+        {device === 'desktop' && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-1">
+                <Settings2 className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only">Columnas</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Mostrar/Ocultar Columnas</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((column) => {
+                if (!column.canHide) return null;
 
-              return (
-                <DropdownMenuCheckboxItem
-                  key={column.id as string}
-                  className="capitalize"
-                  checked={columnVisibility[column.id as string]}
-                  onCheckedChange={(value) =>
-                    setColumnVisibility((prev) => ({
-                      ...prev,
-                      [column.id as string]: !!value
-                    }))
-                  }
-                  disabled={!column.canHide}
-                >
-                  {column.label}
-                </DropdownMenuCheckboxItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id as string}
+                    className="capitalize"
+                    checked={columnVisibility[column.id as string]}
+                    onCheckedChange={(value) =>
+                      setColumnVisibility((prev) => ({
+                        ...prev,
+                        [column.id as string]: !!value
+                      }))
+                    }
+                    disabled={!column.canHide}
+                  >
+                    {column.label}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </CardHeader>
       <CardContent>
         <div className="hidden lg:block">
