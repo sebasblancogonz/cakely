@@ -19,12 +19,15 @@ import {
 import {
   and,
   asc,
+  Column,
   count,
   desc,
   eq,
+  getTableColumns,
   ilike,
   or,
   relations,
+  sql,
   SQL
 } from 'drizzle-orm';
 import {
@@ -502,7 +505,7 @@ const schema = {
   recipeIngredients,
   invitations,
   teamMembers,
-  // Relations
+
   businessesRelations,
   usersRelations,
   customersRelations,
@@ -745,98 +748,128 @@ export async function getOrders(
   search: string = '',
   offset: number = 0,
   limit: number = 5,
-  status: string | null = null
+  status: string | null = null,
+
+  sortBy: string | null,
+  sortOrder: string | null
 ): Promise<GetOrdersResult> {
   if (!businessId) throw new Error('Business ID is required');
 
-  const baseBusinessCondition = eq(orders.businessId, businessId);
+  const allowedSortColumns: Record<string, Column | SQL> = {
+    orderDate: orders.orderDate,
+    deliveryDate: orders.deliveryDate,
+    totalPrice: orders.totalPrice,
+    customerName: customers.name
+  };
 
-  let statusCondition: SQL | undefined;
-  const statusKey = status?.trim().toLowerCase();
-  if (statusKey && statusKey !== 'all') {
-    if (statusKey in OrderStatus) {
-      const statusValue = OrderStatus[statusKey as keyof typeof OrderStatus];
-      statusCondition = eq(orders.orderStatus, statusValue);
-    } else {
-      console.warn(
-        `Invalid status key received: ${statusKey}. No status filter applied.`
+  const sortColumnKey =
+    sortBy && allowedSortColumns[sortBy] ? sortBy : 'orderDate';
+  const sortDirection = sortOrder === 'asc' ? asc : desc;
+  const sortColumn = allowedSortColumns[sortColumnKey];
+
+  let orderByClauses: SQL[] = [];
+  if (sortColumn) {
+    if (sortColumnKey === 'deliveryDate') {
+      orderByClauses.push(
+        sortDirection === asc
+          ? sql`${sortColumn} ASC NULLS LAST`
+          : sql`${sortColumn} DESC NULLS FIRST`
       );
+    } else {
+      orderByClauses.push(sortDirection(sortColumn));
     }
   }
 
-  let searchCondition: SQL | undefined;
+  const whereConditions: (SQL | undefined)[] = [
+    eq(orders.businessId, businessId)
+  ];
+
+  const statusKey = status?.trim().toLowerCase();
+  if (statusKey && statusKey !== 'all') {
+    if (
+      orderStatusEnum.enumValues.includes(
+        statusKey as (typeof orderStatusEnum.enumValues)[number]
+      )
+    ) {
+      whereConditions.push(eq(orders.orderStatus, statusKey as OrderStatus));
+    } else {
+      console.warn(`getOrders: Invalid status filter: ${statusKey}`);
+    }
+  }
+
   const trimmedSearch = search?.trim();
   if (trimmedSearch) {
     const searchTerm = `%${trimmedSearch}%`;
-    searchCondition = or(
-      ilike(orders.description, searchTerm),
-      ilike(orders.flavor, searchTerm),
-      ilike(orders.notes, searchTerm),
-      ilike(orders.customizationDetails, searchTerm),
-      ilike(customers.name, searchTerm),
-      ilike(customers.email, searchTerm),
-      ilike(customers.phone, searchTerm),
-      ilike(customers.instagramHandle, searchTerm)
+
+    whereConditions.push(
+      or(
+        ilike(orders.description, searchTerm),
+        ilike(orders.flavor, searchTerm),
+        ilike(orders.notes, searchTerm),
+        ilike(orders.customizationDetails, searchTerm),
+        ilike(customers.name, searchTerm),
+        ilike(customers.email, searchTerm),
+        ilike(customers.phone, searchTerm),
+
+        sql`${orders.businessOrderNumber}::text ilike ${searchTerm}`,
+        sql`${orders.id}::text ilike ${searchTerm}`
+      )
     );
   }
 
-  const conditions: (SQL | undefined)[] = [baseBusinessCondition];
-  if (statusCondition) conditions.push(statusCondition);
-  if (searchCondition) conditions.push(searchCondition);
+  const finalWhere = and(...whereConditions.filter((c): c is SQL => !!c));
 
-  const whereClause = and(
-    ...(conditions.filter((c) => c !== undefined) as SQL[])
-  );
-
-  let countQueryBuilder = db
-    .select({ count: count(orders.id) })
-    .from(orders)
-    .where(
-      and(
-        ...([baseBusinessCondition, statusCondition].filter(
-          (c) => c !== undefined
-        ) as SQL[])
-      )
-    )
-    .$dynamic();
-
-  let totalOrders = 0;
   try {
-    const totalResult = await countQueryBuilder;
-    totalOrders = totalResult[0]?.count ?? 0;
-  } catch (e) {
-    console.error('Error executing count query:', e);
+    const results = await db
+      .select({
+        ...getTableColumns(orders),
+
+        customer: {
+          id: customers.id,
+          name: customers.name,
+          email: customers.email,
+          phone: customers.phone,
+          instagramHandle: customers.instagramHandle
+        }
+      })
+      .from(orders)
+
+      .leftJoin(customers, eq(orders.customerId, customers.id))
+      .where(finalWhere)
+      .orderBy(...orderByClauses)
+      .limit(limit)
+      .offset(offset);
+
+    const totalResult = await db
+      .select({ value: count() })
+      .from(orders)
+      .leftJoin(customers, eq(orders.customerId, customers.id))
+      .where(finalWhere);
+
+    const totalOrders = totalResult[0]?.value ?? 0;
+    const newOffset =
+      offset + results.length < totalOrders ? offset + results.length : null;
+
+    const mappedOrders = results as unknown as Order[];
+
+    console.log(
+      `getOrders: Found ${results.length} orders for business ${businessId}, total: ${totalOrders}.`
+    );
+
+    return {
+      orders: mappedOrders,
+      newOffset,
+      totalOrders
+    };
+  } catch (error) {
+    console.error(
+      `[getOrders DB Error] businessId: ${businessId}, filters:`,
+      { search, status, sortBy, sortOrder },
+      error
+    );
+
+    throw new Error('Failed to fetch orders from database');
   }
-
-  let results: SelectOrder[] = [];
-  try {
-    results = await db.query.orders.findMany({
-      orderBy: [desc(orders.orderDate)],
-      limit: limit,
-      offset: offset,
-      where: whereClause,
-      with: {
-        customer: true
-      }
-    });
-  } catch (e) {
-    console.error('Error executing data query:', e);
-    throw new Error('Failed to fetch order data');
-  }
-
-  const mappedOrders: Order[] = results.map((order) => ({
-    ...order,
-    amount: order.amount,
-    totalPrice: order.totalPrice
-  }));
-
-  const newOffset = offset + limit < totalOrders ? offset + limit : null;
-
-  return {
-    orders: mappedOrders,
-    newOffset,
-    totalOrders
-  };
 }
 
 type SaveOrderInput = OrderFormData & {

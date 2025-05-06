@@ -30,10 +30,18 @@ import { Button } from '@/components/ui/button';
 import { OrderRow } from './order';
 import { OrderStatus, Order as OrderType, PaymentStatus } from '@types';
 import { JSX } from 'react';
-import { Settings2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBusinessProfile } from '@/hooks/use-business-profile';
 import { OrderCard } from '@/components/orders/OrderCard';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 
 interface OrdersTableProps {
   orders: OrderType[];
@@ -47,20 +55,34 @@ interface OrdersTableProps {
     orderId: number,
     newStatus: OrderStatus | PaymentStatus
   ) => Promise<void>;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  onSortChange: (columnId: string) => void;
+  pathname: string;
+  onSortSelectChange: (value: string) => void;
 }
 
 const availableColumns: {
-  id: keyof OrderType | 'actions' | 'customer';
+  id: keyof OrderType | 'actions' | 'customer' | 'businessOrderNumber';
   label: string;
   defaultVisible: boolean;
   canHide: boolean;
   className?: string;
+  sortableId?: string;
 }[] = [
+  {
+    id: 'businessOrderNumber',
+    label: '#',
+    defaultVisible: true,
+    canHide: true,
+    sortableId: 'id'
+  },
   {
     id: 'deliveryDate',
     label: 'Fecha Entrega',
     defaultVisible: true,
-    canHide: true
+    canHide: true,
+    sortableId: 'deliveryDate'
   },
   { id: 'customer', label: 'Cliente', defaultVisible: true, canHide: false },
   {
@@ -78,10 +100,11 @@ const availableColumns: {
   },
   {
     id: 'totalPrice',
-    label: 'Precio Total',
+    label: 'Total',
     defaultVisible: true,
     canHide: true,
-    className: 'hidden md:table-cell'
+    className: 'hidden md:table-cell',
+    sortableId: 'totalPrice'
   },
   {
     id: 'productType',
@@ -109,16 +132,19 @@ export function OrdersTable({
   setOrders,
   editOrder,
   uploadImages,
-  onStatusChange
+  onStatusChange,
+  sortBy,
+  sortOrder,
+  onSortChange,
+  pathname,
+  onSortSelectChange
 }: OrdersTableProps): JSX.Element {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { profile } = useBusinessProfile();
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >(getDefaultVisibility());
-
   const navigate = useCallback(
     (newOffset: number) => {
       const params = new URLSearchParams(searchParams);
@@ -166,20 +192,44 @@ export function OrdersTable({
   const renderTableHeaders = (): JSX.Element => (
     <TableHeader>
       <TableRow>
-        {availableColumns.map((column) =>
-          columnVisibility[column.id as string] ? (
+        {availableColumns.map((column) => {
+          if (!columnVisibility[column.id as string]) return null;
+
+          const isSortable = !!column.sortableId;
+          const isCurrentSortColumn = sortBy === column.sortableId;
+          const sortIcon = isCurrentSortColumn ? (
+            sortOrder === 'asc' ? (
+              <ArrowUp className="ml-2 h-3 w-3" />
+            ) : (
+              <ArrowDown className="ml-2 h-3 w-3" />
+            )
+          ) : isSortable ? (
+            <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />
+          ) : null;
+
+          return (
             <TableHead
               key={column.id as string}
               className={cn(column.className)}
             >
-              {column.id === 'actions' ? (
+              {isSortable ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-3 h-8 data-[state=open]:bg-accent"
+                  onClick={() => onSortChange(column.sortableId!)}
+                >
+                  {column.label}
+                  {sortIcon}
+                </Button>
+              ) : column.id === 'actions' ? (
                 <span className="sr-only">{column.label}</span>
               ) : (
-                column.label
+                <span>{column.label}</span>
               )}
             </TableHead>
-          ) : null
-        )}
+          );
+        })}
       </TableRow>
     </TableHeader>
   );
@@ -195,7 +245,7 @@ export function OrdersTable({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-auto h-8 gap-1">
+            <Button variant="outline" size="sm" className="h-8 gap-1">
               <Settings2 className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only">Columnas</span>
             </Button>

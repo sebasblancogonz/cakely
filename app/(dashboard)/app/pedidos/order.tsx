@@ -36,6 +36,7 @@ const availableColumns: {
   label: string;
   className?: string;
 }[] = [
+  { id: 'businessOrderNumber', label: '#' },
   { id: 'deliveryDate', label: 'Fecha de entrega' },
   { id: 'customer', label: 'Cliente' },
   { id: 'description', label: 'Descripción' },
@@ -51,6 +52,7 @@ const availableColumns: {
 ];
 
 const columnRenderOrder: (keyof OrderType | 'actions' | 'customer')[] = [
+  'businessOrderNumber',
   'deliveryDate',
   'customer',
   'description',
@@ -91,9 +93,11 @@ export function OrderRow({
   };
 
   const getFormattedValue = (
-    key: keyof OrderType | 'actions' | 'customer'
+    key: keyof OrderType | 'actions' | 'customer' | 'businessOrderNumber'
   ): React.ReactNode => {
     switch (key) {
+      case 'businessOrderNumber':
+        return order.businessOrderNumber;
       case 'customer':
         return order.customer?.name;
       case 'orderDate':

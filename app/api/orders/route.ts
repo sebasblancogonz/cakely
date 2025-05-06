@@ -36,10 +36,18 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = request.nextUrl;
+
   const search = searchParams.get('q') || '';
   const offset = parseInt(searchParams.get('offset') || '0', 10);
   const limit = parseInt(searchParams.get('limit') || '10', 10);
   const status = searchParams.get('status');
+  const sortBy = searchParams.get('sortBy');
+  const sortOrder = searchParams.get('sortOrder');
+
+  const validStatus =
+    status && Object.values(OrderStatus).includes(status as OrderStatus)
+      ? status
+      : null;
 
   try {
     const { orders, newOffset, totalOrders } = await getOrders(
@@ -47,8 +55,11 @@ export async function GET(request: NextRequest) {
       search,
       offset,
       limit,
-      status
+      validStatus,
+      sortBy,
+      sortOrder
     );
+
     return NextResponse.json({ orders, newOffset, totalOrders });
   } catch (error: any) {
     console.error(
@@ -90,7 +101,6 @@ export async function POST(request: NextRequest) {
       validatedData.deliveryTime
     );
 
-    // --- Transacción: calcular número y guardar pedido ---
     const orderCreated = await db.transaction(async (tx: any) => {
       await tx.execute(
         sql`SELECT id FROM ${businesses} WHERE id = ${businessId} FOR UPDATE`
@@ -116,7 +126,6 @@ export async function POST(request: NextRequest) {
       return insertedOrder;
     });
 
-    // --- Crear evento en Google Calendar (si aplica) ---
     await createCalendarEventIfNeeded({
       order: {
         ...orderCreated,
@@ -127,7 +136,6 @@ export async function POST(request: NextRequest) {
       userId
     });
 
-    // --- Devolver datos actualizados ---
     const finalOrder = await db.query.orders.findFirst({
       where: eq(orders.id, orderCreated.id),
       with: { customer: { columns: { name: true } } }

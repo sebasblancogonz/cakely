@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle, Search } from 'lucide-react';
@@ -28,9 +28,23 @@ import {
 } from '@/components/ui/card';
 import UpdateOrderForm from './update-order-form';
 import { UpdateOrderFormData } from '@/lib/validators/orders';
+import { Label } from '@/components/ui/label';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
+
+const sortOptions = [
+  { value: 'orderDate-desc', label: 'Fecha Pedido (Más Recientes)' },
+  { value: 'orderDate-asc', label: 'Fecha Pedido (Más Antiguos)' },
+  { value: 'deliveryDate-asc', label: 'Fecha Entrega (Próximas)' },
+  { value: 'deliveryDate-desc', label: 'Fecha Entrega (Lejanas)' },
+  { value: 'totalPrice-desc', label: 'Precio (Mayor a Menor)' },
+  { value: 'totalPrice-asc', label: 'Precio (Menor a Mayor)' },
+  { value: 'customerName-asc', label: 'Cliente (A-Z)' },
+  { value: 'customerName-desc', label: 'Cliente (Z-A)' },
+  { value: 'businessOrderNumber-desc', label: 'Nº Pedido (Mayor a Menor)' },
+  { value: 'businessOrderNumber-asc', label: 'Nº Pedido (Menor a Mayor)' }
+];
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -41,6 +55,12 @@ export default function OrdersPage() {
   const offset = Number(searchParams.get('offset')) || 0;
   const limit = Number(searchParams.get('limit')) || DEFAULT_PAGE_SIZE;
   const status = searchParams.get('status') || 'all';
+  const initialSortBy = searchParams.get('sortBy') || 'orderDate';
+  const initialSortOrder = searchParams.get('sortOrder') || 'desc';
+  const [sortBy, setSortBy] = useState(initialSortBy);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(
+    initialSortOrder === 'asc' ? 'asc' : 'desc'
+  );
 
   const [selectedTabValue, setSelectedTabValue] = useState(status);
   const [pageSizeValue, setPageSizeValue] = useState(limit);
@@ -84,33 +104,31 @@ export default function OrdersPage() {
     setPageSizeValue(limit);
     setSearchInput(query);
 
-    async function fetchOrders() {
-      setIsLoading(true);
-      const params = new URLSearchParams({
-        search: query,
-        offset: offset.toString(),
-        limit: limit.toString(),
-        status: status === 'all' ? '' : status
-      });
+    setIsLoading(true);
+    const params = new URLSearchParams({
+      search: query,
+      offset: offset.toString(),
+      limit: limit.toString(),
+      status: status === 'all' ? '' : status,
+      sortBy: sortBy,
+      sortOrder: sortOrder
+    });
 
-      try {
-        const response = await fetch(`/api/orders?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error(`API error: ${response.statusText}`);
-        }
-        const data = await response.json();
+    fetch(`/api/orders?${params.toString()}`)
+      .then((res) =>
+        res.ok ? res.json() : Promise.reject(`API Error ${res.status}`)
+      )
+      .then((data) => {
         setOrders(data.orders || []);
         setTotalOrders(data.totalOrders || 0);
-      } catch (error) {
-        console.error('Failed to fetch orders:', error);
+      })
+      .catch((error) => {
+        console.error('Failed fetch orders:', error);
         setOrders([]);
         setTotalOrders(0);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchOrders();
-  }, [query, offset, limit, status]);
+      })
+      .finally(() => setIsLoading(false));
+  }, [query, offset, limit, status, sortBy, sortOrder]);
 
   const handleUpdateStatus = useCallback(
     async (orderId: number, newStatus: OrderStatus | PaymentStatus) => {
@@ -240,11 +258,11 @@ export default function OrdersPage() {
   }, [orders]);
 
   const updateQueryParams = useCallback(
-    (newParams: Record<string, string | number>) => {
+    (newParams: Record<string, string | number | undefined>) => {
       const params = new URLSearchParams(searchParams);
       let resetOffset = false;
       Object.entries(newParams).forEach(([key, value]) => {
-        if (key !== 'offset' && params.get(key) !== String(value)) {
+        if (key !== 'offset' && params.get(key) !== String(value ?? '')) {
           resetOffset = true;
         }
         if (value !== undefined && value !== null && String(value) !== '') {
@@ -253,9 +271,14 @@ export default function OrdersPage() {
           params.delete(key);
         }
       });
-      if (resetOffset || !('offset' in newParams)) {
+
+      if (
+        resetOffset ||
+        (Object.keys(newParams).length > 0 && !('offset' in newParams))
+      ) {
         params.set('offset', '0');
       }
+
       if (!params.has('limit')) {
         params.set('limit', String(pageSizeValue));
       }
@@ -283,6 +306,31 @@ export default function OrdersPage() {
     updateQueryParams({ q: searchInput });
   };
 
+  const handleSortChange = useCallback(
+    (columnId: string) => {
+      const newSortOrder =
+        sortBy === columnId && sortOrder === 'asc' ? 'desc' : 'asc';
+      setSortBy(columnId);
+      setSortOrder(newSortOrder);
+      updateQueryParams({ sortBy: columnId, sortOrder: newSortOrder });
+    },
+    [sortBy, sortOrder, updateQueryParams]
+  );
+
+  const handleSortSelectChange = useCallback(
+    (value: string) => {
+      const [newSortBy, newSortOrder] = value.split('-');
+      if (newSortBy && (newSortOrder === 'asc' || newSortOrder === 'desc')) {
+        setSortBy(newSortBy);
+        setSortOrder(newSortOrder);
+        updateQueryParams({ sortBy: newSortBy, sortOrder: newSortOrder });
+      }
+    },
+    [updateQueryParams]
+  );
+
+  const currentSortValue = `${sortBy}-${sortOrder}`;
+
   return (
     <div className="p-4 md:p-6 flex flex-col gap-4 mt-auto overflow-hidden">
       <form onSubmit={handleSearchSubmit} className="relative w-full md:w-1/3">
@@ -309,10 +357,63 @@ export default function OrdersPage() {
             <TabsTrigger value="ready">Listo</TabsTrigger>
             <TabsTrigger value="delivered">Entregado</TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col justify-end sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto flex-wrap">
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={downloadCSV}
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1"
+              >
+                <File className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only">Exportar</span>
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 gap-1"
+                onClick={() => {
+                  setIsCreating(true);
+                  setOrderToEdit(null);
+                  setIsModalOpen(true);
+                }}
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only">Nuevo</span>
+              </Button>
+            </div>
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
+              <Label
+                htmlFor="sort-select"
+                className="text-xs text-muted-foreground shrink-0"
+              >
+                Ordenar por:
+              </Label>
+              <Select
+                value={currentSortValue}
+                onValueChange={handleSortSelectChange}
+              >
+                <SelectTrigger
+                  id="sort-select"
+                  className="h-8 text-xs w-full sm:w-auto min-w-[180px]"
+                >
+                  <SelectValue placeholder="Ordenar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="text-xs"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center space-x-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                Pedidos por página:
+                Ver:
               </span>
               <Select
                 value={pageSizeValue.toString()}
@@ -334,33 +435,6 @@ export default function OrdersPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button
-              onClick={downloadCSV}
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1"
-            >
-              <File className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Exportar Página
-              </span>
-            </Button>
-            <Button
-              size="sm"
-              className="h-8 gap-1"
-              onClick={() => {
-                setOrderToEdit(null);
-                setIsCreating(true);
-                setIsEditing(false);
-                setIsUploadingImage(false);
-                setIsModalOpen(true);
-              }}
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Nuevo pedido
-              </span>
-            </Button>
           </div>
         </div>
 
@@ -393,6 +467,11 @@ export default function OrdersPage() {
               offset={offset}
               limit={limit}
               totalOrders={totalOrders}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSortChange={handleSortChange}
+              pathname={pathname}
+              onSortSelectChange={handleSortSelectChange}
             />
           </TabsContent>
         )}
