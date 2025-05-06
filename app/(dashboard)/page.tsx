@@ -46,7 +46,7 @@ export default function HomePage() {
           />
           <span className="text-xl">Cakely</span>
         </Link>
-        <nav>
+        <nav className="flex flex-row">
           {isLoadingSession ? (
             <div className="h-9 w-20 animate-pulse bg-muted rounded-md"></div>
           ) : user ? (
