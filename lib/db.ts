@@ -27,6 +27,7 @@ import {
   gte,
   ilike,
   isNotNull,
+  lt,
   or,
   relations,
   sql,
@@ -764,7 +765,7 @@ export async function getOrders(
   };
 
   let sortColumnKey: string;
-  if (sortBy && sortBy === 'upcoming') {
+  if (sortBy && (sortBy === 'upcoming' || sortBy === 'old')) {
     sortColumnKey = 'deliveryDate';
   } else if (sortBy && allowedSortColumns[sortBy]) {
     sortColumnKey = sortBy;
@@ -795,6 +796,10 @@ export async function getOrders(
   if (sortBy === 'upcoming') {
     whereConditions.push(
       and(isNotNull(orders.deliveryDate), gte(orders.deliveryDate, new Date()))
+    );
+  } else if (sortBy === 'old') {
+    whereConditions.push(
+      and(isNotNull(orders.deliveryDate), lt(orders.deliveryDate, new Date()))
     );
   }
 

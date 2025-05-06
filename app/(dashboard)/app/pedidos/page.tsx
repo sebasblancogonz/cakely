@@ -37,7 +37,7 @@ const sortOptions = [
   { value: 'orderDate-desc', label: 'Fecha Pedido (Más Recientes)' },
   { value: 'orderDate-asc', label: 'Fecha Pedido (Más Antiguos)' },
   { value: 'upcoming-asc', label: 'Fecha Entrega (Próximas)' },
-  { value: 'deliveryDate-desc', label: 'Fecha Entrega (Lejanas)' },
+  { value: 'old-desc', label: 'Fecha Entrega (Antiguas)' },
   { value: 'totalPrice-desc', label: 'Precio (Mayor a Menor)' },
   { value: 'totalPrice-asc', label: 'Precio (Menor a Mayor)' },
   { value: 'customerName-asc', label: 'Cliente (A-Z)' },
