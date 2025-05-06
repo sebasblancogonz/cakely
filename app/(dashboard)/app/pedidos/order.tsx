@@ -22,7 +22,6 @@ import { useRouter } from 'next/navigation';
 interface OrderProps {
   order: OrderType;
   setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
-  showDetails: (order: OrderType) => void;
   editOrder: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
   onStatusChange: (
@@ -62,10 +61,9 @@ const columnRenderOrder: (keyof OrderType | 'actions' | 'customer')[] = [
   'actions'
 ];
 
-export function Order({
+export function OrderRow({
   order,
   setOrders,
-  showDetails,
   editOrder,
   uploadImages,
   onStatusChange,

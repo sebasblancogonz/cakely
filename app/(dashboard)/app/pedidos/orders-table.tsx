@@ -27,12 +27,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Order } from './order';
+import { OrderRow } from './order';
 import { OrderStatus, Order as OrderType, PaymentStatus } from '@types';
 import { JSX } from 'react';
 import { Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBusinessProfile } from '@/hooks/use-business-profile';
+import { OrderCard } from '@/components/orders/OrderCard';
 
 interface OrdersTableProps {
   orders: OrderType[];
@@ -41,7 +42,6 @@ interface OrdersTableProps {
   totalOrders: number;
   setOrders: React.Dispatch<React.SetStateAction<OrderType[]>>;
   editOrder: (order: OrderType) => void;
-  showDetails: (order: OrderType) => void;
   uploadImages: (order: OrderType) => void;
   onStatusChange: (
     orderId: number,
@@ -108,7 +108,6 @@ export function OrdersTable({
   totalOrders,
   setOrders,
   editOrder,
-  showDetails,
   uploadImages,
   onStatusChange
 }: OrdersTableProps): JSX.Element {
@@ -228,34 +227,53 @@ export function OrdersTable({
         </DropdownMenu>
       </CardHeader>
       <CardContent>
-        <Table>
-          {renderTableHeaders()}
-          <TableBody>
-            {orders && orders.length > 0 ? (
-              orders.map((order) => (
-                <Order
-                  key={order.id}
-                  order={order}
-                  showDetails={showDetails}
-                  setOrders={setOrders}
-                  editOrder={editOrder}
-                  uploadImages={uploadImages}
-                  onStatusChange={onStatusChange}
-                  columnVisibility={columnVisibility}
-                />
-              ))
-            ) : (
-              <TableRow key="no-orders-row">
-                <TableCell
-                  colSpan={visibleColumnCount}
-                  className="text-center h-24"
-                >
-                  No hay pedidos disponibles
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        <div className="hidden lg:block">
+          <div className="overflow-x-auto relative border rounded-md">
+            <Table>
+              {renderTableHeaders()}
+              <TableBody>
+                {orders && orders.length > 0 ? (
+                  orders.map((order) => (
+                    <OrderRow
+                      key={order.id}
+                      order={order}
+                      setOrders={setOrders}
+                      editOrder={editOrder}
+                      uploadImages={uploadImages}
+                      onStatusChange={onStatusChange}
+                      columnVisibility={columnVisibility}
+                    />
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={visibleColumnCount}
+                      className="text-center h-24"
+                    >
+                      No hay pedidos que coincidan con los filtros.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:hidden">
+          {orders && orders.length > 0 ? (
+            orders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                handleUpdateStatus={onStatusChange}
+              />
+            ))
+          ) : (
+            <p className="text-center text-muted-foreground col-span-1 sm:col-span-2 py-10">
+              No hay pedidos que coincidan con los filtros.
+            </p>
+          )}
+        </div>
       </CardContent>
       <CardFooter>
         <div className="flex items-center w-full justify-between">

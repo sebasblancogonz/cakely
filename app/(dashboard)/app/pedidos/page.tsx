@@ -11,9 +11,6 @@ import Modal from '@/components/common/Modal';
 import OrderForm from './order-form';
 import OrderDetails from './order-details';
 import UploadImage from '@/components/common/MultiUpload';
-import { Analytics } from '@vercel/analytics/react';
-import { cn } from '@/lib/utils';
-import { BreadcrumbTrailItem } from '@/components/common/DashboardBreadcrumb';
 import {
   Select,
   SelectContent,
@@ -57,23 +54,12 @@ export default function OrdersPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
-  const [orderToShow, setOrderToShow] = useState<Order | null>(null);
 
   const editOrder = useCallback((order: Order) => {
     setOrderToEdit(order);
     setIsEditing(true);
     setIsCreating(false);
     setIsUploadingImage(false);
-    setOrderToShow(null);
-    setIsModalOpen(true);
-  }, []);
-
-  const showDetails = useCallback((order: Order) => {
-    setOrderToShow(order);
-    setIsEditing(false);
-    setIsCreating(false);
-    setIsUploadingImage(false);
-    setOrderToEdit(null);
     setIsModalOpen(true);
   }, []);
 
@@ -82,7 +68,6 @@ export default function OrdersPage() {
     setIsUploadingImage(true);
     setIsEditing(false);
     setIsCreating(false);
-    setOrderToShow(null);
     setIsModalOpen(true);
   }, []);
 
@@ -91,7 +76,6 @@ export default function OrdersPage() {
     setIsModalOpen(false);
     setIsEditing(false);
     setIsCreating(false);
-    setOrderToShow(null);
     setIsUploadingImage(false);
   }, []);
 
@@ -369,7 +353,6 @@ export default function OrdersPage() {
                 setIsCreating(true);
                 setIsEditing(false);
                 setIsUploadingImage(false);
-                setOrderToShow(null);
                 setIsModalOpen(true);
               }}
             >
@@ -404,7 +387,6 @@ export default function OrdersPage() {
             <OrdersTable
               setOrders={setOrders}
               editOrder={editOrder}
-              showDetails={showDetails}
               uploadImages={uploadImages}
               onStatusChange={handleUpdateStatus}
               orders={orders}
@@ -432,8 +414,6 @@ export default function OrdersPage() {
           />
         ) : isUploadingImage && orderToEdit ? (
           <UploadImage orderId={orderToEdit.id!} />
-        ) : orderToShow ? (
-          <OrderDetails order={orderToShow} />
         ) : null}
       </Modal>
     </div>

@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from 'clsx';
+import { format } from 'date-fns';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
@@ -45,5 +46,24 @@ export function formatCurrency(
   } catch (error) {
     console.error('Error formatting currency:', error);
     return fallback;
+  }
+}
+
+export function displayDate(
+  date: Date | string | number | null | undefined,
+  formatString: string = 'PPP',
+  fallback: string = '-'
+): string {
+  if (!date) return fallback;
+  try {
+    const dateObj = new Date(date);
+
+    if (isNaN(dateObj.getTime())) {
+      throw new Error('Invalid date value');
+    }
+    return format(dateObj, formatString);
+  } catch (error) {
+    console.warn('displayDate formatting error:', error);
+    return 'Inválida';
   }
 }
