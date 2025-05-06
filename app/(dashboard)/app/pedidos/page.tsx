@@ -132,6 +132,7 @@ export default function OrdersPage() {
 
   const handleUpdateStatus = useCallback(
     async (orderId: number, newStatus: OrderStatus | PaymentStatus) => {
+      console.log(newStatus);
       let orderData: UpdateOrderFormData;
       console.log(
         `OrdersPage: Attempting to update order ${orderId} to status: ${newStatus}`

@@ -124,7 +124,7 @@ const OrderForm = ({
       }
       const dataToSend = {
         ...apiData,
-        orderStatus: OrderStatus.pending
+        orderStatus: OrderStatus.Pendiente
       };
       const response = await fetch('/api/orders', {
         method: 'POST',

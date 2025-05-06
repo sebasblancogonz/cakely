@@ -106,7 +106,7 @@ export const orders = pgTable(
     deliveryDate: timestamp('delivery_date', { mode: 'date' }),
     orderStatus: orderStatusEnum('order_status')
       .notNull()
-      .default(OrderStatus.pending),
+      .default(OrderStatus.Pendiente),
     productType: productTypeEnum('product_type').notNull(),
     businessOrderNumber: integer('business_order_number').notNull(),
     customizationDetails: text('customization_details'),

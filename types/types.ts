@@ -52,10 +52,10 @@ export type Order = DbSelectOrder & {
 };
 
 export enum OrderStatus {
-  pending = 'Pendiente',
-  processing = 'Preparando',
-  ready = 'Listo',
-  delivered = 'Entregado'
+  Pendiente = 'Pendiente',
+  Preparando = 'Preparando',
+  Listo = 'Listo',
+  Entregado = 'Entregado'
 }
 
 export enum ProductType {

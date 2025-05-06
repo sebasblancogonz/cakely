@@ -47,13 +47,13 @@ function CalendarOrderCard({
   onClick: () => void;
 }) {
   const statusColor =
-    order.orderStatus === OrderStatus.ready
+    order.orderStatus === OrderStatus.Listo
       ? 'bg-green-100 border-green-300'
-      : order.orderStatus === OrderStatus.pending
+      : order.orderStatus === OrderStatus.Pendiente
         ? 'bg-yellow-100 border-yellow-300'
-        : order.orderStatus === OrderStatus.processing
+        : order.orderStatus === OrderStatus.Preparando
           ? 'bg-blue-100 border-blue-300'
-          : order.orderStatus === OrderStatus.delivered
+          : order.orderStatus === OrderStatus.Entregado
             ? 'bg-gray-100 border-gray-300'
             : 'bg-gray-50 border-gray-200';
 

@@ -34,7 +34,7 @@ export function prepareOrderDataForInsert(
     ...rest,
     deliveryDate,
     businessId,
-    orderStatus: OrderStatus.pending,
+    orderStatus: OrderStatus.Pendiente,
     businessOrderNumber: orderNumber,
     createdAt: new Date(),
     updatedAt: new Date()
