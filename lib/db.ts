@@ -803,8 +803,8 @@ export async function getOrders(
     );
   }
 
-  const statusKey = status?.trim().toLowerCase();
-  if (statusKey && statusKey !== 'all') {
+  const statusKey = status?.trim();
+  if (statusKey && statusKey !== 'Todos') {
     if (
       orderStatusEnum.enumValues.includes(
         statusKey as (typeof orderStatusEnum.enumValues)[number]

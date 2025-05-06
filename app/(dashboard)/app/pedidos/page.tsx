@@ -353,10 +353,10 @@ export default function OrdersPage() {
         <div className="flex items-center justify-center flex-col gap-4 xs:w-full md:inline-flex md:justify-between md:items-center md:flex-row mb-4">
           <TabsList>
             <TabsTrigger value="all">Todo</TabsTrigger>
-            <TabsTrigger value="pending">Pendiente</TabsTrigger>
-            <TabsTrigger value="processing">En preparación</TabsTrigger>
-            <TabsTrigger value="ready">Listo</TabsTrigger>
-            <TabsTrigger value="delivered">Entregado</TabsTrigger>
+            <TabsTrigger value="Pendiente">Pendiente</TabsTrigger>
+            <TabsTrigger value="Preparando">En preparación</TabsTrigger>
+            <TabsTrigger value="Listo">Listo</TabsTrigger>
+            <TabsTrigger value="Entregado">Entregado</TabsTrigger>
           </TabsList>
           <div className="flex flex-col justify-end sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto flex-wrap">
             <div className="flex items-center gap-2">

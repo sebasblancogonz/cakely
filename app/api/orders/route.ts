@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { businesses, db, Order } from '@/lib/db';
-import {
-  orders,
-  customers,
-  accounts,
-  teamMembers,
-  users,
-  TeamMemberWithUser
-} from '@/lib/db';
-import { getOrders, saveOrder } from '@/lib/db';
+import { businesses, db } from '@/lib/db';
+import { orders } from '@/lib/db';
+import { getOrders } from '@/lib/db';
 import { OrderStatus } from '@types';
-import { createOrderFormSchema, OrderFormData } from '@/lib/validators/orders';
-import { and, eq, max, sql } from 'drizzle-orm';
-import { getGoogleAuthClient } from '@/lib/auth/google-auth';
-import {
-  calculateEndTime,
-  callCreateCalendarEvent
-} from '@/lib/calendar-integration';
+import { createOrderFormSchema } from '@/lib/validators/orders';
+import { eq, max, sql } from 'drizzle-orm';
 import {
   combineDeliveryDateAndTime,
   createCalendarEventIfNeeded,
@@ -45,7 +33,9 @@ export async function GET(request: NextRequest) {
   const sortOrder = searchParams.get('sortOrder');
 
   const validStatus =
-    status && Object.values(OrderStatus).includes(status as OrderStatus)
+    status &&
+    (status === 'Todo' ||
+      Object.values(OrderStatus).includes(status as OrderStatus))
       ? status
       : null;
 
