@@ -36,7 +36,7 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 const sortOptions = [
   { value: 'orderDate-desc', label: 'Fecha Pedido (Más Recientes)' },
   { value: 'orderDate-asc', label: 'Fecha Pedido (Más Antiguos)' },
-  { value: 'deliveryDate-asc', label: 'Fecha Entrega (Próximas)' },
+  { value: 'upcoming-asc', label: 'Fecha Entrega (Próximas)' },
   { value: 'deliveryDate-desc', label: 'Fecha Entrega (Lejanas)' },
   { value: 'totalPrice-desc', label: 'Precio (Mayor a Menor)' },
   { value: 'totalPrice-asc', label: 'Precio (Menor a Mayor)' },

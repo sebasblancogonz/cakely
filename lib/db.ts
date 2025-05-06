@@ -24,7 +24,9 @@ import {
   desc,
   eq,
   getTableColumns,
+  gte,
   ilike,
+  isNotNull,
   or,
   relations,
   sql,
@@ -749,7 +751,6 @@ export async function getOrders(
   offset: number = 0,
   limit: number = 5,
   status: string | null = null,
-
   sortBy: string | null,
   sortOrder: string | null
 ): Promise<GetOrdersResult> {
@@ -762,8 +763,15 @@ export async function getOrders(
     customerName: customers.name
   };
 
-  const sortColumnKey =
-    sortBy && allowedSortColumns[sortBy] ? sortBy : 'orderDate';
+  let sortColumnKey: string;
+  if (sortBy && sortBy === 'upcoming') {
+    sortColumnKey = 'deliveryDate';
+  } else if (sortBy && allowedSortColumns[sortBy]) {
+    sortColumnKey = sortBy;
+  } else {
+    sortColumnKey = 'orderDate';
+  }
+
   const sortDirection = sortOrder === 'asc' ? asc : desc;
   const sortColumn = allowedSortColumns[sortColumnKey];
 
@@ -783,6 +791,12 @@ export async function getOrders(
   const whereConditions: (SQL | undefined)[] = [
     eq(orders.businessId, businessId)
   ];
+
+  if (sortBy === 'upcoming') {
+    whereConditions.push(
+      and(isNotNull(orders.deliveryDate), gte(orders.deliveryDate, new Date()))
+    );
+  }
 
   const statusKey = status?.trim().toLowerCase();
   if (statusKey && statusKey !== 'all') {
