@@ -5,11 +5,10 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { OrdersTable } from './orders-table';
+import { Orders } from '@/components/orders/Orders';
 import { Order, OrderStatus, PaymentStatus } from '@types';
 import Modal from '@/components/common/Modal';
-import OrderForm from './order-form';
-import OrderDetails from './order-details';
+import OrderForm from '@/components/forms/OrderForm';
 import UploadImage from '@/components/common/MultiUpload';
 import {
   Select,
@@ -26,9 +25,9 @@ import {
   CardFooter,
   CardHeader
 } from '@/components/ui/card';
-import UpdateOrderForm from './update-order-form';
 import { UpdateOrderFormData } from '@/lib/validators/orders';
 import { Label } from '@/components/ui/label';
+import UpdateOrderForm from '@/components/forms/UpdateOrderForm';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -459,7 +458,7 @@ export default function OrdersPage() {
           </Card>
         ) : (
           <TabsContent value={selectedTabValue} className="xs:w-full mt-0">
-            <OrdersTable
+            <Orders
               setOrders={setOrders}
               editOrder={editOrder}
               uploadImages={uploadImages}
@@ -472,7 +471,6 @@ export default function OrdersPage() {
               sortOrder={sortOrder}
               onSortChange={handleSortChange}
               pathname={pathname}
-              onSortSelectChange={handleSortSelectChange}
             />
           </TabsContent>
         )}

@@ -25,26 +25,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { OrderRow } from './order';
+import { OrderRow } from '@/components/tables/OrderRow';
 import { OrderStatus, Order as OrderType, PaymentStatus } from '@types';
 import { JSX } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBusinessProfile } from '@/hooks/use-business-profile';
 import { OrderCard } from '@/components/orders/OrderCard';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { useDeviceType } from '@/hooks/use-device-type';
 
-interface OrdersTableProps {
+interface OrdersProps {
   orders: OrderType[];
   offset: number;
   limit: number;
@@ -60,7 +52,6 @@ interface OrdersTableProps {
   sortOrder: 'asc' | 'desc';
   onSortChange: (columnId: string) => void;
   pathname: string;
-  onSortSelectChange: (value: string) => void;
 }
 
 const availableColumns: {
@@ -125,7 +116,7 @@ const getDefaultVisibility = () => {
   return defaultState;
 };
 
-export function OrdersTable({
+export function Orders({
   orders,
   offset,
   limit,
@@ -137,9 +128,8 @@ export function OrdersTable({
   sortBy,
   sortOrder,
   onSortChange,
-  pathname,
-  onSortSelectChange
-}: OrdersTableProps): JSX.Element {
+  pathname
+}: OrdersProps): JSX.Element {
   const router = useRouter();
   const device = useDeviceType();
   const searchParams = useSearchParams();

@@ -45,14 +45,16 @@ export async function createCalendarEventIfNeeded({
   order,
   deliveryDate,
   userEmail,
-  userId
+  userId,
+  createCalendarEvent
 }: {
   order: typeof orders.$inferSelect;
   deliveryDate: Date | null;
   userEmail: string;
   userId: string;
+  createCalendarEvent: boolean;
 }) {
-  if (!deliveryDate || !order.googleCalendarEventId) return null;
+  if (!deliveryDate || !createCalendarEvent) return null;
   console.log(`[Order Create ${order.id}] Intentando crear evento GCal...`);
 
   try {

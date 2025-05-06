@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Eye, MoreHorizontal, Pen, Trash, Upload } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { deleteOrder } from '../../actions';
+import { deleteOrder } from '../../app/(dashboard)/actions';
 import { OrderStatus, Order as OrderType, PaymentStatus } from '@types';
 import { Status as OrderStatusCell } from '@/components/common/OrderStatusCell';
 import { Status as PaymentStatusCell } from '@/components/common/PaymentStatusCell';

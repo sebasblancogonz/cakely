@@ -118,11 +118,11 @@ export async function POST(request: NextRequest) {
 
     await createCalendarEventIfNeeded({
       order: {
-        ...orderCreated,
-        createCalendarEvent: validatedData.createCalendarEvent
+        ...orderCreated
       },
       deliveryDate: finalDeliveryDateTime,
       userEmail,
+      createCalendarEvent: validatedData.createCalendarEvent,
       userId
     });
 

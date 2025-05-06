@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/card';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Customer } from './customer';
+import { Customer } from './CustomerRow';
 import { Customer as CustomerType } from '@types';
 import { JSX, useCallback } from 'react';
 import { useSession } from 'next-auth/react';

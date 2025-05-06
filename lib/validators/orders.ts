@@ -53,7 +53,7 @@ export const createOrderFormSchema = z.object({
 });
 
 export const updateOrderFormSchema = createOrderFormSchema
-  .omit({ customerId: true })
+  .omit({ customerId: true, createCalendarEvent: true })
   .partial()
   .extend({
     images: z

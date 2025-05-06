@@ -82,7 +82,6 @@ const areImageArraysEqual = (
   const ids1 = new Set(arr1.map((img) => img.id));
   const ids2 = new Set(arr2.map((img) => img.id));
   if (ids1.size !== ids2.size) {
-    // Extra check si un array tuviera duplicados
     return false;
   }
   for (const id of ids1) {
