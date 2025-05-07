@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import Modal from '@/components/common/Modal';
 import UpdateOrderForm from '@/components/forms/UpdateOrderForm';
 import { Order } from '@types';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface OrderDetailActionsProps {
@@ -37,10 +37,15 @@ export function OrderDetailActions({ order }: OrderDetailActionsProps) {
     });
   };
 
+  const removeOrder = () => {};
+
   return (
     <>
       <Button variant="outline" onClick={openEditModal}>
         <Pencil className="mr-2 h-4 w-4" /> Editar Pedido
+      </Button>
+      <Button variant="destructive" size="icon" onClick={removeOrder}>
+        <Trash2 className="h-4 w-4" />
       </Button>
 
       <Modal isOpen={isEditModalOpen} onClose={closeEditModal}>

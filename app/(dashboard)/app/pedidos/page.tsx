@@ -29,6 +29,13 @@ import { UpdateOrderFormData } from '@/lib/validators/orders';
 import { Label } from '@/components/ui/label';
 import UpdateOrderForm from '@/components/forms/UpdateOrderForm';
 import { toast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -74,6 +81,8 @@ export default function OrdersPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const editOrder = useCallback((order: Order) => {
     setOrderToEdit(order);
@@ -205,8 +214,9 @@ export default function OrdersPage() {
         }
       } catch (error) {
         console.error('Error updating status:', error);
-        alert(
-          `Error updating status: ${error instanceof Error ? error.message : String(error)}`
+        setShowAlert(true);
+        setAlertMessage(
+          `Error actualizando estado: ${error instanceof Error ? error.message : String(error)}`
         );
       }
     },
@@ -216,7 +226,8 @@ export default function OrdersPage() {
   const downloadCSV = useCallback(() => {
     const dataToExport = orders;
     if (dataToExport.length === 0) {
-      alert('No orders on the current page to export.');
+      setShowAlert(true);
+      setAlertMessage('No hay pedidos en la página actual para exportar.');
       return;
     }
 
@@ -513,6 +524,17 @@ export default function OrdersPage() {
           <UploadImage orderId={orderToEdit.id!} />
         ) : null}
       </Modal>
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent>
+          <AlertDialogTitle className="text-lg font-medium text-center">
+            Error
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-center">
+            {alertMessage}
+          </AlertDialogDescription>
+          <AlertDialogCancel>Cerrar</AlertDialogCancel>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

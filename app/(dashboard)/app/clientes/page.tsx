@@ -24,6 +24,13 @@ import {
   CardFooter,
   CardHeader
 } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -49,6 +56,7 @@ export default function CustomersPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
   const [customerToShow, setCustomerToShow] = useState<Customer | null>(null);
+  const [showAlert, setShowAlert] = useState(false);
 
   const editCustomer = useCallback((customer: Customer) => {
     setCustomerToEdit(customer);
@@ -146,7 +154,7 @@ export default function CustomersPage() {
 
   const downloadCSV = () => {
     if (customers.length === 0) {
-      alert('No customers on the current page to export.');
+      setShowAlert(true);
       return;
     }
     const headers = [
@@ -292,6 +300,17 @@ export default function CustomersPage() {
           <CustomerDetails customer={customerToShow} />
         ) : null}
       </Modal>
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent>
+          <AlertDialogTitle className="text-lg font-medium text-center">
+            No se puede exportar
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-center">
+            No hay clientes disponibles para exportar.
+          </AlertDialogDescription>
+          <AlertDialogCancel>Cerrar</AlertDialogCancel>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

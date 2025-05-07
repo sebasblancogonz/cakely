@@ -14,19 +14,26 @@ import { deleteCustomer } from '../../app/(dashboard)/actions';
 import { Customer as CustomerType } from '@types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle
+} from '../ui/alert-dialog';
 
 export function Customer({
   customer,
   setCustomers,
-  showDetails,
   editCustomer
 }: {
   customer: CustomerType;
   setCustomers: React.Dispatch<React.SetStateAction<CustomerType[]>>;
-  showDetails: (customer: CustomerType) => void;
   editCustomer: (customer: CustomerType) => void;
 }) {
   const router = useRouter();
+  const [showAlert, setShowAlert] = useState(false);
 
   return (
     <TableRow>
@@ -99,9 +106,7 @@ export function Customer({
                     );
                   } catch (error) {
                     console.error('Error al eliminar el cliente:', error);
-                    alert(
-                      'No se pudo eliminar el cliente. Inténtalo de nuevo.'
-                    );
+                    setShowAlert(true);
                   }
                 }}
               >
@@ -111,6 +116,15 @@ export function Customer({
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Error</AlertDialogTitle>
+          <AlertDialogDescription>
+            No se pudo eliminar el cliente. Inténtalo de nuevo.
+          </AlertDialogDescription>
+          <AlertDialogCancel>Cerrar</AlertDialogCancel>
+        </AlertDialogContent>
+      </AlertDialog>
     </TableRow>
   );
 }
