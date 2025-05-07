@@ -233,7 +233,9 @@ export default function OrdersPage() {
 
     const headers = [
       'Nombre del cliente',
-      'Contacto del cliente',
+      'Teléfono del cliente',
+      'Email del cliente',
+      'Instagram del cliente',
       'Descripción',
       'Cantidad',
       'Tipo de producto',
@@ -257,6 +259,8 @@ export default function OrdersPage() {
         [
           order.customer!.name,
           order.customer!.phone,
+          order.customer!.email,
+          order.customer!.instagramHandle,
           order.description,
           order.amount,
           order.productType,
@@ -277,12 +281,13 @@ export default function OrdersPage() {
           .join(',')
       )
     ].join('\n');
-    const blob = new Blob(['\ufeff' + csvRows], {
+    const cleanValue = csvRows.replace(/[’]/g, "'");
+    const blob = new Blob(['\ufeff' + cleanValue], {
       type: 'text/csv;charset=utf-8;'
     });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'orders_page.csv');
+    link.setAttribute('download', 'order_report.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

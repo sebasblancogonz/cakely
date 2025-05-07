@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import { fetcher } from '@/lib/fetcher';
-import type { Recipe, RecipeWithIngredients } from '@/types/types';
+import type { RecipeWithIngredients } from '@/types/types';
 
 export function useRecipes(canFetch: boolean = true) {
   const { data, error, isLoading, mutate } = useSWR<RecipeWithIngredients[]>(

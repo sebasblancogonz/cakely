@@ -157,12 +157,7 @@ export default function CustomersPage() {
       setShowAlert(true);
       return;
     }
-    const headers = [
-      'Name',
-      'Email',
-      'Phone',
-      'Notes' /* Add other customer headers */
-    ];
+    const headers = ['Nombre', 'Email', 'Teléfono', 'Instagram', 'Notas'];
     const csvRows = [
       headers.join(','),
       ...customers.map((customer) =>
@@ -170,13 +165,15 @@ export default function CustomersPage() {
           customer.name,
           customer.email,
           customer.phone,
-          customer.notes /* Map other values */
+          customer.instagramHandle,
+          customer.notes
         ]
           .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
           .join(',')
       )
     ].join('\n');
-    const blob = new Blob(['\ufeff' + csvRows], {
+    const cleanValue = csvRows.replace(/[’]/g, "'");
+    const blob = new Blob(['\ufeff' + cleanValue], {
       type: 'text/csv;charset=utf-8;'
     });
     const link = document.createElement('a');
