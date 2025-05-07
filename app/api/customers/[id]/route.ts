@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateCustomer, db, customers } from '@/lib/db';
+import { updateCustomer, db, customers, deleteCustomerById } from '@/lib/db';
 import { and, eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import {
   UpdateCustomerFormData,
   updateCustomerSchema
 } from '@/lib/validators/customers';
+import { checkPermission, getSessionInfo } from '@/lib/auth/utils';
 
 export async function GET(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -48,6 +49,46 @@ export async function GET(request: NextRequest) {
     console.error(`API Error fetching customer ${customerId}:`, error);
     return NextResponse.json(
       { message: 'Failed to fetch customer' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const sessionInfo = await getSessionInfo(request);
+  if (sessionInfo instanceof NextResponse) return sessionInfo;
+  const { userId, businessId } = sessionInfo;
+
+  const permissionCheck = await checkPermission(userId, businessId, [
+    'OWNER',
+    'ADMIN',
+    'EDITOR'
+  ]);
+  if (permissionCheck instanceof NextResponse) return permissionCheck;
+
+  const { pathname } = request.nextUrl;
+  const customerId = Number(pathname.split('/').pop());
+
+  try {
+    if (isNaN(customerId)) {
+      return NextResponse.json(
+        { message: 'ID de pedido inválido' },
+        { status: 400 }
+      );
+    }
+
+    await deleteCustomerById(businessId, customerId);
+    return NextResponse.json(
+      { message: 'Customer deleted successfully' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error(
+      `API Error deleting customer ${customerId} for business ${businessId}:`,
+      error
+    );
+    return NextResponse.json(
+      { message: 'Failed to delete customer' },
       { status: 500 }
     );
   }

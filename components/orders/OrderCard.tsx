@@ -11,10 +11,9 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { formatCurrency, displayDate, getStatusStyle } from '@/lib/utils';
+import { formatCurrency, displayDate } from '@/lib/utils';
 import { CalendarDays, User, Package, Euro, Eye } from 'lucide-react';
 import { Status as PaymentStatusCell } from '../common/PaymentStatusCell';
 import { Status as OrderStatusCell } from '../common/OrderStatusCell';
@@ -85,7 +84,12 @@ export function OrderCard({ order, handleUpdateStatus }: OrderCardProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button variant="secondary" size="sm" className="w-full" asChild>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full active:bg-gray-200"
+          asChild
+        >
           <Link href={`/app/pedidos/${order.id}`}>
             <Eye className="mr-2 h-4 w-4" /> Ver Detalles
           </Link>

@@ -184,7 +184,6 @@ export default async function OrderDetailPage({
                 </Badge>
               )}
             </div>
-            {/* Estado del Pago */}
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">
                 Pago:
@@ -211,7 +210,6 @@ export default async function OrderDetailPage({
           <BackButton />
           <div className="flex flex-shrink-0 gap-2 self-start sm:self-center">
             {canEditOrder && <OrderDetailActions order={order} />}{' '}
-            {/* Renderiza si tiene permiso */}
           </div>
         </div>
       </div>

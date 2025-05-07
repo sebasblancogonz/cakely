@@ -7,7 +7,8 @@ import {
   teamMembers,
   users,
   TeamMemberWithUser,
-  SelectOrder
+  SelectOrder,
+  deleteOrderById
 } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
@@ -24,10 +25,8 @@ import {
 import { getGoogleAuthClient } from '@/lib/auth/google-auth';
 import { format } from 'date-fns';
 import { checkPermission, getSessionInfo } from '@/lib/auth/utils';
-import { OrderImage } from '@/types/types';
 
 export async function GET(request: NextRequest) {
-  console.log(await request.text());
   const session = await auth();
   const businessId = session?.user?.businessId;
 
@@ -64,6 +63,46 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error(
       `API Error fetching order ${orderId} for business ${businessId}:`,
+      error
+    );
+    return NextResponse.json(
+      { message: 'Failed to fetch order' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const sessionInfo = await getSessionInfo(request);
+  if (sessionInfo instanceof NextResponse) return sessionInfo;
+  const { userId, businessId } = sessionInfo;
+
+  const permissionCheck = await checkPermission(userId, businessId, [
+    'OWNER',
+    'ADMIN',
+    'EDITOR'
+  ]);
+  if (permissionCheck instanceof NextResponse) return permissionCheck;
+
+  const { pathname } = request.nextUrl;
+  const orderIdNum = Number(pathname.split('/').pop());
+
+  try {
+    if (isNaN(orderIdNum)) {
+      return NextResponse.json(
+        { message: 'ID de pedido inválido' },
+        { status: 400 }
+      );
+    }
+
+    await deleteOrderById(businessId, orderIdNum);
+    return NextResponse.json(
+      { message: 'Order deleted successfully' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error(
+      `API Error deleting order ${orderIdNum} for business ${businessId}:`,
       error
     );
     return NextResponse.json(

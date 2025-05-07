@@ -118,7 +118,6 @@ export function CustomersTable({
             {customers && customers.length > 0 ? (
               customers.map((customer) => (
                 <Customer
-                  showDetails={showDetails}
                   key={customer.id}
                   customer={customer}
                   setCustomers={setCustomers}
