@@ -88,7 +88,8 @@ export default function QuotesPage() {
       decorationComplexity: 'simple',
       sizeOrWeight: '',
       details: ''
-    }
+    },
+    mode: 'onSubmit'
   });
 
   useEffect(() => {
@@ -113,7 +114,7 @@ export default function QuotesPage() {
         setAvailableRecipes(recipesData || []);
 
         if (recipesData && recipesData.length > 0 && !watch('recipeId')) {
-          setValue('recipeId', recipesData[0].id, { shouldValidate: true });
+          setValue('recipeId', recipesData[0].id);
         }
       } catch (error) {
         console.error('Error loading prerequisites:', error);
@@ -406,36 +407,63 @@ export default function QuotesPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="recipeId">Receta Base</Label>
-              <Controller
-                name="recipeId"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    onValueChange={(value) =>
-                      field.onChange(value ? parseInt(value, 10) : undefined)
-                    }
-                    value={field.value?.toString()}
-                    disabled={
-                      essentialSettingsMissing || availableRecipes.length === 0
-                    }
-                  >
-                    <SelectTrigger id="recipeId">
-                      <SelectValue placeholder="Selecciona receta..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableRecipes.map((recipe) => (
-                        <SelectItem
-                          key={recipe.id}
-                          value={recipe.id.toString()}
-                        >
-                          {recipe.name} ({recipe.productType})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+              {availableRecipes.length === 1 ? (
+                <div>
+                  <Label htmlFor="recipeId">Receta Base</Label>
+                  <Input
+                    id="recipeId-display"
+                    value={`${availableRecipes[0].name} (${availableRecipes[0].productType})`}
+                    readOnly
+                    disabled
+                    className="bg-muted border-muted mt-1"
+                  />
+                </div>
+              ) : (
+                <>
+                  <Label htmlFor="recipeId">Receta Base</Label>
+                  <Controller
+                    name="recipeId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={(value) => {
+                          console.log(
+                            'Select onChange - value recibido (string):',
+                            value
+                          );
+                          const parsedValue = value
+                            ? parseInt(value, 10)
+                            : undefined;
+                          console.log(
+                            'Select onChange - valor parseado (number/undefined):',
+                            parsedValue
+                          );
+                          field.onChange(parsedValue);
+                        }}
+                        value={field.value?.toString()}
+                        disabled={
+                          essentialSettingsMissing ||
+                          availableRecipes.length === 0
+                        }
+                      >
+                        <SelectTrigger id="recipeId">
+                          <SelectValue placeholder="Selecciona receta..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableRecipes.map((recipe) => (
+                            <SelectItem
+                              key={recipe.id}
+                              value={recipe.id.toString()}
+                            >
+                              {recipe.name} ({recipe.productType})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </>
+              )}
               {errors.recipeId && (
                 <p className="text-xs text-red-600 mt-1">
                   {errors.recipeId.message}

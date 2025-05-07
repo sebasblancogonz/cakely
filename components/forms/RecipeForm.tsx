@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,30 +18,7 @@ import {
 } from '@/components/ui/select';
 import { DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Trash2, Plus } from 'lucide-react';
-
-const recipeFormSchema = z.object({
-  id: z.coerce.number().optional(),
-  name: z.string().min(1, 'Nombre de receta requerido'),
-  productType: z.nativeEnum(ProductType, {
-    errorMap: () => ({ message: 'Selecciona un tipo de producto' })
-  }),
-  baseLaborHours: z.coerce.number().min(0, 'Horas deben ser >= 0'),
-  notes: z.string().optional(),
-  recipeIngredients: z
-    .array(
-      z.object({
-        ingredientId: z.coerce
-          .number()
-          .int()
-          .positive('Selecciona un ingrediente'),
-        quantity: z.coerce.number().positive('Cantidad debe ser positiva'),
-        unit: z.string().min(1, 'Unidad requerida'),
-        name: z.string().optional()
-      })
-    )
-    .min(1, 'Añade al menos un ingrediente')
-});
-type RecipeFormData = z.infer<typeof recipeFormSchema>;
+import { RecipeFormData, recipeFormSchema } from '@/lib/validators/recipes';
 
 interface RecipeFormProps {
   recipe: Partial<RecipeWithIngredients> | null;
@@ -60,7 +37,8 @@ export function RecipeForm({
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
+    reset
   } = useForm<RecipeFormData>({
     resolver: zodResolver(recipeFormSchema),
     defaultValues: {
@@ -85,6 +63,25 @@ export function RecipeForm({
     control,
     name: 'recipeIngredients'
   });
+
+  useEffect(() => {
+    reset({
+      id: recipe?.id,
+      name: recipe?.name || '',
+      productType: (recipe?.productType as ProductType) || ProductType.Tarta,
+      baseLaborHours: recipe?.baseLaborHours
+        ? Number(recipe.baseLaborHours)
+        : 0.5,
+      notes: recipe?.notes || '',
+      recipeIngredients:
+        recipe?.recipeIngredients?.map((ri) => ({
+          ingredientId: ri.ingredientId,
+          name: ri.ingredient.name,
+          quantity: Number(ri.quantity),
+          unit: ri.unit
+        })) || []
+    });
+  }, [recipe, reset]);
 
   const onSubmit = async (data: RecipeFormData) => {
     console.log('Recipe form data to save:', data);
