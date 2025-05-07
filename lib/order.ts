@@ -69,7 +69,7 @@ export async function createCalendarEventIfNeeded({
     });
     const customerName = customer?.name || 'Cliente Desconocido';
     const eventTitle = `Entrega Pedido #${order.businessOrderNumber} - ${customerName}`;
-    const eventDescription = `Producto: ${order.description || ''}\nPedido ID Interno: ${order.id}\nVer: ${process.env.NEXT_PUBLIC_APP_URL}/pedidos/${order.id}`;
+    const eventDescription = `Producto: ${order.description || ''}\nID del pedido en Cakely: ${order.id}\nVer en Cakely: ${process.env.NEXT_PUBLIC_APP_URL}/pedidos/${order.id}`;
 
     const teamMembers = await db
       .select({ user: { email: users.email } })

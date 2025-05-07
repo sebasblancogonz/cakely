@@ -76,7 +76,7 @@ export function OrderRow({
     const customerName = order.customer?.name || `pedido ID ${order.id}`;
     if (
       !confirm(
-        `¿Estás seguro de que quieres eliminar el pedido para ${customerName}?`
+        `¿Estás seguro de que quieres eliminar el pedido de ${customerName}?`
       )
     ) {
       return;
