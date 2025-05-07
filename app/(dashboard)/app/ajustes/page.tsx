@@ -29,6 +29,7 @@ import { useIngredients } from '@/hooks/use-ingredients';
 import { useRecipes } from '@/hooks/use-recipes';
 
 import { motion } from 'framer-motion';
+import FinancialSummary from '@/components/statistics/FinancialSummary';
 
 type BusinessNameUpdateData = { name: string };
 
@@ -58,13 +59,16 @@ export default function SettingsPage() {
     currentUserRole === 'OWNER' ||
     currentUserRole === 'ADMIN' ||
     currentUserRole === 'EDITOR';
+  const canViewFinances =
+    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
 
   const hasAnyBusinessAccess =
     canEditBusinessProfile ||
     canEditOperationalSettings ||
     canManageTeam ||
     canAccessIngredients ||
-    canAccessRecipes;
+    canAccessRecipes ||
+    canViewFinances;
 
   const {
     ingredients,
@@ -295,7 +299,8 @@ export default function SettingsPage() {
 
   let defaultTabValue = 'user-profile';
   if (!canEditUserProfile) {
-    if (canEditBusinessProfile || canEditOperationalSettings)
+    if (canViewFinances) defaultTabValue = 'finances';
+    else if (canEditBusinessProfile || canEditOperationalSettings)
       defaultTabValue = 'business';
     else if (canManageTeam) defaultTabValue = 'team';
     else if (canAccessIngredients) defaultTabValue = 'ingredients';
@@ -328,6 +333,9 @@ export default function SettingsPage() {
               <TabsTrigger value="business">Negocio</TabsTrigger>
             )}
             {canManageTeam && <TabsTrigger value="team">Equipo</TabsTrigger>}
+            {canViewFinances && (
+              <TabsTrigger value="finances">Finanzas</TabsTrigger>
+            )}
             {canAccessIngredients && (
               <TabsTrigger value="ingredients">Ingredientes</TabsTrigger>
             )}
@@ -389,6 +397,18 @@ export default function SettingsPage() {
                   currentUserId={currentUserId}
                   businessId={businessId}
                 />
+              </motion.div>
+            </TabsContent>
+          )}
+          {canViewFinances && (
+            <TabsContent value="finances">
+              <motion.div
+                key="finances"
+                initial={{ x: 10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <FinancialSummary />
               </motion.div>
             </TabsContent>
           )}
