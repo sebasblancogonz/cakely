@@ -21,6 +21,7 @@ import { Customer } from './CustomerRow';
 import { Customer as CustomerType } from '@types';
 import { JSX, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useBusinessProfile } from '@/hooks/use-business-profile';
 
 interface CustomersTableProps {
   customers: CustomerType[];
@@ -38,12 +39,12 @@ export function CustomersTable({
   limit,
   totalCustomers,
   setCustomers,
-  editCustomer,
-  showDetails
+  editCustomer
 }: CustomersTableProps): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { profile } = useBusinessProfile();
 
   const navigate = useCallback(
     (newOffset: number) => {
@@ -109,7 +110,9 @@ export function CustomersTable({
     <Card>
       <CardHeader>
         <CardTitle>Clientes</CardTitle>
-        <CardDescription>Gestiona los clientes de Aura Bakery</CardDescription>
+        <CardDescription>
+          Gestiona los clientes de {profile?.name ?? 'tu negocio'}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
