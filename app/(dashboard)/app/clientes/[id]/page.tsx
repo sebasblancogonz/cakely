@@ -41,12 +41,11 @@ import {
   Instagram,
   StickyNote,
   ListOrdered,
-  Pencil,
   MessageSquare,
   Eye
 } from 'lucide-react';
 import { formatCurrency, getStatusStyle } from '@/lib/utils';
-import { BackButton } from '@/components/common/BackButton';
+import { CustomerDetailActions } from '@/components/customers/CustomerDetailActions';
 
 export async function generateMetadata({
   params
@@ -150,6 +149,7 @@ export default async function CustomerDetailPage({
       return 'Inválida';
     }
   };
+
   const cleanInstagramHandle = (handle: string | null | undefined) =>
     handle?.replace(/^@/, '') || '';
 
@@ -165,10 +165,7 @@ export default async function CustomerDetailPage({
           </p>
         </div>
         <div className="flex flex-shrink-0 gap-2">
-          <Button variant="outline" disabled>
-            <Pencil className="mr-2 h-4 w-4" /> Editar Cliente
-          </Button>
-          <BackButton />
+          <CustomerDetailActions customer={customerData} />
         </div>
       </div>
 

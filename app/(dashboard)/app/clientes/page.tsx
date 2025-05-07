@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CustomersTable } from '@/components/users/Customers';
+import { CustomersTable } from '@/components/customers/Customers';
 import { Customer } from '@types';
 import Modal from '@/components/common/Modal';
 import CustomerForm from '@/components/forms/CustomerForm';
-import CustomerDetails from '@/components/users/CustomerDetails';
+import CustomerDetails from '@/components/customers/CustomerDetails';
 import { Input } from '@/components/ui/input';
 import {
   Select,

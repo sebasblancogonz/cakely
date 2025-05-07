@@ -56,6 +56,7 @@ import { Status } from '@/components/common/OrderStatusCell';
 import { PaymentStatusSelector } from '@/components/orders/PaymentStatusSelector';
 import { OrderStatusSelector } from '@/components/orders/OrderStatusSelector';
 import { BackButton } from '@/components/common/BackButton';
+import { OrderDetailActions } from '@/components/orders/OrderDetailActions';
 
 export async function generateMetadata({
   params
@@ -142,6 +143,10 @@ export default async function OrderDetailPage({
   const totalPriceNum = Number(order.totalPrice || '0');
   const depositAmountNum = Number(order.depositAmount || '0');
   const pendingAmount = totalPriceNum - depositAmountNum;
+  const canEditOrder =
+    currentUserRole === 'OWNER' ||
+    currentUserRole === 'ADMIN' ||
+    currentUserRole === 'EDITOR';
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 lg:space-y-8">
@@ -159,7 +164,6 @@ export default async function OrderDetailPage({
             | Pedido el: {formatDateFull(order.orderDate)}
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2">
-            {/* Estado del Pedido */}
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">
                 Estado:
@@ -205,13 +209,10 @@ export default async function OrderDetailPage({
         </div>
         <div className="flex flex-shrink-0 gap-2">
           <BackButton />
-          {/* <Link href="/app/pedidos">
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver
-            </Button>
-          </Link> */}
-          {/* <Button variant="outline"><Pencil className="mr-2 h-4 w-4" /> Editar</Button> */}
+          <div className="flex flex-shrink-0 gap-2 self-start sm:self-center">
+            {canEditOrder && <OrderDetailActions order={order} />}{' '}
+            {/* Renderiza si tiene permiso */}
+          </div>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Orders } from '@/components/orders/Orders';
-import { Order, OrderStatus, PaymentStatus } from '@types';
+import { Customer, Order, OrderStatus, PaymentStatus } from '@types';
 import Modal from '@/components/common/Modal';
 import OrderForm from '@/components/forms/OrderForm';
 import UploadImage from '@/components/common/MultiUpload';
@@ -28,6 +28,7 @@ import {
 import { UpdateOrderFormData } from '@/lib/validators/orders';
 import { Label } from '@/components/ui/label';
 import UpdateOrderForm from '@/components/forms/UpdateOrderForm';
+import { toast } from '@/hooks/use-toast';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -97,6 +98,25 @@ export default function OrdersPage() {
     setIsCreating(false);
     setIsUploadingImage(false);
   }, []);
+  const closeEditModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleUpdateSuccess = (updatedOrder: Order) => {
+    console.log('Customer updated, refreshing data...', updatedOrder);
+    setOrders((prevOrders) =>
+      prevOrders.map((order) =>
+        order.id === updatedOrder.id ? updatedOrder : order
+      )
+    );
+    closeEditModal();
+
+    router.refresh();
+    toast({
+      title: 'Pedido Actualizado',
+      description: `Los datos del pedido #${updatedOrder.businessOrderNumber} se han guardado.`
+    });
+  };
 
   useEffect(() => {
     setSelectedTabValue(status);
@@ -485,9 +505,8 @@ export default function OrdersPage() {
           />
         ) : isEditing ? (
           <UpdateOrderForm
-            setIsModalOpen={setIsModalOpen}
-            setOrders={setOrders}
-            setIsEditing={setIsEditing}
+            onCancel={closeModal}
+            onUpdateSuccess={handleUpdateSuccess}
             orderToEdit={orderToEdit!}
           />
         ) : isUploadingImage && orderToEdit ? (

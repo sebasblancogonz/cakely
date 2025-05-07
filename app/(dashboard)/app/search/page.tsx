@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Package, Users, Beaker, Loader2 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import OrderDetails from '@/components/orders/OrderDetails';
-import CustomerDetails from '@/components/users/CustomerDetails';
+import CustomerDetails from '@/components/customers/CustomerDetails';
 import { IngredientDetails } from '@/components/common/IngredientDetails';
 import { Order, Customer, IngredientPrice } from '@types';
 import { useToast } from '@/hooks/use-toast';

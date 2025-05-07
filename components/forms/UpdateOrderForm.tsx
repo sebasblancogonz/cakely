@@ -48,10 +48,9 @@ const defaultOrderFormValues: Partial<UpdateOrderFormData> = {
 };
 
 interface OrderFormProps {
-  setIsModalOpen: (value: boolean) => void;
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  setIsEditing: (value: boolean) => void;
   orderToEdit: Order;
+  onCancel: () => void;
+  onUpdateSuccess: (updatedOrder: Order) => void;
 }
 
 const formatDateForInput = (date: Date | string | null | undefined): string => {
@@ -93,10 +92,9 @@ const areImageArraysEqual = (
 };
 
 const UpdateOrderForm = ({
-  setIsModalOpen,
-  setOrders,
-  setIsEditing,
-  orderToEdit
+  onCancel,
+  orderToEdit,
+  onUpdateSuccess
 }: OrderFormProps) => {
   const { toast } = useToast();
   const [imageUrls, setImageUrls] = useState<OrderImage[]>([]);
@@ -179,8 +177,6 @@ const UpdateOrderForm = ({
         description: 'No has modificado ningún dato del pedido.',
         variant: 'default'
       });
-      setIsModalOpen(false);
-      setIsEditing(false);
       setImagesToDelete([]);
       setImageUrls([]);
       return;
@@ -212,11 +208,6 @@ const UpdateOrderForm = ({
         throw new Error(errorData.message || 'Failed to update order');
       }
       savedOrUpdatedOrder = await response.json();
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === savedOrUpdatedOrder.id ? savedOrUpdatedOrder : o
-        )
-      );
 
       if (imagesToDelete.length > 0) {
         await Promise.all(
@@ -235,8 +226,9 @@ const UpdateOrderForm = ({
         title: 'Éxito',
         description: 'Pedido actualizado correctamente.'
       });
+      onUpdateSuccess(savedOrUpdatedOrder);
 
-      closeModal();
+      onCancel();
     } catch (error) {
       console.error('Error saving/updating order:', error);
       toast({
@@ -260,8 +252,7 @@ const UpdateOrderForm = ({
   };
 
   const closeModal = () => {
-    setIsModalOpen(false);
-    setIsEditing(false);
+    onCancel();
     reset(defaultOrderFormValues);
   };
 
