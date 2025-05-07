@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Images } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrderImage } from '@types';
+import { useBusinessProfile } from '@/hooks/use-business-profile';
 
 interface FileProgress {
   loaded: number;
@@ -37,7 +38,7 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef(new AbortController());
-
+  const { profile } = useBusinessProfile();
   useEffect(() => {
     if (!files) {
       setPreviews([]);
@@ -133,7 +134,7 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
             file,
             fileName: file.name,
             useUniqueFileName: true,
-            folder: 'aurabakery',
+            folder: `cakely/${profile.name}/orders/`,
             tags: [`orderId:${orderId}`],
             abortSignal: signal,
             onProgress: (progressEvent: ProgressEvent) => {
