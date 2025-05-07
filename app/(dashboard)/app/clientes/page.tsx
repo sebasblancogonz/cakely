@@ -31,6 +31,7 @@ import {
   AlertDialogDescription,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
+import { useBusinessProfile } from '@/hooks/use-business-profile';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -39,6 +40,7 @@ export default function CustomersPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { profile } = useBusinessProfile();
 
   const search = searchParams.get('q') || '';
   const offsetParam = Number(searchParams.get('offset')) || 0;
@@ -178,7 +180,11 @@ export default function CustomersPage() {
     });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'customers_page.csv');
+    const timestamp = new Date().toISOString().slice(0, 10);
+    link.setAttribute(
+      'download',
+      `clientes_${profile?.name || 'negocio'}_${timestamp}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

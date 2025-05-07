@@ -36,6 +36,7 @@ import {
   AlertDialogDescription,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
+import { useBusinessProfile } from '@/hooks/use-business-profile';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -57,6 +58,7 @@ export default function OrdersPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { profile } = useBusinessProfile();
 
   const query = searchParams.get('q') || '';
   const offset = Number(searchParams.get('offset')) || 0;
@@ -287,7 +289,11 @@ export default function OrdersPage() {
     });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'order_report.csv');
+    const timestamp = new Date().toISOString().slice(0, 10);
+    link.setAttribute(
+      'download',
+      `pedidos_${profile?.name || 'negocio'}_${timestamp}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
