@@ -31,7 +31,8 @@ import type {
   Customer,
   Order,
   OrderStatus as OrderStatusType,
-  PaymentStatus as PaymentStatusType
+  PaymentStatus as PaymentStatusType,
+  TeamRole
 } from '@types';
 
 import {
@@ -46,6 +47,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, getStatusStyle } from '@/lib/utils';
 import { CustomerDetailActions } from '@/components/customers/CustomerDetailActions';
+import { BackButton } from '@/components/common/BackButton';
 
 export async function generateMetadata({
   params
@@ -99,8 +101,13 @@ export default async function CustomerDetailPage({
 }) {
   const session = await auth();
   const businessId = session?.user?.businessId;
+  const currentUserRole = session?.user?.role as TeamRole | undefined | null;
   const p = await params;
   const customerId = parseInt(p.id, 10);
+  const canEditUsers =
+    currentUserRole === 'OWNER' ||
+    currentUserRole === 'ADMIN' ||
+    currentUserRole === 'EDITOR';
 
   if (!businessId) {
     notFound();
@@ -165,7 +172,10 @@ export default async function CustomerDetailPage({
           </p>
         </div>
         <div className="flex flex-shrink-0 gap-2">
-          <CustomerDetailActions customer={customerData} />
+          <BackButton />
+          <div className="flex flex-shrink-0 gap-2 self-start sm:self-center">
+            {canEditUsers && <CustomerDetailActions customer={customerData} />}
+          </div>
         </div>
       </div>
 

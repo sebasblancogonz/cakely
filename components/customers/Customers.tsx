@@ -22,6 +22,7 @@ import { Customer as CustomerType } from '@types';
 import { JSX, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useBusinessProfile } from '@/hooks/use-business-profile';
+import { CustomerCard } from './CustomerCard';
 
 interface CustomersTableProps {
   customers: CustomerType[];
@@ -115,30 +116,46 @@ export function CustomersTable({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          {renderTableHeaders()}
-          <TableBody>
-            {customers && customers.length > 0 ? (
-              customers.map((customer) => (
-                <Customer
-                  key={customer.id}
-                  customer={customer}
-                  setCustomers={setCustomers}
-                  editCustomer={editCustomer}
-                />
-              ))
-            ) : (
-              <TableRow>
-                <TableHead
-                  colSpan={visibleColumnCount}
-                  className="text-center h-24"
-                >
-                  No hay clientes disponibles
-                </TableHead>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        <div className="hidden lg:block">
+          <div className="overflow-x-auto relative border rounded-md">
+            <Table>
+              {renderTableHeaders()}
+              <TableBody>
+                {customers && customers.length > 0 ? (
+                  customers.map((customer) => (
+                    <Customer
+                      key={customer.id}
+                      customer={customer}
+                      setCustomers={setCustomers}
+                      editCustomer={editCustomer}
+                    />
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableHead
+                      colSpan={visibleColumnCount}
+                      className="text-center h-24"
+                    >
+                      No hay clientes disponibles
+                    </TableHead>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:hidden">
+          {customers && customers.length > 0 ? (
+            customers.map((customer) => (
+              <CustomerCard key={customer.id} customer={customer} />
+            ))
+          ) : (
+            <p className="text-center text-muted-foreground col-span-1 sm:col-span-2 py-10">
+              No hay clientes disponibles
+            </p>
+          )}
+        </div>
       </CardContent>
       <CardFooter>
         <div className="flex items-center w-full justify-between">
