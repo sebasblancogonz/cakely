@@ -111,6 +111,10 @@ export const orders = pgTable(
       .notNull()
       .default(OrderStatus.Pendiente),
     productType: productTypeEnum('product_type').notNull(),
+    productTypeId: integer('product_type_id').references(
+      () => productTypes.id,
+      { onDelete: 'set null' }
+    ),
     businessOrderNumber: integer('business_order_number').notNull(),
     customizationDetails: text('customization_details'),
     quantity: integer('quantity').notNull(),
@@ -141,6 +145,26 @@ export const orders = pgTable(
       )
     };
   }
+);
+
+export const productTypes = pgTable(
+  'product_types',
+  {
+    id: serial('id').primaryKey(),
+    businessId: integer('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => ({
+    businessTypeNameIdx: uniqueIndex('business_type_name_idx').on(
+      table.businessId,
+      table.name
+    )
+  })
 );
 
 export const businessSettings = pgTable('business_settings', {
@@ -433,6 +457,10 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
 }));
 
 export const ordersRelations = relations(orders, ({ one }) => ({
+  productType: one(productTypes, {
+    fields: [orders.productTypeId],
+    references: [productTypes.id]
+  }),
   business: one(businesses, {
     fields: [orders.businessId],
     references: [businesses.id]
@@ -442,6 +470,17 @@ export const ordersRelations = relations(orders, ({ one }) => ({
     references: [customers.id]
   })
 }));
+
+export const productTypesRelations = relations(
+  productTypes,
+  ({ one, many }) => ({
+    business: one(businesses, {
+      fields: [productTypes.businessId],
+      references: [businesses.id]
+    }),
+    orders: many(orders)
+  })
+);
 
 export const recipesRelations = relations(recipes, ({ one, many }) => ({
   business: one(businesses, {
@@ -508,6 +547,7 @@ const schema = {
   recipeIngredients,
   invitations,
   teamMembers,
+  productTypes,
 
   businessesRelations,
   usersRelations,
@@ -520,7 +560,8 @@ const schema = {
   accountsRelations,
   sessionsRelations,
   invitationRelations,
-  teamMemberRelations
+  teamMemberRelations,
+  productTypesRelations
 };
 
 let dbInstance: any;

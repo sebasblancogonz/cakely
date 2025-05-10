@@ -1,26 +1,19 @@
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { orders, customers } from '@/lib/db';
+import { orders } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { formatCurrency, getStatusStyle, cn } from '@/lib/utils';
+import { formatCurrency, getStatusStyle } from '@/lib/utils';
 import type {
   Order,
   Customer,
@@ -46,13 +39,11 @@ import {
   Package,
   Euro,
   CircleHelp,
-  BotMessageSquare,
-  ArrowLeft
+  BotMessageSquare
 } from 'lucide-react';
 
 import OrderImagesClient from '@/components/orders/OrderImagesClient';
 import { Label } from '@/components/ui/label';
-import { Status } from '@/components/common/OrderStatusCell';
 import { PaymentStatusSelector } from '@/components/orders/PaymentStatusSelector';
 import { OrderStatusSelector } from '@/components/orders/OrderStatusSelector';
 import { BackButton } from '@/components/common/BackButton';
@@ -71,7 +62,7 @@ export async function generateMetadata({
     const businessId = session?.user?.businessId;
     if (!isNaN(orderId) && businessId) {
       const orderInfo = await db.query.orders.findFirst({
-        columns: { businessOrderNumber: true, customerId: true }, // Selecciona el número guardado
+        columns: { businessOrderNumber: true, customerId: true },
         where: and(eq(orders.id, orderId), eq(orders.businessId, businessId)),
         with: { customer: { columns: { name: true } } }
       });
