@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Order,
   Customer,
-  OrderImage,
   ProductType,
   PaymentMethod,
   OrderStatus,
@@ -23,18 +22,19 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { OrderFormData, createOrderFormSchema } from '@/lib/validators/orders';
-import { Checkbox } from '@/components/ui/checkbox';
+import { format } from 'date-fns';
 
 const defaultOrderFormValues: Partial<OrderFormData> = {
   customerId: undefined,
   description: '',
   amount: undefined,
-  deliveryTime: '',
   deliveryDate: null,
+  deliveryTime: '',
   productType: ProductType.Tarta,
   customizationDetails: '',
   quantity: 1,
@@ -49,15 +49,19 @@ const defaultOrderFormValues: Partial<OrderFormData> = {
 };
 
 interface OrderFormProps {
-  setIsModalOpen: (value: boolean) => void;
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  setIsCreating: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsModalOpen?: (value: boolean) => void;
+  setOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
+  setIsCreating?: (value: boolean) => void;
+  onOrderCreated?: (createdOrder: Order) => void;
+  onCancelForm?: () => void;
 }
 
 const OrderForm = ({
   setIsModalOpen,
   setOrders,
-  setIsCreating
+  setIsCreating,
+  onOrderCreated,
+  onCancelForm
 }: OrderFormProps) => {
   const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -103,45 +107,48 @@ const OrderForm = ({
     reset(defaultOrderFormValues);
   }, [reset]);
 
-  const onSubmit = async (data: OrderFormData) => {
-    console.log('Form Data Submitted:', data);
+  const onSubmit: SubmitHandler<OrderFormData> = async (data) => {
+    console.log('OrderForm - Form Data Submitted:', data);
 
     const apiData = {
       ...data,
       amount: data.amount?.toString(),
       totalPrice: data.totalPrice?.toString(),
       depositAmount: (data.depositAmount ?? 0).toString(),
-      deliveryDate: data.deliveryDate ? data.deliveryDate : null,
-      deliveryTime: data.deliveryTime || null
+      deliveryDate: data.deliveryDate
+        ? format(data.deliveryDate, 'yyyy-MM-dd')
+        : null,
+      deliveryTime: data.deliveryTime || null,
+      orderStatus: OrderStatus.Pendiente
     };
 
     try {
-      let savedOrUpdatedOrder: Order;
-
-      console.log('Saving new order:', apiData);
-      if (!('customerId' in apiData) || !apiData.customerId) {
+      if (!apiData.customerId) {
         throw new Error('Falta el ID del cliente para crear el pedido.');
       }
-      const dataToSend = {
-        ...apiData,
-        orderStatus: OrderStatus.Pendiente
-      };
+
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSend)
+        body: JSON.stringify(apiData)
       });
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to create order');
       }
-      savedOrUpdatedOrder = await response.json();
-      setOrders((prev) => [savedOrUpdatedOrder, ...prev]);
+      const savedOrder = await response.json();
       toast({ title: 'Éxito', description: 'Pedido creado correctamente.' });
 
-      closeModal();
+      if (onOrderCreated) {
+        onOrderCreated(savedOrder);
+      } else if (setOrders) {
+        setOrders((prev) => [savedOrder, ...prev]);
+      }
+
+      handleCancelOrClose();
     } catch (error) {
-      console.error('Error saving/updating order:', error);
+      console.error('Error saving order:', error);
       toast({
         title: 'Error',
         description: `No se pudo guardar el pedido: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -152,7 +159,6 @@ const OrderForm = ({
 
   const onValidationErrors = (validationErrors: any) => {
     console.error('ORDER FORM - VALIDATION ERRORS (RHF):', validationErrors);
-
     toast({
       title: 'Error de Validación',
       description: 'Por favor, revisa los campos marcados en rojo.',
@@ -160,9 +166,13 @@ const OrderForm = ({
     });
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setIsCreating(false);
+  const handleCancelOrClose = () => {
+    if (onCancelForm) {
+      onCancelForm();
+    } else if (setIsModalOpen && setIsCreating) {
+      setIsModalOpen(false);
+      setIsCreating(false);
+    }
     reset(defaultOrderFormValues);
   };
 
@@ -172,36 +182,38 @@ const OrderForm = ({
         Nuevo Pedido
       </h2>
       <form
-        className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
+        className="space-y-4 overflow-y-auto pr-2"
         //@ts-ignore
         onSubmit={handleSubmit(onSubmit, onValidationErrors)}
       >
         <div className={cn('space-y-1.5', 'block')}>
-          <Label htmlFor="customerId">Cliente</Label>
+          <Label htmlFor="customerId-create">Cliente</Label>
           <Controller
             name="customerId"
             control={control}
             render={({ field }) => (
               <Select
-                onValueChange={field.onChange}
+                onValueChange={(value) =>
+                  field.onChange(value ? parseInt(value, 10) : undefined)
+                }
                 value={field.value == null ? '' : field.value.toString()}
                 disabled={loadingCustomers}
               >
                 <SelectTrigger
-                  id="customerId"
+                  id="customerId-create"
                   className={cn(errors.customerId && 'border-destructive')}
                 >
                   <SelectValue
                     placeholder={
                       loadingCustomers
-                        ? 'Cargando clientes...'
+                        ? 'Cargando...'
                         : 'Selecciona un cliente...'
                     }
                   />
                 </SelectTrigger>
                 <SelectContent>
                   {!loadingCustomers && customers.length === 0 && (
-                    <SelectItem value="no-customers" disabled>
+                    <SelectItem value="no-customers-yet" disabled>
                       No hay clientes
                     </SelectItem>
                   )}
@@ -225,9 +237,9 @@ const OrderForm = ({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="description">Descripción</Label>
+          <Label htmlFor="description-create">Descripción</Label>
           <Textarea
-            id="description"
+            id="description-create"
             placeholder="Ej: Tarta cumpleaños infantil, 2 pisos..."
             {...register('description')}
             className={cn(errors.description && 'border-destructive')}
@@ -238,11 +250,12 @@ const OrderForm = ({
             </p>
           )}
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="deliveryDate">Fecha Entrega</Label>
+            <Label htmlFor="deliveryDate-create">Fecha Entrega</Label>
             <Input
-              id="deliveryDate"
+              id="deliveryDate-create"
               type="date"
               {...register('deliveryDate', { valueAsDate: true })}
               className={cn(errors.deliveryDate && 'border-destructive')}
@@ -254,9 +267,9 @@ const OrderForm = ({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="deliveryTime">Hora Entrega (Opcional)</Label>
+            <Label htmlFor="deliveryTime-create">Hora Entrega (Opcional)</Label>
             <Input
-              id="deliveryTime"
+              id="deliveryTime-create"
               type="time"
               {...register('deliveryTime')}
               className={cn(errors.deliveryTime && 'border-destructive')}
@@ -268,28 +281,30 @@ const OrderForm = ({
             )}
           </div>
         </div>
+
         <div className="items-top flex space-x-2 pt-2">
           <Controller
             name="createCalendarEvent"
             control={control}
             render={({ field }) => (
               <Checkbox
-                id="createCalendarEvent"
+                id="createCalendarEvent-create"
                 checked={field.value}
                 onCheckedChange={field.onChange}
+                aria-labelledby="createCalendarEvent-label"
               />
             )}
           />
           <div className="grid gap-1.5 leading-none">
             <label
-              htmlFor="createCalendarEvent"
+              htmlFor="createCalendarEvent-create"
+              id="createCalendarEvent-label"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
               Añadir entrega a Google Calendar
             </label>
             <p className="text-xs text-muted-foreground">
-              Creará un evento en tu calendario y el de tus colaboradores (si
-              aplica).
+              Creará un evento en tu calendario y el de tus colaboradores.
             </p>
             {errors.createCalendarEvent && (
               <p className="text-xs text-destructive">
@@ -298,16 +313,21 @@ const OrderForm = ({
             )}
           </div>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="productType">Tipo Producto</Label>
+            <Label htmlFor="productType-create">Tipo Producto</Label>
             <Controller
               name="productType"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  defaultValue={defaultOrderFormValues.productType}
+                >
                   <SelectTrigger
-                    id="productType"
+                    id="productType-create"
                     className={cn(errors.productType && 'border-destructive')}
                   >
                     <SelectValue />
@@ -329,9 +349,9 @@ const OrderForm = ({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="quantity">Cantidad</Label>
+            <Label htmlFor="quantity-create">Cantidad</Label>
             <Input
-              id="quantity"
+              id="quantity-create"
               type="number"
               step="1"
               {...register('quantity')}
@@ -345,14 +365,16 @@ const OrderForm = ({
           </div>
         </div>
 
+        {/* Tamaño/Peso y Sabor */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="sizeOrWeight">Tamaño / Peso</Label>
+            <Label htmlFor="sizeOrWeight-create">
+              Tamaño / Peso (Opcional)
+            </Label>
             <Input
-              id="sizeOrWeight"
-              placeholder="Ej: 20cm, 12 raciones, 1.5kg"
+              id="sizeOrWeight-create"
+              placeholder="Ej: 20cm, 1.5kg"
               {...register('sizeOrWeight')}
-              className={cn(errors.sizeOrWeight && 'border-destructive')}
             />
             {errors.sizeOrWeight && (
               <p className="text-xs text-destructive mt-1">
@@ -361,12 +383,11 @@ const OrderForm = ({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="flavor">Sabor / Relleno</Label>
+            <Label htmlFor="flavor-create">Sabor / Relleno (Opcional)</Label>
             <Input
-              id="flavor"
+              id="flavor-create"
               placeholder="Ej: Chocolate y Nata"
               {...register('flavor')}
-              className={cn(errors.flavor && 'border-destructive')}
             />
             {errors.flavor && (
               <p className="text-xs text-destructive mt-1">
@@ -377,11 +398,11 @@ const OrderForm = ({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="customizationDetails">
+          <Label htmlFor="customizationDetails-create">
             Detalles Personalización (Opcional)
           </Label>
           <Textarea
-            id="customizationDetails"
+            id="customizationDetails-create"
             placeholder="Color, nombre, temática..."
             {...register('customizationDetails')}
           />
@@ -391,12 +412,11 @@ const OrderForm = ({
             </p>
           )}
         </div>
-
         <div className="space-y-1.5">
-          <Label htmlFor="allergyInformation">Alergias (Opcional)</Label>
+          <Label htmlFor="allergyInformation-create">Alergias (Opcional)</Label>
           <Textarea
-            id="allergyInformation"
-            placeholder="Ej: Sin frutos secos, sin lactosa"
+            id="allergyInformation-create"
+            placeholder="Ej: Sin frutos secos"
             {...register('allergyInformation')}
           />
           {errors.allergyInformation && (
@@ -406,14 +426,15 @@ const OrderForm = ({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="amount">Importe Original (€)</Label>
+            <Label htmlFor="amount-create">
+              Importe Original (€) (Opcional)
+            </Label>
             <Input
-              id="amount"
+              id="amount-create"
               type="number"
               step="0.01"
-              placeholder="Ej: 50.00"
               {...register('amount')}
               className={cn(errors.amount && 'border-destructive')}
             />
@@ -424,12 +445,11 @@ const OrderForm = ({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="totalPrice">Precio Total (€)</Label>
+            <Label htmlFor="totalPrice-create">Precio Total (€)</Label>
             <Input
-              id="totalPrice"
+              id="totalPrice-create"
               type="number"
               step="0.01"
-              placeholder="Ej: 55.50"
               {...register('totalPrice')}
               className={cn(errors.totalPrice && 'border-destructive')}
             />
@@ -440,12 +460,13 @@ const OrderForm = ({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="depositAmount">Señal Recibida (€) (Opcional)</Label>
+            <Label htmlFor="depositAmount-create">
+              Señal Recibida (€) (Opcional)
+            </Label>
             <Input
-              id="depositAmount"
+              id="depositAmount-create"
               type="number"
               step="0.01"
-              placeholder="Ej: 20.00"
               {...register('depositAmount')}
               className={cn(errors.depositAmount && 'border-destructive')}
             />
@@ -459,14 +480,18 @@ const OrderForm = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="paymentMethod">Método Pago</Label>
+            <Label htmlFor="paymentMethod-create">Método Pago</Label>
             <Controller
               name="paymentMethod"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  defaultValue={defaultOrderFormValues.paymentMethod}
+                >
                   <SelectTrigger
-                    id="paymentMethod"
+                    id="paymentMethod-create"
                     className={cn(errors.paymentMethod && 'border-destructive')}
                   >
                     <SelectValue />
@@ -488,14 +513,18 @@ const OrderForm = ({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="paymentStatus">Estado Pago</Label>
+            <Label htmlFor="paymentStatus-create">Estado Pago</Label>
             <Controller
               name="paymentStatus"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  defaultValue={defaultOrderFormValues.paymentStatus}
+                >
                   <SelectTrigger
-                    id="paymentStatus"
+                    id="paymentStatus-create"
                     className={cn(errors.paymentStatus && 'border-destructive')}
                   >
                     <SelectValue />
@@ -519,9 +548,9 @@ const OrderForm = ({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="notes">Notas Internas (Opcional)</Label>
+          <Label htmlFor="notes-create">Notas Internas (Opcional)</Label>
           <Textarea
-            id="notes"
+            id="notes-create"
             placeholder="Recordatorios, detalles extra..."
             {...register('notes')}
           />
@@ -532,8 +561,8 @@ const OrderForm = ({
           )}
         </div>
 
-        <div className="flex justify-end pt-4 sticky bottom-0 bg-background pb-1 border-t">
-          <Button type="button" variant="outline" onClick={closeModal}>
+        <div className="flex justify-end pt-4 sticky bottom-0 bg-background pb-1 border-t -mx-6 px-6">
+          <Button type="button" variant="outline" onClick={handleCancelOrClose}>
             Cancelar
           </Button>
           <Button
