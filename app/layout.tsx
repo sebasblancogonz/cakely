@@ -18,14 +18,14 @@ export const metadata = {
     'gestión clientes repostería',
     'CRM para negocios de tartas y galletas'
   ],
-  authors: [{ name: 'Cakely', url: 'https://cakely.es' }],
+  authors: [{ name: 'Cakely', url: 'https://app.cakely.es' }],
   creator: 'Cakely',
-  metadataBase: new URL('https://cakely.es'),
+  metadataBase: new URL('https://app.cakely.es'),
   openGraph: {
     title: 'Cakely – CRM para Repostería',
     description:
       'Gestiona clientes y pedidos de tu pastelería con facilidad usando Cakely.',
-    url: 'https://cakely.es',
+    url: 'https://app.cakely.es',
     siteName: 'Cakely',
     images: [
       {
