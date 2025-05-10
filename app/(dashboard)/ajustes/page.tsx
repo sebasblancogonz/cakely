@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 
 import OperativeSettings from '@/components/settings/OperativeSettings';
@@ -30,12 +30,26 @@ import { useRecipes } from '@/hooks/use-recipes';
 
 import { motion } from 'framer-motion';
 import FinancialSummary from '@/components/statistics/FinancialSummary';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 
 type BusinessNameUpdateData = { name: string };
+
+const VALID_TABS = [
+  'user-profile',
+  'business',
+  'team',
+  'finances',
+  'ingredients',
+  'recipes',
+  'no-access'
+];
 
 export default function SettingsPage() {
   const { data: session, status: sessionStatus } = useSession();
   const { profile, isLoadingProfile, mutateProfile } = useBusinessProfile();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const currentUserRole = session?.user?.role as TeamRole | undefined | null;
   const currentUserId = session?.user?.id;
@@ -85,6 +99,55 @@ export default function SettingsPage() {
   const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] =
     useState<Partial<RecipeWithIngredients> | null>(null);
+
+  const determineDefaultTab = useCallback(() => {
+    if (canEditUserProfile) return 'user-profile';
+    if (canViewFinances) return 'finances';
+    if (canEditBusinessProfile || canEditOperationalSettings) return 'business';
+    if (canManageTeam) return 'team';
+    if (canAccessIngredients) return 'ingredients';
+    if (canAccessRecipes) return 'recipes';
+    return 'no-access';
+  }, [
+    canEditUserProfile,
+    canViewFinances,
+    canEditBusinessProfile,
+    canEditOperationalSettings,
+    canManageTeam,
+    canAccessIngredients,
+    canAccessRecipes
+  ]);
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const tabFromUrl = searchParams.get('tab');
+    return tabFromUrl && VALID_TABS.includes(tabFromUrl)
+      ? tabFromUrl
+      : determineDefaultTab();
+  });
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && VALID_TABS.includes(tabFromUrl)) {
+      if (tabFromUrl !== activeTab) {
+        setActiveTab(tabFromUrl);
+      }
+    } else {
+      const defaultTab = determineDefaultTab();
+      if (activeTab !== defaultTab) {
+        setActiveTab(defaultTab);
+      }
+    }
+  }, [searchParams, determineDefaultTab, activeTab]);
+
+  const handleTabChange = useCallback(
+    (newTabValue: string) => {
+      setActiveTab(newTabValue);
+      const currentParams = new URLSearchParams(searchParams.toString());
+      currentParams.set('tab', newTabValue);
+      router.push(`${pathname}?${currentParams.toString()}`);
+    },
+    [searchParams, router, pathname]
+  );
 
   const handleSaveIngredient = async (data: IngredientFormData) => {
     const isEditing = !!data.id;
@@ -324,7 +387,11 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue={defaultTabValue} className="w-full">
+        <Tabs
+          onValueChange={handleTabChange}
+          defaultValue={activeTab}
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-6">
             {canEditUserProfile && (
               <TabsTrigger value="user-profile">Tu Perfil</TabsTrigger>

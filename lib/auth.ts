@@ -6,10 +6,6 @@ import { accounts, sessions, verificationTokens, teamRoleEnum } from '@/lib/db';
 import { and, asc, eq, gt } from 'drizzle-orm';
 import { TeamRole } from '@/types/next-auth';
 import { z } from 'zod';
-const inviteSchema = z.object({
-  email: z.string().email('Email inválido.'),
-  role: z.enum([teamRoleEnum.enumValues[1], teamRoleEnum.enumValues[2]]) // ADMIN, EDITOR
-});
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -306,6 +302,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.name = token.name ?? null;
       }
       return session;
+    }
+  },
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === 'production'
+          ? `__Secure-authjs.session-token`
+          : `authjs.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        domain:
+          process.env.NODE_ENV === 'production' ? '.cakely.es' : 'localhost'
+      }
     }
   }
 });

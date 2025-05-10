@@ -14,7 +14,8 @@ import {
   ChevronRight,
   Calendar,
   Calculator,
-  Loader2
+  Loader2,
+  BarChart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -164,7 +165,7 @@ function DesktopNav({
     >
       <nav className="flex flex-col gap-4 px-2 sm:py-5">
         <Link
-          href="/dashboard"
+          href="/"
           className={cn(
             'group flex items-center justify-center gap-2 rounded-lg text-lg font-semibold text-primary-foreground',
             isExpanded
@@ -231,15 +232,23 @@ function DesktopNav({
         </Link>
 
         <NavItem
-          href="/app/dashboard"
-          label="Dashboard"
+          href="/"
+          label="Inicio"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
         >
           <Home className="h-5 w-5" />
         </NavItem>
         <NavItem
-          href="/app/pedidos"
+          href="/estadisticas"
+          label="Estadísticas"
+          isExpanded={isExpanded}
+          animationDuration={transitionDuration}
+        >
+          <BarChart className="h-5 w-5" />
+        </NavItem>
+        <NavItem
+          href="/pedidos"
           label="Pedidos"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -247,7 +256,7 @@ function DesktopNav({
           <ShoppingCart className="h-5 w-5" />
         </NavItem>
         <NavItem
-          href="/app/clientes"
+          href="/clientes"
           label="Clientes"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -255,7 +264,7 @@ function DesktopNav({
           <Users2 className="h-5 w-5" />
         </NavItem>
         <NavItem
-          href="/app/calendario"
+          href="/calendario"
           label="Calendario"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -263,7 +272,7 @@ function DesktopNav({
           <Calendar className="h-5 w-5" />
         </NavItem>
         <NavItem
-          href="/app/presupuesto"
+          href="/presupuesto"
           label="Presupuesto"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -274,7 +283,7 @@ function DesktopNav({
 
       <nav className="mt-auto flex flex-col gap-4 px-2 sm:py-5">
         <NavItem
-          href="/app/ajustes"
+          href="/ajustes"
           label="Ajustes"
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
@@ -335,7 +344,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
         <nav className="grid gap-6 text-lg font-medium mt-4">
           <SheetTrigger asChild>
             <Link
-              href="/dashboard"
+              href="/"
               className="flex items-center gap-4 px-2.5 text-foreground hover:text-foreground"
             >
               <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
@@ -369,15 +378,23 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/app/dashboard"
+              href="/"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
-              <Home className="h-5 w-5" /> Dashboard
+              <Home className="h-5 w-5" /> Inicio
             </Link>
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/app/pedidos"
+              href="/estadisticas"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Home className="h-5 w-5" /> Estadisticas
+            </Link>
+          </SheetTrigger>
+          <SheetTrigger asChild>
+            <Link
+              href="/pedidos"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <ShoppingCart className="h-5 w-5" /> Pedidos
@@ -385,7 +402,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/app/clientes"
+              href="/clientes"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Users2 className="h-5 w-5" /> Clientes
@@ -393,7 +410,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/app/calendario"
+              href="/calendario"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Calendar className="h-5 w-5" /> Calendario
@@ -401,7 +418,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/app/presupuesto"
+              href="/presupuesto"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Calculator className="h-5 w-5" /> Presupuesto
@@ -409,7 +426,7 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
           </SheetTrigger>
           <SheetTrigger asChild>
             <Link
-              href="/app/ajustes"
+              href="/ajustes"
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Settings className="h-5 w-5" /> Ajustes

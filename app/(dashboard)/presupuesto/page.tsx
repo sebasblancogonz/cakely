@@ -370,21 +370,21 @@ export default function QuotesPage() {
           <AlertDescription>
             No se pueden calcular presupuestos. Por favor, configura los{' '}
             <Link
-              href="/app/ajustes"
+              href="/ajustes"
               className="font-semibold underline hover:text-destructive-foreground/80"
             >
               Ajustes
             </Link>{' '}
             (costes, márgenes), añade{' '}
             <Link
-              href="/app/ajustes"
+              href="/ajustes"
               className="font-semibold underline hover:text-destructive-foreground/80"
             >
               Precios de Ingredientes
             </Link>{' '}
             y define{' '}
             <Link
-              href="/app/ajustes"
+              href="/ajustes"
               className="font-semibold underline hover:text-destructive-foreground/80"
             >
               Recetas

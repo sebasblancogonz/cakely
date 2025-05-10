@@ -11,7 +11,7 @@ import {
 import { OrderStatus } from '@types';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { updateOrderStatusAction } from '@/app/(dashboard)/app/pedidos/actions';
+import { updateOrderStatusAction } from '@/app/(dashboard)/pedidos/actions';
 
 interface OrderStatusSelectorProps {
   orderId: number;

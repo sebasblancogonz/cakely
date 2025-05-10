@@ -7,6 +7,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function displayData(
+  data: string | null | undefined,
+  fallback: string = '-'
+): string {
+  return data ?? fallback;
+}
+
 const statusStyles: Record<string, string> = {
   pendiente: 'bg-pending text-pending-text',
   preparando: 'bg-wip text-wip-text',
