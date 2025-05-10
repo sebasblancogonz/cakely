@@ -365,7 +365,7 @@ export default async function OrderDetailPage({
               {order.customerId && (
                 <div className="pt-3 border-t mt-3">
                   <Button variant="secondary" size="sm" asChild>
-                    <Link href={`/app/clientes/${order.customerId}`}>
+                    <Link href={`/clientes/${order.customerId}`}>
                       Ver Ficha Cliente
                     </Link>
                   </Button>

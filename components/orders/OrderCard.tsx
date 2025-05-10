@@ -90,7 +90,7 @@ export function OrderCard({ order, handleUpdateStatus }: OrderCardProps) {
           className="w-full active:bg-gray-200"
           asChild
         >
-          <Link href={`/app/pedidos/${order.id}`}>
+          <Link href={`/pedidos/${order.id}`}>
             <Eye className="mr-2 h-4 w-4" /> Ver Detalles
           </Link>
         </Button>

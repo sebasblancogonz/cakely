@@ -252,7 +252,7 @@ export async function PATCH(request: NextRequest) {
         });
         const customerName = customer?.name || 'Cliente Desconocido';
         const eventTitle = `Entrega Pedido #${updatedOrderDb.businessOrderNumber} - ${customerName}`;
-        const eventDescription = `Producto: ${updatedOrderDb.description || ''}\nVer: ${process.env.NEXT_PUBLIC_APP_URL}/app/pedidos/${orderIdNum}`;
+        const eventDescription = `Producto: ${updatedOrderDb.description || ''}\nVer: ${process.env.NEXT_PUBLIC_APP_URL}/pedidos/${orderIdNum}`;
 
         const teamMembersWithData = await db
           .select({ user: { email: users.email } })

@@ -83,7 +83,7 @@ export function Customer({
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuItem
               className="cursor-pointer"
-              onClick={() => router.push(`/app/clientes/${customer.id}`)}
+              onClick={() => router.push(`/clientes/${customer.id}`)}
             >
               Ver detalles
             </DropdownMenuItem>

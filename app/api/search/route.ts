@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         type: 'order' as const,
         title: o.title || `Pedido #${o.businessOrderNumber}`,
         description: o.customerName || undefined,
-        url: `/app/pedidos#order-${o.id}`
+        url: `/pedidos#order-${o.id}`
       }))
     );
 
@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
         type: 'ingredient' as const,
         title: i.title,
         description: i.description ? `Unidad: ${i.description}` : undefined,
-        url: `/app/ajustes#ingredient-${i.id}`
+        url: `/ajustes#ingredient-${i.id}`
       }))
     );
 
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
         type: 'recipe' as const,
         title: r.title,
         description: r.description ? `Tipo: ${r.description}` : undefined,
-        url: `/app/ajustes#recipe-${r.id}`
+        url: `/ajustes#recipe-${r.id}`
       }))
     );
 

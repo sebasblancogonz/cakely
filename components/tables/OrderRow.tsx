@@ -163,7 +163,7 @@ export function OrderRow({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                   <DropdownMenuItem
-                    onClick={() => router.push(`/app/pedidos/${order.id}`)}
+                    onClick={() => router.push(`/pedidos/${order.id}`)}
                     className="cursor-pointer"
                   >
                     <Eye size={15} className="mr-2" /> Ver detalles

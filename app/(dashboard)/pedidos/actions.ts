@@ -54,8 +54,8 @@ export async function updateOrderStatusAction(
       };
     }
 
-    revalidatePath(`/app/pedidos/${orderId}`);
-    revalidatePath('/app/pedidos');
+    revalidatePath(`/pedidos/${orderId}`);
+    revalidatePath('/pedidos');
 
     console.log(`Server Action: Order ${orderId} status updated successfully.`);
     return { success: true, message: 'Estado del pedido actualizado.' };
@@ -114,8 +114,8 @@ export async function updatePaymentStatusAction(
       };
     }
 
-    revalidatePath(`/app/pedidos/${orderId}`);
-    revalidatePath('/app/pedidos');
+    revalidatePath(`/pedidos/${orderId}`);
+    revalidatePath('/pedidos');
 
     console.log(
       `Server Action: Order ${orderId} payment status updated successfully.`

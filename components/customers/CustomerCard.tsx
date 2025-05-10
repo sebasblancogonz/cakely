@@ -114,12 +114,12 @@ export function CustomerCard({ customer }: CustomerCardProps) {
       </CardContent>
       <CardFooter className="grid grid-cols-2 gap-2">
         <Button variant="outline" size="sm" className="w-full" asChild>
-          <Link href={`/app/pedidos?customerId=${customer.id}`}>
+          <Link href={`/pedidos?customerId=${customer.id}`}>
             <ListOrdered className="mr-1.5 h-4 w-4" /> Pedidos
           </Link>
         </Button>
         <Button variant="secondary" size="sm" className="w-full" asChild>
-          <Link href={`/app/clientes/${customer.id}`}>
+          <Link href={`/clientes/${customer.id}`}>
             <Eye className="mr-1.5 h-4 w-4" /> Detalles
           </Link>
         </Button>

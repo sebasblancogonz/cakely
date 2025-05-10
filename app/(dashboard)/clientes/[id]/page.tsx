@@ -290,7 +290,7 @@ export default async function CustomerDetailPage({
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">
                           <Link
-                            href={`/app/pedidos/${order.id}`}
+                            href={`/pedidos/${order.id}`}
                             className="hover:underline"
                           >
                             #{order.id}
@@ -330,7 +330,7 @@ export default async function CustomerDetailPage({
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/app/pedidos/${order.id}`}>
+                            <Link href={`/pedidos/${order.id}`}>
                               <Eye className="h-4 w-4 mr-1 sm:mr-0" />{' '}
                               <span className="hidden sm:inline ml-1">Ver</span>
                             </Link>
