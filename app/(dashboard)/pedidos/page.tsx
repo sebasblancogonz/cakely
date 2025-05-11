@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Orders } from '@/components/orders/Orders';
-import { Customer, Order, OrderStatus, PaymentStatus } from '@types';
+import { Order, OrderStatus, PaymentStatus } from '@types';
 import Modal from '@/components/common/Modal';
 import OrderForm from '@/components/forms/OrderForm';
 import UploadImage from '@/components/common/MultiUpload';

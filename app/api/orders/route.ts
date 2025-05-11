@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { businesses, db } from '@/lib/db';
+import { businesses, customers, db, productTypes } from '@/lib/db';
 import { orders } from '@/lib/db';
 import { getOrders } from '@/lib/db';
 import { OrderStatus } from '@types';
 import { createOrderFormSchema } from '@/lib/validators/orders';
-import { eq, max, sql } from 'drizzle-orm';
+import { and, eq, max, sql } from 'drizzle-orm';
 import {
   combineDeliveryDateAndTime,
   createCalendarEventIfNeeded,
@@ -95,6 +95,43 @@ export async function POST(request: NextRequest) {
       await tx.execute(
         sql`SELECT id FROM ${businesses} WHERE id = ${businessId} FOR UPDATE`
       );
+
+      let productTypeIdToUse: number;
+      const productName = validatedData.productType;
+      const [existingProductType] = await tx
+        .select({ id: productTypes.id })
+        .from(productTypes)
+        .where(
+          and(
+            eq(productTypes.businessId, businessId),
+            eq(
+              sql`lower(${productTypes.name})`,
+              productName.toLowerCase().trim()
+            )
+          )
+        )
+        .limit(1);
+
+      if (existingProductType) {
+        productTypeIdToUse = existingProductType.id;
+        console.log(
+          `[Order Create Tx] Usando productType existente ID: ${productTypeIdToUse} para "${productName}"`
+        );
+      } else {
+        console.log(
+          `[Order Create Tx] Creando nuevo productType: "${productName}"`
+        );
+        const [newType] = await tx
+          .insert(productTypes)
+          .values({
+            name: productName.trim(),
+            businessId: businessId
+          })
+          .returning({ id: productTypes.id });
+        if (!newType || !newType.id)
+          throw new Error('No se pudo crear el nuevo tipo de producto.');
+        productTypeIdToUse = newType.id;
+      }
       const maxResult = await tx
         .select({ maxValue: max(orders.businessOrderNumber) })
         .from(orders)
@@ -105,7 +142,8 @@ export async function POST(request: NextRequest) {
         validatedData,
         finalDeliveryDateTime,
         businessId,
-        nextNumber
+        nextNumber,
+        productTypeIdToUse
       );
       const [insertedOrder] = await tx
         .insert(orders)
@@ -128,7 +166,10 @@ export async function POST(request: NextRequest) {
 
     const finalOrder = await db.query.orders.findFirst({
       where: eq(orders.id, orderCreated.id),
-      with: { customer: { columns: { name: true } } }
+      with: {
+        customer: { columns: { name: true } },
+        productType: { columns: { name: true } }
+      }
     });
 
     return NextResponse.json(finalOrder ?? orderCreated, { status: 201 });

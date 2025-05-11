@@ -38,7 +38,7 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
-  ProductType
+  ProductTypeEnum
 } from '@types';
 import { OrderFormData, UpdateOrderFormData } from './validators/orders';
 import { UpdateCustomerFormData } from './validators/customers';
@@ -62,7 +62,7 @@ export const paymentMethodEnum = pgEnum(
 
 export const productTypeEnum = pgEnum(
   'product_type',
-  Object.values(ProductType) as [string, ...string[]]
+  Object.values(ProductTypeEnum) as [string, ...string[]]
 );
 
 export const users = pgTable('users', {
@@ -110,7 +110,6 @@ export const orders = pgTable(
     orderStatus: orderStatusEnum('order_status')
       .notNull()
       .default(OrderStatus.Pendiente),
-    productType: productTypeEnum('product_type').notNull(),
     productTypeId: integer('product_type_id').references(
       () => productTypes.id,
       { onDelete: 'set null' }
@@ -592,6 +591,7 @@ if (
 export const db = dbInstance;
 
 export type SelectBusiness = typeof businesses.$inferSelect;
+export type SelectProductType = typeof productTypes.$inferSelect;
 export type SelectUser = typeof users.$inferSelect;
 export type SelectOrder = typeof orders.$inferSelect;
 export type SelectCustomer = typeof customers.$inferSelect;
@@ -610,6 +610,7 @@ export type PendingInvitation = typeof invitations.$inferSelect;
 
 export type Order = SelectOrder & {
   customer?: SelectCustomer;
+  productType?: SelectProductType;
 };
 export type Customer = SelectCustomer & {
   orders?: SelectOrder[];
@@ -890,11 +891,16 @@ export async function getOrders(
           email: customers.email,
           phone: customers.phone,
           instagramHandle: customers.instagramHandle
+        },
+        productType: {
+          id: productTypes.id,
+          name: productTypes.name
         }
       })
       .from(orders)
 
       .leftJoin(customers, eq(orders.customerId, customers.id))
+      .leftJoin(productTypes, eq(orders.productTypeId, productTypes.id))
       .where(finalWhere)
       .orderBy(...orderByClauses)
       .limit(limit)
@@ -904,6 +910,7 @@ export async function getOrders(
       .select({ value: count() })
       .from(orders)
       .leftJoin(customers, eq(orders.customerId, customers.id))
+      .leftJoin(productTypes, eq(orders.productTypeId, productTypes.id))
       .where(finalWhere);
 
     const totalOrders = totalResult[0]?.value ?? 0;
@@ -951,7 +958,13 @@ export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
     amount: orderInput.amount.toString(),
     deliveryDate: orderInput.deliveryDate ? orderInput.deliveryDate : null,
     orderStatus: orderInput.orderStatus,
-    productType: orderInput.productType,
+    productTypeId: await db.query.productTypes.findFirst({
+      where: and(
+        eq(productTypes.name, orderInput.productType),
+        eq(businesses.id, orderInput.businessId)
+      )
+    }),
+    productType: 'toberemoved',
     customizationDetails: orderInput.customizationDetails,
     quantity: orderInput.quantity,
     sizeOrWeight: orderInput.sizeOrWeight,

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Order,
   OrderImage,
-  ProductType,
+  ProductTypeEnum,
   PaymentMethod,
   PaymentStatus,
   OrderStatus
@@ -30,12 +30,13 @@ import {
   updateOrderFormSchema
 } from '@/lib/validators/orders';
 import { format } from 'date-fns';
+import { Combobox, ComboboxOption } from '../ui/combobox';
 
 const defaultOrderFormValues: Partial<UpdateOrderFormData> = {
   description: '',
   amount: undefined,
   deliveryDate: null,
-  productType: ProductType.Tarta,
+  productType: ProductTypeEnum.Tarta,
   customizationDetails: '',
   quantity: 1,
   sizeOrWeight: '',
@@ -100,6 +101,11 @@ const UpdateOrderForm = ({
   const [imageUrls, setImageUrls] = useState<OrderImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<OrderImage[]>([]);
   const [initialImageUrls, setInitialImageUrls] = useState<OrderImage[]>([]);
+  const [productTypeOptions, setProductTypeOptions] = useState<
+    ComboboxOption[]
+  >([]);
+  const [loadingProductTypes, setLoadingProductTypes] = useState(true);
+
   const {
     register,
     handleSubmit,
@@ -115,7 +121,7 @@ const UpdateOrderForm = ({
         ? new Date(orderToEdit.deliveryDate)
         : null,
       deliveryTime: formatTimeForInput(orderToEdit.deliveryDate),
-      productType: orderToEdit.productType as ProductType,
+      productType: orderToEdit.productType?.name ?? '',
       customizationDetails: orderToEdit.customizationDetails ?? '',
       quantity: orderToEdit.quantity ?? 1,
       sizeOrWeight: orderToEdit.sizeOrWeight ?? '',
@@ -136,6 +142,40 @@ const UpdateOrderForm = ({
   });
 
   useEffect(() => {
+    setLoadingProductTypes(true);
+    async function fetchProductTypes() {
+      try {
+        const response = await fetch('/api/product-types');
+        if (!response.ok) throw new Error('Failed to fetch product types');
+        const typesData: { id: number; name: string }[] = await response.json();
+
+        const enumValues = Object.values(ProductTypeEnum);
+        const combinedNames = new Set([
+          ...enumValues,
+          ...typesData.map((t) => t.name)
+        ]);
+
+        setProductTypeOptions(
+          Array.from(combinedNames)
+            .map((name) => ({ value: name, label: name }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+        );
+      } catch (error) {
+        console.error('Error fetching product types:', error);
+        setProductTypeOptions(
+          Object.values(ProductTypeEnum).map((type) => ({
+            value: type,
+            label: type
+          }))
+        );
+      } finally {
+        setLoadingProductTypes(false);
+      }
+    }
+    fetchProductTypes();
+  }, []);
+
+  useEffect(() => {
     const dateForInputReset = formatDateForInput(orderToEdit.deliveryDate);
     const initialImages = Array.isArray(orderToEdit.images)
       ? orderToEdit.images
@@ -147,7 +187,7 @@ const UpdateOrderForm = ({
       //@ts-ignore
       deliveryDate: dateForInputReset,
       deliveryTime: formatTimeForInput(orderToEdit.deliveryDate),
-      productType: orderToEdit.productType as ProductType,
+      productType: orderToEdit.productType?.name ?? '',
       customizationDetails: orderToEdit.customizationDetails || '',
       quantity: orderToEdit.quantity,
       sizeOrWeight: orderToEdit.sizeOrWeight,
@@ -191,6 +231,8 @@ const UpdateOrderForm = ({
       deliveryDate: data.deliveryDate ? data.deliveryDate : null,
       images: imageUrls
     };
+
+    console.log('API DATA BRO', apiData);
 
     delete (apiData as any).customerId;
 
@@ -344,21 +386,23 @@ const UpdateOrderForm = ({
               name="productType"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger
-                    id="productType"
-                    className={cn(errors.productType && 'border-destructive')}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(ProductType).map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  id="productType-create"
+                  options={productTypeOptions}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Selecciona o escribe un tipo..."
+                  searchPlaceholder="Buscar o crear tipo..."
+                  notFoundMessage={
+                    loadingProductTypes
+                      ? 'Cargando tipos...'
+                      : 'No hay tipos. Escribe para crear uno nuevo.'
+                  }
+                  disabled={loadingProductTypes}
+                  inputClassName={cn(
+                    errors.productType && 'border-destructive'
+                  )}
+                />
               )}
             />
             {errors.productType && (

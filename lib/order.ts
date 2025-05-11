@@ -27,7 +27,8 @@ export function prepareOrderDataForInsert(
   validatedData: OrderFormData,
   deliveryDate: Date | null,
   businessId: number,
-  orderNumber: number
+  orderNumber: number,
+  productTypeIdToUse: number
 ) {
   const { createCalendarEvent, deliveryTime, ...rest } = validatedData;
   return {
@@ -36,6 +37,7 @@ export function prepareOrderDataForInsert(
     businessId,
     orderStatus: OrderStatus.Pendiente,
     businessOrderNumber: orderNumber,
+    productTypeId: productTypeIdToUse,
     createdAt: new Date(),
     updatedAt: new Date()
   };

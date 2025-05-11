@@ -30,7 +30,10 @@ export const createOrderFormSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal('')),
-  productType: z.nativeEnum(ProductType),
+  productType: z
+    .string()
+    .trim()
+    .min(1, { message: 'El tipo de producto es requerido' }),
   customizationDetails: z.string().optional(),
   quantity: z.coerce
     .number()
@@ -53,9 +56,10 @@ export const createOrderFormSchema = z.object({
 });
 
 export const updateOrderFormSchema = createOrderFormSchema
-  .omit({ customerId: true, createCalendarEvent: true })
+  .omit({ customerId: true })
   .partial()
   .extend({
+    productType: z.string().trim().min(1, 'El tipo es requerido').optional(),
     images: z
       .array(
         z.object({

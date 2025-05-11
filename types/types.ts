@@ -5,7 +5,8 @@ import {
   Recipe as SelectRecipe,
   RecipeIngredient as SelectRecipeIngredient,
   SelectOrder as DbSelectOrder,
-  SelectCustomer as DbSelectCustomer
+  SelectCustomer as DbSelectCustomer,
+  SelectProductType
 } from '@/lib/db';
 import { teamRoleEnum, invitationStatusEnum } from '@/lib/db';
 
@@ -40,6 +41,7 @@ export type Setting = SelectSetting;
 export type IngredientPrice = SelectIngredientPrice;
 export type Recipe = SelectRecipe;
 export type RecipeIngredient = SelectRecipeIngredient;
+export type ProductType = SelectProductType;
 
 export type Customer = DbSelectCustomer & {
   orders?: Order[];
@@ -49,6 +51,7 @@ export type Order = DbSelectOrder & {
   customer?: Customer;
   orderHistory?: OrderHistoryEntry[];
   images?: OrderImage[];
+  productType: ProductType;
 };
 
 export enum OrderStatus {
@@ -58,7 +61,7 @@ export enum OrderStatus {
   Entregado = 'Entregado'
 }
 
-export enum ProductType {
+export enum ProductTypeEnum {
   Tarta = 'Tarta',
   Galletas = 'Galletas',
   Cupcakes = 'Cupcakes',

@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   db,
-  updateOrder,
   orders,
   customers,
   teamMembers,
   users,
   TeamMemberWithUser,
   SelectOrder,
-  deleteOrderById
+  deleteOrderById,
+  productTypes
 } from '@/lib/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
-import {
-  UpdateOrderFormData,
-  updateOrderFormSchema
-} from '@/lib/validators/orders';
+import { updateOrderFormSchema } from '@/lib/validators/orders';
 import {
   calculateEndTime,
-  callCreateCalendarEvent,
   callDeleteCalendarEvent,
   callModifyCalendarEvent
 } from '@/lib/calendar-integration';
@@ -51,7 +47,8 @@ export async function GET(request: NextRequest) {
     const orderResult = await db.query.orders.findFirst({
       where: and(eq(orders.id, orderId), eq(orders.businessId, businessId)),
       with: {
-        customer: true
+        customer: true,
+        productType: true
       }
     });
 
@@ -185,14 +182,12 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  const [currentOrder]: SelectOrder[] = await db
-    .select({
-      deliveryDate: orders.deliveryDate,
-      googleCalendarEventId: orders.googleCalendarEventId
-    })
-    .from(orders)
-    .where(and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId)))
-    .limit(1);
+  const currentOrder = await db.query.orders.findFirst({
+    where: eq(orders.id, orderIdNum),
+    with: {
+      productType: true
+    }
+  });
 
   if (!currentOrder) {
     return NextResponse.json(
@@ -215,12 +210,135 @@ export async function PATCH(request: NextRequest) {
     }
   });
 
+  let resolvedProductTypeId: number | null | undefined =
+    currentOrder.productTypeId;
+
   try {
-    const [updatedOrderDb] = await db
-      .update(orders)
-      .set(dataToUpdateInDb)
-      .where(and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId)))
-      .returning();
+    const updatedOrderDb = await db.transaction(async (tx: any) => {
+      // --- A. Resolver/Crear ProductType ID si se envió un nuevo nombre de tipo ---
+      // Esta lógica toma el validatedData.productType (string) y lo convierte
+      // a un resolvedProductTypeId (number) buscando/creando en la tabla productTypes.
+      if (
+        validatedData.productType &&
+        typeof validatedData.productType === 'string'
+      ) {
+        const productTypeNameFromForm = validatedData.productType.trim();
+        if (
+          productTypeNameFromForm !== (currentOrder.productType?.name ?? '') ||
+          !currentOrder.productTypeId
+        ) {
+          console.log(
+            `[Order PATCH ${orderIdNum}] Resolviendo productType: "${productTypeNameFromForm}"`
+          );
+          const [existingPT] = await tx
+            .select({ id: productTypes.id })
+            .from(productTypes)
+            .where(
+              and(
+                eq(productTypes.businessId, businessId),
+                eq(
+                  sql`lower(${productTypes.name})`,
+                  productTypeNameFromForm.toLowerCase()
+                )
+              )
+            )
+            .limit(1);
+          if (existingPT) {
+            resolvedProductTypeId = existingPT.id;
+          } else {
+            const [newPT] = await tx
+              .insert(productTypes)
+              .values({ name: productTypeNameFromForm, businessId })
+              .returning({ id: productTypes.id });
+            if (!newPT?.id)
+              throw new Error('No se pudo crear el nuevo tipo de producto.');
+            resolvedProductTypeId = newPT.id;
+          }
+          console.log(
+            `[Order PATCH ${orderIdNum}] Usando productTypeId: ${resolvedProductTypeId}`
+          );
+        }
+      } else if (
+        validatedData.productType === null ||
+        validatedData.productType === ''
+      ) {
+        // Si el usuario explícitamente quiere quitar el tipo de producto (envía null o "")
+        resolvedProductTypeId = null;
+      }
+      // --- Fin Resolver/Crear ProductType ID ---
+
+      // --- B. Preparar Datos para Actualizar 'orders' ---
+      // Desestructura validatedData para quitar campos que no van directo a 'orders' o necesitan manejo especial
+      const {
+        deliveryTime, // Se usó para finalDeliveryDateTime
+        createCalendarEvent, // Se usa para lógica de GCal, no es columna DB
+        productType: productTypeNameString, // Ya lo usamos para resolvedProductTypeId
+        images: imagesFromForm, // Se maneja abajo si es JSONB o si tienes tabla de relación
+        amount,
+        totalPrice,
+        depositAmount,
+        deliveryDate, // Se maneja con dateEffectivelyUpdated y finalDeliveryDateTime
+        ...restOfValidatedFields // Campos que pueden ir más directo (description, status, etc.)
+      } = validatedData;
+
+      const dataToSet: Partial<typeof orders.$inferInsert> = {
+        ...restOfValidatedFields
+      };
+
+      // Añade campos condicionalmente y con conversión de tipo
+      if (dateUpdated) {
+        dataToSet.deliveryDate = finalDeliveryDateTime;
+      }
+      // Actualiza productTypeId solo si realmente cambió o se resolvió uno nuevo
+      if (resolvedProductTypeId !== currentOrder.productTypeId) {
+        dataToSet.productTypeId = resolvedProductTypeId;
+      }
+
+      // Convierte campos numéricos a string para Drizzle (si tus columnas son NUMERIC)
+      if (amount !== undefined) dataToSet.amount = amount.toString();
+      if (totalPrice !== undefined)
+        dataToSet.totalPrice = totalPrice.toString();
+      if (depositAmount !== undefined)
+        dataToSet.depositAmount = depositAmount.toString();
+
+      // Limpia cualquier propiedad que haya quedado como 'undefined' explícitamente
+      // Drizzle generalmente ignora las claves 'undefined' en .set(), pero esto es más seguro.
+      Object.keys(dataToSet).forEach((key) => {
+        if (dataToSet[key as keyof typeof dataToSet] === undefined) {
+          delete dataToSet[key as keyof typeof dataToSet];
+        }
+      });
+
+      // Si no hay campos que actualizar (solo updatedAt), podríamos optimizar,
+      // pero por ahora actualizamos siempre si hay cambios o se resolvió productTypeId
+      if (
+        Object.keys(dataToSet).length <= 1 &&
+        resolvedProductTypeId === currentOrder.productTypeId &&
+        !dateUpdated
+      ) {
+        console.log(
+          `[Order PATCH ${orderIdNum}] No hay campos de pedido significativos que actualizar en DB.`
+        );
+        return currentOrder as typeof orders.$inferSelect;
+      }
+
+      // --- C. Actualizar Pedido Principal ---
+      console.log(
+        `[Order PATCH ${orderIdNum}] Updating orders table with:`,
+        dataToSet
+      );
+      const [result] = await tx
+        .update(orders)
+        .set(dataToSet) // <--- dataToSet AHORA CONTIENE productTypeId (número)
+        .where(
+          and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId))
+        )
+        .returning();
+      if (!result)
+        throw new Error('Fallo al actualizar el pedido en la base de datos.');
+      console.log(`[Order PATCH ${orderIdNum}] Pedido actualizado en BBDD.`);
+      return result;
+    });
 
     if (!updatedOrderDb) {
       throw new Error('No se pudo actualizar el pedido en la base de datos.');
@@ -312,6 +430,11 @@ export async function PATCH(request: NextRequest) {
       where: eq(orders.id, orderIdNum),
       with: {
         customer: {
+          columns: {
+            name: true
+          }
+        },
+        productType: {
           columns: {
             name: true
           }

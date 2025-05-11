@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { orders, customers, ingredientPrices, recipes } from '@/lib/db';
-import { ilike, or, eq, and, SQL, sql } from 'drizzle-orm';
+import {
+  orders,
+  customers,
+  ingredientPrices,
+  recipes,
+  productTypes
+} from '@/lib/db';
+import { ilike, or, eq, and, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 
 interface SearchResult {
@@ -53,7 +59,7 @@ export async function GET(request: NextRequest) {
       ilike(orders.customizationDetails, searchTerm),
       ilike(orders.sizeOrWeight, searchTerm),
       ilike(customers.name, searchTerm),
-      ilike(sql`${orders.productType}::text`, searchTerm)
+      ilike(sql`${productTypes.name}::text`, searchTerm)
     );
     const orderCondition = and(
       baseBusinessCondition(orders),
