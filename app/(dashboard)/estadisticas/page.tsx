@@ -167,7 +167,7 @@ export default function StatisticsPage() {
     const distinctProductTypes = Array.from(
       new Set(
         filtered
-          .map((order) => order.productType.name)
+          .map((order) => order.productType && order.productType.name)
           .filter((pt) => typeof pt === 'string' && pt.trim() !== '')
       )
     );
@@ -182,8 +182,9 @@ export default function StatisticsPage() {
     const productData: ChartData[] = distinctProductTypes
       .map((type) => ({
         name: type,
-        value: filtered.filter((order) => order.productType.name === type)
-          .length
+        value: filtered.filter(
+          (order) => order.productType && order.productType.name === type
+        ).length
       }))
       .filter((item) => item.value > 0)
       .sort((a, b) => b.value - a.value);

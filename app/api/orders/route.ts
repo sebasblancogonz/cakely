@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const sortBy = searchParams.get('sortBy');
   const sortOrder = searchParams.get('sortOrder');
+  const filterDate = searchParams.get('filterDate');
 
   const validStatus =
     status &&
@@ -47,7 +48,8 @@ export async function GET(request: NextRequest) {
       limit,
       validStatus,
       sortBy,
-      sortOrder
+      sortOrder,
+      filterDate
     );
 
     return NextResponse.json({ orders, newOffset, totalOrders });

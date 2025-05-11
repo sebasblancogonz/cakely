@@ -66,6 +66,7 @@ export default function OrdersPage() {
   const status = searchParams.get('status') || 'all';
   const initialSortBy = searchParams.get('sortBy') || 'orderDate';
   const initialSortOrder = searchParams.get('sortOrder') || 'desc';
+  const filterDate = searchParams.get('filterDate') || '';
   const [sortBy, setSortBy] = useState(initialSortBy);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(
     initialSortOrder === 'asc' ? 'asc' : 'desc'
@@ -141,7 +142,8 @@ export default function OrdersPage() {
       limit: limit.toString(),
       status: status === 'all' ? '' : status,
       sortBy: sortBy,
-      sortOrder: sortOrder
+      sortOrder: sortOrder,
+      filterDate: filterDate
     });
 
     fetch(`/api/orders?${params.toString()}`)

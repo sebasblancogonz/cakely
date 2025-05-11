@@ -44,6 +44,7 @@ import { OrderFormData, UpdateOrderFormData } from './validators/orders';
 import { UpdateCustomerFormData } from './validators/customers';
 import { Pool } from '@neondatabase/serverless';
 import { table } from 'console';
+import { endOfDay, startOfDay } from 'date-fns';
 
 export const orderStatusEnum = pgEnum(
   'order_status',
@@ -795,8 +796,10 @@ export async function getOrders(
   limit: number = 5,
   status: string | null = null,
   sortBy: string | null,
-  sortOrder: string | null
+  sortOrder: string | null,
+  filterDate: string | null
 ): Promise<GetOrdersResult> {
+  console.log('FILTER DATE', filterDate);
   if (!businessId) throw new Error('Business ID is required');
 
   const allowedSortColumns: Record<string, Column | SQL> = {
@@ -875,6 +878,15 @@ export async function getOrders(
         sql`${orders.businessOrderNumber}::text ilike ${searchTerm}`,
         sql`${orders.id}::text ilike ${searchTerm}`
       )
+    );
+  }
+
+  if (filterDate) {
+    const start = startOfDay(filterDate);
+    const end = endOfDay(start);
+
+    whereConditions.push(
+      and(gte(orders.deliveryDate, start), lt(orders.deliveryDate, end))
     );
   }
 

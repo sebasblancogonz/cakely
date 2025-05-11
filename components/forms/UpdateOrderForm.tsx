@@ -282,10 +282,7 @@ const UpdateOrderForm = ({
   };
 
   const onValidationErrors = (validationErrors: any) => {
-    console.error(
-      'ORDER FORM - VALIDATION ERRORS (RHF):',
-      JSON.stringify(validationErrors, null, 2)
-    );
+    console.error('ORDER FORM - VALIDATION ERRORS (RHF):', validationErrors);
     toast({
       title: 'Error de Validación',
       description: 'Por favor, revisa los campos marcados en rojo.',
