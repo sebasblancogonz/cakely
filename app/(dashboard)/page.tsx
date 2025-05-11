@@ -271,7 +271,7 @@ export default async function DashboardHomePage() {
           title="Próximas Entregas (7 días)"
           value={orderStats.upcomingDeliveriesNext7Days}
           icon={<BellRing className="h-4 w-4 text-muted-foreground" />}
-          link="/pedidos?status=upcoming&sortBy=upcoming"
+          link="/pedidos?status=upcoming&sortBy=upcoming&sortOrder=asc"
         />
         <StatCard
           title="Pedidos Pendientes"
