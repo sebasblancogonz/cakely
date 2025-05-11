@@ -84,10 +84,12 @@ export enum PaymentMethod {
   Bizum = 'Bizum'
 }
 
+export interface RecipeIngredientPrice extends RecipeIngredient {
+  ingredient: IngredientPrice;
+}
+
 export type RecipeWithIngredients = Recipe & {
-  recipeIngredients: (RecipeIngredient & {
-    ingredient: IngredientPrice;
-  })[];
+  recipeIngredients: RecipeIngredientPrice[];
 };
 
 export interface RecipeIngredientFormItem {

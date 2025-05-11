@@ -5,16 +5,13 @@ import { updateProductTypeSchema } from '@/lib/validators/productTypes';
 import { eq, and, ne } from 'drizzle-orm';
 import { getSessionInfo, checkPermission } from '@/lib/auth/utils';
 
-interface RouteParams {
-  params: { id: string };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest) {
   const sessionInfo = await getSessionInfo(request);
   if (sessionInfo instanceof NextResponse) return sessionInfo;
   const { businessId, userId } = sessionInfo;
 
-  const id = parseInt(params.id, 10);
+  const { pathname } = request.nextUrl;
+  const id = Number(pathname.split('/').pop());
   if (isNaN(id)) {
     return NextResponse.json(
       { message: 'ID de tipo de producto inválido' },
@@ -46,7 +43,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest) {
   const sessionInfo = await getSessionInfo(request);
   if (sessionInfo instanceof NextResponse) return sessionInfo;
   const { userId, businessId } = sessionInfo;
@@ -58,7 +55,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   ]);
   if (permissionCheck instanceof NextResponse) return permissionCheck;
 
-  const id = parseInt(params.id, 10);
+  const { pathname } = request.nextUrl;
+  const id = Number(pathname.split('/').pop());
   if (isNaN(id)) {
     return NextResponse.json(
       { message: 'ID de tipo de producto inválido' },
@@ -133,7 +131,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest) {
   const sessionInfo = await getSessionInfo(request);
   if (sessionInfo instanceof NextResponse) return sessionInfo;
   const { userId, businessId } = sessionInfo;
@@ -145,7 +143,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   ]);
   if (permissionCheck instanceof NextResponse) return permissionCheck;
 
-  const id = parseInt(params.id, 10);
+  const { pathname } = request.nextUrl;
+  const id = Number(pathname.split('/').pop());
   if (isNaN(id)) {
     return NextResponse.json(
       { message: 'ID de tipo de producto inválido' },

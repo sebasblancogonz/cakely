@@ -76,7 +76,7 @@ export async function createCalendarEventIfNeeded({
     const teamMembers = await db
       .select({ user: { email: users.email } })
       .from(users)
-      .where(eq(users.businessId, order.businessId)); // Ajusta si tienes tabla intermedia
+      .where(eq(users.businessId, order.businessId));
     const collaboratorEmails = teamMembers
       .map((m: TeamMemberWithUser) => m.user?.email)
       .filter((e: string) => !!e);

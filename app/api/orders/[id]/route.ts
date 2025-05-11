@@ -215,9 +215,6 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const updatedOrderDb = await db.transaction(async (tx: any) => {
-      // --- A. Resolver/Crear ProductType ID si se envió un nuevo nombre de tipo ---
-      // Esta lógica toma el validatedData.productType (string) y lo convierte
-      // a un resolvedProductTypeId (number) buscando/creando en la tabla productTypes.
       if (
         validatedData.productType &&
         typeof validatedData.productType === 'string'
@@ -262,55 +259,44 @@ export async function PATCH(request: NextRequest) {
         validatedData.productType === null ||
         validatedData.productType === ''
       ) {
-        // Si el usuario explícitamente quiere quitar el tipo de producto (envía null o "")
         resolvedProductTypeId = null;
       }
-      // --- Fin Resolver/Crear ProductType ID ---
 
-      // --- B. Preparar Datos para Actualizar 'orders' ---
-      // Desestructura validatedData para quitar campos que no van directo a 'orders' o necesitan manejo especial
       const {
-        deliveryTime, // Se usó para finalDeliveryDateTime
-        createCalendarEvent, // Se usa para lógica de GCal, no es columna DB
-        productType: productTypeNameString, // Ya lo usamos para resolvedProductTypeId
-        images: imagesFromForm, // Se maneja abajo si es JSONB o si tienes tabla de relación
+        deliveryTime,
+        createCalendarEvent,
+        productType: productTypeNameString,
+        images: imagesFromForm,
         amount,
         totalPrice,
         depositAmount,
-        deliveryDate, // Se maneja con dateEffectivelyUpdated y finalDeliveryDateTime
-        ...restOfValidatedFields // Campos que pueden ir más directo (description, status, etc.)
+        deliveryDate,
+        ...restOfValidatedFields
       } = validatedData;
 
       const dataToSet: Partial<typeof orders.$inferInsert> = {
         ...restOfValidatedFields
       };
 
-      // Añade campos condicionalmente y con conversión de tipo
       if (dateUpdated) {
         dataToSet.deliveryDate = finalDeliveryDateTime;
       }
-      // Actualiza productTypeId solo si realmente cambió o se resolvió uno nuevo
       if (resolvedProductTypeId !== currentOrder.productTypeId) {
         dataToSet.productTypeId = resolvedProductTypeId;
       }
 
-      // Convierte campos numéricos a string para Drizzle (si tus columnas son NUMERIC)
       if (amount !== undefined) dataToSet.amount = amount.toString();
       if (totalPrice !== undefined)
         dataToSet.totalPrice = totalPrice.toString();
       if (depositAmount !== undefined)
         dataToSet.depositAmount = depositAmount.toString();
 
-      // Limpia cualquier propiedad que haya quedado como 'undefined' explícitamente
-      // Drizzle generalmente ignora las claves 'undefined' en .set(), pero esto es más seguro.
       Object.keys(dataToSet).forEach((key) => {
         if (dataToSet[key as keyof typeof dataToSet] === undefined) {
           delete dataToSet[key as keyof typeof dataToSet];
         }
       });
 
-      // Si no hay campos que actualizar (solo updatedAt), podríamos optimizar,
-      // pero por ahora actualizamos siempre si hay cambios o se resolvió productTypeId
       if (
         Object.keys(dataToSet).length <= 1 &&
         resolvedProductTypeId === currentOrder.productTypeId &&
@@ -322,14 +308,13 @@ export async function PATCH(request: NextRequest) {
         return currentOrder as typeof orders.$inferSelect;
       }
 
-      // --- C. Actualizar Pedido Principal ---
       console.log(
         `[Order PATCH ${orderIdNum}] Updating orders table with:`,
         dataToSet
       );
       const [result] = await tx
         .update(orders)
-        .set(dataToSet) // <--- dataToSet AHORA CONTIENE productTypeId (número)
+        .set(dataToSet)
         .where(
           and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId))
         )

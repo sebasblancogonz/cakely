@@ -8,10 +8,8 @@ export function useDeviceType() {
   useEffect(() => {
     const checkDevice = () => {
       const width = window.innerWidth;
-      if (width <= 767)
-        setDevice('mobile'); // móviles
-      else if (width <= 1024)
-        setDevice('tablet'); // tablets
+      if (width <= 767) setDevice('mobile');
+      else if (width <= 1024) setDevice('tablet');
       else setDevice('desktop');
     };
 
