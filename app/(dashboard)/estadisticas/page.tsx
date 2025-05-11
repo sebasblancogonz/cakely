@@ -28,7 +28,7 @@ import {
 import {
   Order,
   OrderStatus,
-  ProductType,
+  ProductTypeEnum,
   PaymentMethod,
   PaymentStatus
 } from '@types';
@@ -164,6 +164,14 @@ export default function StatisticsPage() {
       `[useMemo Statistics] Filtered orders count: ${filtered.length}`
     );
 
+    const distinctProductTypes = Array.from(
+      new Set(
+        filtered
+          .map((order) => order.productType && order.productType.name)
+          .filter((pt) => typeof pt === 'string' && pt.trim() !== '')
+      )
+    );
+
     const statusData: ChartData[] = Object.values(OrderStatus)
       .map((status) => ({
         name: status,
@@ -171,12 +179,15 @@ export default function StatisticsPage() {
       }))
       .filter((item) => item.value > 0);
 
-    const productData: ChartData[] = Object.values(ProductType)
+    const productData: ChartData[] = distinctProductTypes
       .map((type) => ({
         name: type,
-        value: filtered.filter((order) => order.productType === type).length
+        value: filtered.filter(
+          (order) => order.productType && order.productType.name === type
+        ).length
       }))
-      .filter((item) => item.value > 0);
+      .filter((item) => item.value > 0)
+      .sort((a, b) => b.value - a.value);
 
     const paymentData: ChartData[] = Object.values(PaymentMethod)
       .map((method) => ({

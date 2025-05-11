@@ -4,7 +4,11 @@ import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
 import { eq, and, inArray } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { updateRecipeSchema } from '@/lib/validators/recipes';
-import { IngredientPrice } from '@/types/types';
+import {
+  IngredientPrice,
+  RecipeIngredient,
+  RecipeWithIngredients
+} from '@/types/types';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -93,54 +97,76 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { recipeIngredients: ingredientsData, ...recipeData } =
+    const { recipeIngredients: newIngredientsData, ...recipeOnlyData } =
       validation.data;
 
-    const updatedRecipe = await db.transaction(async (tx: any) => {
-      const dataToUpdateRecipe: Record<string, string | Date | undefined> = {};
-      if (recipeData.name !== undefined)
-        dataToUpdateRecipe.name = recipeData.name;
-      if (recipeData.productType !== undefined)
-        dataToUpdateRecipe.productType = recipeData.productType;
-      if (recipeData.baseLaborHours !== undefined)
-        dataToUpdateRecipe.baseLaborHours =
-          recipeData.baseLaborHours.toString();
-      if (recipeData.notes !== undefined)
-        dataToUpdateRecipe.notes = recipeData.notes;
+    const updatedRecipeWithDetails = await db.transaction(async (tx: any) => {
+      let recipeUpdated = false;
 
-      let recipeExists = false;
-      if (Object.keys(dataToUpdateRecipe).length > 0) {
-        dataToUpdateRecipe.updatedAt = new Date();
+      const recipeTableUpdates: Partial<typeof recipes.$inferInsert> = {};
+
+      if (recipeOnlyData.name !== undefined) {
+        recipeTableUpdates.name = recipeOnlyData.name as string;
+      }
+      if (recipeOnlyData.productType !== undefined) {
+        recipeTableUpdates.productType = recipeOnlyData.productType as string;
+      }
+      if (recipeOnlyData.baseLaborHours !== undefined) {
+        recipeTableUpdates.baseLaborHours =
+          recipeOnlyData.baseLaborHours!.toString();
+      }
+      if (recipeOnlyData.notes !== undefined) {
+        recipeTableUpdates.notes = recipeOnlyData.notes as string | null;
+      }
+
+      if (Object.keys(recipeTableUpdates).length > 0) {
+        recipeTableUpdates.updatedAt = new Date();
+        console.log(
+          `[Recipe Tx ${id}] Updating recipe table with:`,
+          recipeTableUpdates
+        );
         const updateResult = await tx
           .update(recipes)
-          .set(dataToUpdateRecipe)
+          .set(recipeTableUpdates)
           .where(and(eq(recipes.id, id), eq(recipes.businessId, businessId)))
           .returning({ id: recipes.id });
+
         if (updateResult.length === 0) {
-          throw new Error('Recipe not found for update or not authorized');
+          throw new Error(
+            'Receta no encontrada para actualizar o no autorizada.'
+          );
         }
-        recipeExists = true;
+        recipeUpdated = true;
+        console.log(`[Recipe Tx ${id}] Recipe table updated.`);
       } else {
-        const existing = await tx
+        const [existingRecipe] = await tx
           .select({ id: recipes.id })
           .from(recipes)
           .where(and(eq(recipes.id, id), eq(recipes.businessId, businessId)));
-        if (existing.length === 0)
-          throw new Error('Recipe not found or not authorized');
-        recipeExists = true;
+        if (!existingRecipe) {
+          throw new Error('Receta no encontrada o no autorizada.');
+        }
       }
 
-      if (recipeExists && ingredientsData !== undefined) {
+      let ingredientsChanged = false;
+      if (newIngredientsData) {
+        ingredientsChanged = true;
+        console.log(`[Recipe Tx ${id}] Deleting existing ingredients...`);
         await tx
           .delete(recipeIngredients)
           .where(eq(recipeIngredients.recipeId, id));
 
-        if (ingredientsData.length > 0) {
-          const ingredientIdsToCheck = ingredientsData.map(
+        // Ahora que sabemos que newIngredientsData es un array (puede estar vacío),
+        // podemos usar .length y .map sin problemas.
+        if (
+          Array.isArray(newIngredientsData) &&
+          newIngredientsData.length > 0
+        ) {
+          const ingredientIdsToCheck = newIngredientsData.map(
             (ing) => ing.ingredientId
           );
 
-          const validIngredientIds = await tx
+          const validIngredientRows = await tx
             .select({ id: ingredientPrices.id })
             .from(ingredientPrices)
             .where(
@@ -149,12 +175,11 @@ export async function PUT(request: NextRequest) {
                 inArray(ingredientPrices.id, ingredientIdsToCheck)
               )
             );
-
           const validIdSet = new Set(
-            validIngredientIds.map((i: IngredientPrice) => i.id)
+            validIngredientRows.map((i: RecipeIngredient) => i.id)
           );
 
-          const ingredientsToInsert = ingredientsData
+          const ingredientsToInsert = newIngredientsData
             .filter((ing) => validIdSet.has(ing.ingredientId))
             .map((ing) => ({
               recipeId: id,
@@ -163,32 +188,73 @@ export async function PUT(request: NextRequest) {
               unit: ing.unit
             }));
 
-          if (ingredientsToInsert.length !== ingredientsData.length) {
+          if (ingredientsToInsert.length !== newIngredientsData.length) {
             console.warn(
-              `Attempted to add ingredients not belonging to business ${businessId} for recipe ${id}`
+              `[Recipe Tx ${id}] Se intentaron añadir ingredientes no válidos o no pertenecientes al negocio.`
             );
           }
 
           if (ingredientsToInsert.length > 0) {
+            console.log(
+              `[Recipe Tx ${id}] Inserting ${ingredientsToInsert.length} new ingredients...`
+            );
             await tx.insert(recipeIngredients).values(ingredientsToInsert);
           }
+        } else {
+          console.log(
+            `[Recipe Tx ${id}] newIngredientsData estaba presente pero vacío. Todos los ingredientes fueron eliminados.`
+          );
         }
+      }
+
+      if (
+        ingredientsChanged &&
+        !recipeUpdated &&
+        Object.keys(recipeTableUpdates).length === 0
+      ) {
+        console.log(
+          `[Recipe Tx ${id}] Touching recipe updatedAt due to ingredient changes.`
+        );
+        await tx
+          .update(recipes)
+          .set({ updatedAt: new Date() })
+          .where(and(eq(recipes.id, id), eq(recipes.businessId, businessId)));
       }
 
       const finalRecipe = await tx.query.recipes.findFirst({
         where: and(eq(recipes.id, id), eq(recipes.businessId, businessId)),
         with: {
-          recipeIngredients: { with: { ingredient: true } }
+          recipeIngredients: {
+            with: {
+              ingredient: {
+                columns: {
+                  name: true,
+                  unit: true,
+                  pricePerUnit: true,
+                  id: true
+                }
+              }
+            },
+            columns: {
+              quantity: true,
+              unit: true,
+              ingredientId: true,
+              id: true
+            }
+          }
         }
       });
 
       if (!finalRecipe) {
-        throw new Error('Failed to retrieve updated recipe');
+        throw new Error(
+          'No se pudo obtener la receta actualizada después de la transacción.'
+        );
       }
-      return finalRecipe;
+      console.log(`[Recipe Tx ${id}] Transacción completada.`);
+      return finalRecipe as RecipeWithIngredients;
     });
 
-    return NextResponse.json(updatedRecipe);
+    return NextResponse.json(updatedRecipeWithDetails);
   } catch (error: any) {
     console.error(
       `API Error updating recipe ${id} for business ${businessId}:`,

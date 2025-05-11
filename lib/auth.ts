@@ -101,7 +101,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           "AUTH JWT - Callback received 'account' object:",
           JSON.stringify(account, null, 2)
         );
-        // Comprueba explícitamente si refresh_token existe en este objeto
         console.log(
           "AUTH JWT - Refresh token present in received 'account' object?",
           !!account.refresh_token
@@ -163,7 +162,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               await tx
                 .update(invitations)
                 .set({ status: 'ACCEPTED' })
-                .where(eq(invitations.id, pendingInvite.id)); // Assuming id is number
+                .where(eq(invitations.id, pendingInvite.id));
             });
             console.log(
               `AUTH_CALLBACK: SignUp - Usuario ${currentUserId} añadido al equipo ${pendingInvite.businessId} como ${pendingInvite.role}.`

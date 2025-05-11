@@ -1,9 +1,8 @@
-// src/components/customers/CustomerCard.tsx (o donde prefieras)
-'use client'; // Puede ser server component si solo muestra datos y usa Link
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
-import { Customer } from '@types'; // Ajusta ruta
+import { Customer } from '@types';
 import {
   Card,
   CardContent,
@@ -14,7 +13,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-// Asume que tienes estos helpers o impórtalos/defínelos
 import { displayDate } from '@/lib/utils';
 import {
   User,
@@ -25,7 +23,7 @@ import {
   BotMessageSquare,
   Eye,
   ListOrdered
-} from 'lucide-react'; // Iconos
+} from 'lucide-react';
 
 interface CustomerCardProps {
   customer: Customer;

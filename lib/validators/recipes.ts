@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProductType } from '@types';
+import { ProductTypeEnum } from '@types';
 
 export const RecipeIngredientInputSchema = z.object({
   ingredientId: z.coerce.number().int().positive('ID de ingrediente inválido'),
@@ -9,19 +9,21 @@ export const RecipeIngredientInputSchema = z.object({
 
 export const recipeFormSchema = z.object({
   id: z.coerce.number().optional(),
-  name: z.string().min(1, 'Nombre de receta requerido'),
-  productType: z.nativeEnum(ProductType, {
-    errorMap: () => ({ message: 'Selecciona un tipo de producto' })
-  }),
+  name: z.string().trim().min(1, 'Nombre de receta requerido'),
+
+  productType: z.string().trim().min(1, 'El tipo de producto es requerido'),
   baseLaborHours: z.coerce.number().min(0, 'Horas deben ser >= 0'),
-  notes: z.string().optional(),
+  notes: z.string().trim().nullable().optional(),
   recipeIngredients: z
     .array(
       z.object({
         ingredientId: z.coerce
-          .number()
+          .number({
+            required_error: 'Selecciona un ingrediente',
+            invalid_type_error: 'ID inválido'
+          })
           .int()
-          .positive('Selecciona un ingrediente'),
+          .min(1, 'Selecciona un ingrediente válido'),
         quantity: z.coerce.number().positive('Cantidad debe ser positiva'),
         unit: z.string().min(1, 'Unidad requerida'),
         name: z.string().optional()

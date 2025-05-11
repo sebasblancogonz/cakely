@@ -1,33 +1,27 @@
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { orders, customers } from '@/lib/db';
+import { orders } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { formatCurrency, getStatusStyle, cn } from '@/lib/utils';
+import { formatCurrency, getStatusStyle } from '@/lib/utils';
 import type {
   Order,
   Customer,
   OrderImage,
   OrderStatus as OrderStatusType,
   PaymentStatus as PaymentStatusType,
-  TeamRole
+  TeamRole,
+  ProductType
 } from '@types';
 
 import {
@@ -46,13 +40,11 @@ import {
   Package,
   Euro,
   CircleHelp,
-  BotMessageSquare,
-  ArrowLeft
+  BotMessageSquare
 } from 'lucide-react';
 
 import OrderImagesClient from '@/components/orders/OrderImagesClient';
 import { Label } from '@/components/ui/label';
-import { Status } from '@/components/common/OrderStatusCell';
 import { PaymentStatusSelector } from '@/components/orders/PaymentStatusSelector';
 import { OrderStatusSelector } from '@/components/orders/OrderStatusSelector';
 import { BackButton } from '@/components/common/BackButton';
@@ -71,7 +63,7 @@ export async function generateMetadata({
     const businessId = session?.user?.businessId;
     if (!isNaN(orderId) && businessId) {
       const orderInfo = await db.query.orders.findFirst({
-        columns: { businessOrderNumber: true, customerId: true }, // Selecciona el número guardado
+        columns: { businessOrderNumber: true, customerId: true },
         where: and(eq(orders.id, orderId), eq(orders.businessId, businessId)),
         with: { customer: { columns: { name: true } } }
       });
@@ -88,6 +80,7 @@ export async function generateMetadata({
 
 type OrderWithCustomer = Order & {
   customer: Customer | null;
+  productType: ProductType | null;
   images: OrderImage[];
 };
 
@@ -107,7 +100,7 @@ export default async function OrderDetailPage({
 
   const order: OrderWithCustomer | undefined = await db.query.orders.findFirst({
     where: and(eq(orders.id, orderId), eq(orders.businessId, businessId)),
-    with: { customer: true }
+    with: { customer: true, productType: true }
   });
   if (!order) {
     notFound();
@@ -244,7 +237,7 @@ export default async function OrderDetailPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm pt-2">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-muted-foreground" />
-                  <strong>Tipo:</strong> {displayData(order.productType)}
+                  <strong>Tipo:</strong> {displayData(order.productType.name)}
                 </div>
                 <div className="flex items-center gap-2">
                   <Hash className="h-4 w-4 text-muted-foreground" />

@@ -11,7 +11,6 @@ const Lightbox = dynamic(() => import('yet-another-react-lightbox'), {
 
 import 'yet-another-react-lightbox/styles.css';
 import Link from 'next/link';
-import { label } from 'yet-another-react-lightbox';
 
 interface OrderDetailsProps {
   order: Order;
@@ -142,7 +141,11 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
       value: formatCurrency(order.amount),
       key: 'amount'
     },
-    { label: 'Tipo de producto', value: order.productType, key: 'productType' },
+    {
+      label: 'Tipo de producto',
+      value: order.productType.name,
+      key: 'productType'
+    },
     {
       label: 'Estado del pedido',
       value: order.orderStatus,

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Orders } from '@/components/orders/Orders';
-import { Customer, Order, OrderStatus, PaymentStatus } from '@types';
+import { Order, OrderStatus, PaymentStatus } from '@types';
 import Modal from '@/components/common/Modal';
 import OrderForm from '@/components/forms/OrderForm';
 import UploadImage from '@/components/common/MultiUpload';
@@ -66,6 +66,7 @@ export default function OrdersPage() {
   const status = searchParams.get('status') || 'all';
   const initialSortBy = searchParams.get('sortBy') || 'orderDate';
   const initialSortOrder = searchParams.get('sortOrder') || 'desc';
+  const filterDate = searchParams.get('filterDate') || '';
   const [sortBy, setSortBy] = useState(initialSortBy);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(
     initialSortOrder === 'asc' ? 'asc' : 'desc'
@@ -141,7 +142,8 @@ export default function OrdersPage() {
       limit: limit.toString(),
       status: status === 'all' ? '' : status,
       sortBy: sortBy,
-      sortOrder: sortOrder
+      sortOrder: sortOrder,
+      filterDate: filterDate
     });
 
     fetch(`/api/orders?${params.toString()}`)

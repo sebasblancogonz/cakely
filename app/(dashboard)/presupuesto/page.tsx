@@ -4,7 +4,12 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { RecipeWithIngredients, ProductType, QuoteBreakdown } from '@types';
+import {
+  RecipeWithIngredients,
+  ProductType,
+  QuoteBreakdown,
+  ProductTypeEnum
+} from '@types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -267,9 +272,9 @@ export default function QuotesPage() {
       const totalCogsIngredients = baseCogsIngredientsPerUnit * formQuantity;
 
       const baseCogsPackaging =
-        selectedRecipe.productType === ProductType.Tarta ? 2.5 : 1.0;
+        selectedRecipe.productType === ProductTypeEnum.Tarta ? 2.5 : 1.0;
       const totalCogsPackaging =
-        selectedRecipe.productType === ProductType.Tarta
+        selectedRecipe.productType === ProductTypeEnum.Tarta
           ? baseCogsPackaging
           : baseCogsPackaging * formQuantity;
 

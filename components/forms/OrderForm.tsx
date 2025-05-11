@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Order,
   Customer,
-  ProductType,
+  ProductTypeEnum,
   PaymentMethod,
   OrderStatus,
   PaymentStatus
@@ -26,8 +26,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { ProductTypeEnum as FrontendProductTypeEnum } from '@types';
 import { OrderFormData, createOrderFormSchema } from '@/lib/validators/orders';
 import { format } from 'date-fns';
+import { Combobox, ComboboxOption } from '../ui/combobox';
 
 const defaultOrderFormValues: Partial<OrderFormData> = {
   customerId: undefined,
@@ -35,7 +37,7 @@ const defaultOrderFormValues: Partial<OrderFormData> = {
   amount: undefined,
   deliveryDate: null,
   deliveryTime: '',
-  productType: ProductType.Tarta,
+  productType: ProductTypeEnum.Tarta,
   customizationDetails: '',
   quantity: 1,
   sizeOrWeight: '',
@@ -66,6 +68,10 @@ const OrderForm = ({
   const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
+  const [productTypeOptions, setProductTypeOptions] = useState<
+    ComboboxOption[]
+  >([]);
+  const [loadingProductTypes, setLoadingProductTypes] = useState(true);
 
   const {
     register,
@@ -78,6 +84,40 @@ const OrderForm = ({
     resolver: zodResolver(createOrderFormSchema),
     defaultValues: defaultOrderFormValues
   });
+
+  useEffect(() => {
+    setLoadingProductTypes(true);
+    async function fetchProductTypes() {
+      try {
+        const response = await fetch('/api/product-types');
+        if (!response.ok) throw new Error('Failed to fetch product types');
+        const typesData: { id: number; name: string }[] = await response.json();
+
+        const enumValues = Object.values(ProductTypeEnum);
+        const combinedNames = new Set([
+          ...enumValues,
+          ...typesData.map((t) => t.name)
+        ]);
+
+        setProductTypeOptions(
+          Array.from(combinedNames)
+            .map((name) => ({ value: name, label: name }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+        );
+      } catch (error) {
+        console.error('Error fetching product types:', error);
+        setProductTypeOptions(
+          Object.values(ProductTypeEnum).map((type) => ({
+            value: type,
+            label: type
+          }))
+        );
+      } finally {
+        setLoadingProductTypes(false);
+      }
+    }
+    fetchProductTypes();
+  }, []);
 
   useEffect(() => {
     setLoadingCustomers(true);
@@ -109,7 +149,6 @@ const OrderForm = ({
 
   const onSubmit: SubmitHandler<OrderFormData> = async (data) => {
     console.log('OrderForm - Form Data Submitted:', data);
-
     const apiData = {
       ...data,
       amount: data.amount?.toString(),
@@ -321,25 +360,23 @@ const OrderForm = ({
               name="productType"
               control={control}
               render={({ field }) => (
-                <Select
-                  onValueChange={field.onChange}
+                <Combobox
+                  id="productType-create"
+                  options={productTypeOptions}
                   value={field.value}
-                  defaultValue={defaultOrderFormValues.productType}
-                >
-                  <SelectTrigger
-                    id="productType-create"
-                    className={cn(errors.productType && 'border-destructive')}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(ProductType).map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onValueChange={field.onChange}
+                  placeholder="Selecciona o escribe un tipo..."
+                  searchPlaceholder="Buscar o crear tipo..."
+                  notFoundMessage={
+                    loadingProductTypes
+                      ? 'Cargando tipos...'
+                      : 'No hay tipos. Escribe para crear uno nuevo.'
+                  }
+                  disabled={loadingProductTypes}
+                  inputClassName={cn(
+                    errors.productType && 'border-destructive'
+                  )}
+                />
               )}
             />
             {errors.productType && (
@@ -365,12 +402,9 @@ const OrderForm = ({
           </div>
         </div>
 
-        {/* Tamaño/Peso y Sabor */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="sizeOrWeight-create">
-              Tamaño / Peso (Opcional)
-            </Label>
+            <Label htmlFor="sizeOrWeight-create">Tamaño / Peso</Label>
             <Input
               id="sizeOrWeight-create"
               placeholder="Ej: 20cm, 1.5kg"
@@ -383,7 +417,7 @@ const OrderForm = ({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="flavor-create">Sabor / Relleno (Opcional)</Label>
+            <Label htmlFor="flavor-create">Sabor / Relleno</Label>
             <Input
               id="flavor-create"
               placeholder="Ej: Chocolate y Nata"
@@ -426,11 +460,9 @@ const OrderForm = ({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="amount-create">
-              Importe Original (€) (Opcional)
-            </Label>
+            <Label htmlFor="amount-create">Importe Original (€)</Label>
             <Input
               id="amount-create"
               type="number"

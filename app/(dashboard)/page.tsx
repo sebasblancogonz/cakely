@@ -80,8 +80,7 @@ export default async function DashboardHomePage() {
 
   const serverTodayStart = startOfToday();
   const serverTodayEnd = endOfToday();
-  const next7DaysEnd = endOfToday();
-  addDays(next7DaysEnd, 6);
+  const next7DaysEnd = addDays(endOfToday(), 6);
   const startOfCurrentMonth = startOfMonth(serverTodayStart);
   const endOfCurrentMonth = endOfMonth(serverTodayStart);
 
@@ -251,7 +250,6 @@ export default async function DashboardHomePage() {
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6 lg:p-8">
-      {/* Mensaje de Bienvenida */}
       <div className="mb-2">
         <h1 className="text-3xl font-bold tracking-tight">
           ¡Hola, {userName || 'Usuario'}!
@@ -261,13 +259,12 @@ export default async function DashboardHomePage() {
         </p>
       </div>
 
-      {/* Sección Principal de Estadísticas y Accesos */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Entregas Hoy"
           value={orderStats.deliveriesToday}
           icon={<CalendarCheck className="h-4 w-4 text-muted-foreground" />}
-          link={`/pedidos?status=upcoming&filterDate=${format(serverTodayStart, 'yyyy-MM-dd')}`}
+          link={`/pedidos?status=upcoming&filterDate=${format(serverTodayStart, 'yyyy-MM-dd')}&sortBy=deliveryDate&sortOrder=asc`}
           linkText="Ver Entregas de Hoy"
         />
         <StatCard
@@ -280,17 +277,16 @@ export default async function DashboardHomePage() {
           title="Pedidos Pendientes"
           value={orderStats.pendingOrders}
           icon={<Hourglass className="h-4 w-4 text-muted-foreground" />}
-          link="/pedidos?status=Pendiente"
+          link="/pedidos?status=Pendiente&sortBy=deliveryDate&sortOrder=asc"
         />
         <StatCard
           title="Listos para Entregar"
           value={orderStats.readyOrders}
           icon={<PackageCheck className="h-4 w-4 text-muted-foreground" />}
-          link="/pedidos?status=Listo"
+          link="/pedidos?status=Listo&sortBy=deliveryDate&sortOrder=asc"
         />
       </div>
 
-      {/* Sección Financiera y Últimos Pedidos */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="md:col-span-1">
           <CardHeader>
@@ -394,7 +390,6 @@ export default async function DashboardHomePage() {
         </Card>
       </div>
 
-      {/* Accesos Rápidos */}
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Accesos Rápidos</CardTitle>
@@ -422,7 +417,6 @@ export default async function DashboardHomePage() {
           </Button>
           <Button variant="outline" asChild className="flex-col h-auto py-4">
             <Link href="/presupuesto">
-              {/* Asume icono para Presupuestos */}
               <ShoppingCart className="h-6 w-6 mb-1" /> Presupuestos
             </Link>
           </Button>

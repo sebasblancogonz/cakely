@@ -22,6 +22,8 @@ interface CustomerFormProps {
   setIsEditing: (value: boolean) => void;
   setIsCreating: (value: boolean) => void;
   customerToEdit: Customer | null;
+  onCustomerCreated?: (createdCustomer: Customer) => void;
+  onCancelForm?: () => void;
 }
 
 const CustomerForm = ({
@@ -29,7 +31,9 @@ const CustomerForm = ({
   setCustomers,
   setIsEditing,
   setIsCreating,
-  customerToEdit
+  customerToEdit,
+  onCustomerCreated,
+  onCancelForm
 }: CustomerFormProps) => {
   const { toast } = useToast();
   const isEditingMode = !!customerToEdit;
@@ -132,6 +136,13 @@ const CustomerForm = ({
         savedCustomer = await response.json();
         setCustomers((prevCustomers) => [...prevCustomers, savedCustomer]);
         toast({ title: 'Éxito', description: 'Cliente creado correctamente.' });
+        if (onCustomerCreated) {
+          onCustomerCreated(savedCustomer);
+        } else if (setCustomers) {
+          setCustomers((prevCustomers) => [...prevCustomers, savedCustomer]);
+        }
+
+        handleCancel();
       }
 
       setIsModalOpen(false);
@@ -148,20 +159,24 @@ const CustomerForm = ({
   };
 
   const handleCancel = () => {
-    setIsModalOpen(false);
-    setIsEditing(false);
-    setIsCreating(false);
-    reset(
-      isEditingMode
-        ? {
-            name: customerToEdit?.name || '',
-            email: customerToEdit?.email || undefined,
-            phone: customerToEdit?.phone || '',
-            instagramHandle: customerToEdit?.instagramHandle || '',
-            notes: customerToEdit?.notes || ''
-          }
-        : { name: '', email: '', phone: '', instagramHandle: '', notes: '' }
-    );
+    if (onCancelForm) {
+      onCancelForm();
+    } else {
+      setIsModalOpen(false);
+      setIsEditing(false);
+      setIsCreating(false);
+      reset(
+        isEditingMode
+          ? {
+              name: customerToEdit?.name || '',
+              email: customerToEdit?.email || undefined,
+              phone: customerToEdit?.phone || '',
+              instagramHandle: customerToEdit?.instagramHandle || '',
+              notes: customerToEdit?.notes || ''
+            }
+          : { name: '', email: '', phone: '', instagramHandle: '', notes: '' }
+      );
+    }
   };
 
   return (

@@ -27,7 +27,8 @@ export function prepareOrderDataForInsert(
   validatedData: OrderFormData,
   deliveryDate: Date | null,
   businessId: number,
-  orderNumber: number
+  orderNumber: number,
+  productTypeIdToUse: number
 ) {
   const { createCalendarEvent, deliveryTime, ...rest } = validatedData;
   return {
@@ -36,6 +37,7 @@ export function prepareOrderDataForInsert(
     businessId,
     orderStatus: OrderStatus.Pendiente,
     businessOrderNumber: orderNumber,
+    productTypeId: productTypeIdToUse,
     createdAt: new Date(),
     updatedAt: new Date()
   };
@@ -74,7 +76,7 @@ export async function createCalendarEventIfNeeded({
     const teamMembers = await db
       .select({ user: { email: users.email } })
       .from(users)
-      .where(eq(users.businessId, order.businessId)); // Ajusta si tienes tabla intermedia
+      .where(eq(users.businessId, order.businessId));
     const collaboratorEmails = teamMembers
       .map((m: TeamMemberWithUser) => m.user?.email)
       .filter((e: string) => !!e);

@@ -38,12 +38,13 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
-  ProductType
+  ProductTypeEnum
 } from '@types';
 import { OrderFormData, UpdateOrderFormData } from './validators/orders';
 import { UpdateCustomerFormData } from './validators/customers';
 import { Pool } from '@neondatabase/serverless';
 import { table } from 'console';
+import { endOfDay, startOfDay } from 'date-fns';
 
 export const orderStatusEnum = pgEnum(
   'order_status',
@@ -62,7 +63,7 @@ export const paymentMethodEnum = pgEnum(
 
 export const productTypeEnum = pgEnum(
   'product_type',
-  Object.values(ProductType) as [string, ...string[]]
+  Object.values(ProductTypeEnum) as [string, ...string[]]
 );
 
 export const users = pgTable('users', {
@@ -110,7 +111,10 @@ export const orders = pgTable(
     orderStatus: orderStatusEnum('order_status')
       .notNull()
       .default(OrderStatus.Pendiente),
-    productType: productTypeEnum('product_type').notNull(),
+    productTypeId: integer('product_type_id').references(
+      () => productTypes.id,
+      { onDelete: 'set null' }
+    ),
     businessOrderNumber: integer('business_order_number').notNull(),
     customizationDetails: text('customization_details'),
     quantity: integer('quantity').notNull(),
@@ -141,6 +145,26 @@ export const orders = pgTable(
       )
     };
   }
+);
+
+export const productTypes = pgTable(
+  'product_types',
+  {
+    id: serial('id').primaryKey(),
+    businessId: integer('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull()
+  },
+  (table) => ({
+    businessTypeNameIdx: uniqueIndex('business_type_name_idx').on(
+      table.businessId,
+      table.name
+    )
+  })
 );
 
 export const businessSettings = pgTable('business_settings', {
@@ -433,6 +457,10 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
 }));
 
 export const ordersRelations = relations(orders, ({ one }) => ({
+  productType: one(productTypes, {
+    fields: [orders.productTypeId],
+    references: [productTypes.id]
+  }),
   business: one(businesses, {
     fields: [orders.businessId],
     references: [businesses.id]
@@ -442,6 +470,17 @@ export const ordersRelations = relations(orders, ({ one }) => ({
     references: [customers.id]
   })
 }));
+
+export const productTypesRelations = relations(
+  productTypes,
+  ({ one, many }) => ({
+    business: one(businesses, {
+      fields: [productTypes.businessId],
+      references: [businesses.id]
+    }),
+    orders: many(orders)
+  })
+);
 
 export const recipesRelations = relations(recipes, ({ one, many }) => ({
   business: one(businesses, {
@@ -508,6 +547,7 @@ const schema = {
   recipeIngredients,
   invitations,
   teamMembers,
+  productTypes,
 
   businessesRelations,
   usersRelations,
@@ -520,7 +560,8 @@ const schema = {
   accountsRelations,
   sessionsRelations,
   invitationRelations,
-  teamMemberRelations
+  teamMemberRelations,
+  productTypesRelations
 };
 
 let dbInstance: any;
@@ -551,6 +592,7 @@ if (
 export const db = dbInstance;
 
 export type SelectBusiness = typeof businesses.$inferSelect;
+export type SelectProductType = typeof productTypes.$inferSelect;
 export type SelectUser = typeof users.$inferSelect;
 export type SelectOrder = typeof orders.$inferSelect;
 export type SelectCustomer = typeof customers.$inferSelect;
@@ -569,6 +611,7 @@ export type PendingInvitation = typeof invitations.$inferSelect;
 
 export type Order = SelectOrder & {
   customer?: SelectCustomer;
+  productType?: SelectProductType;
 };
 export type Customer = SelectCustomer & {
   orders?: SelectOrder[];
@@ -753,8 +796,10 @@ export async function getOrders(
   limit: number = 5,
   status: string | null = null,
   sortBy: string | null,
-  sortOrder: string | null
+  sortOrder: string | null,
+  filterDate: string | null
 ): Promise<GetOrdersResult> {
+  console.log('FILTER DATE', filterDate);
   if (!businessId) throw new Error('Business ID is required');
 
   const allowedSortColumns: Record<string, Column | SQL> = {
@@ -836,6 +881,15 @@ export async function getOrders(
     );
   }
 
+  if (filterDate) {
+    const start = startOfDay(filterDate);
+    const end = endOfDay(start);
+
+    whereConditions.push(
+      and(gte(orders.deliveryDate, start), lt(orders.deliveryDate, end))
+    );
+  }
+
   const finalWhere = and(...whereConditions.filter((c): c is SQL => !!c));
 
   try {
@@ -849,11 +903,16 @@ export async function getOrders(
           email: customers.email,
           phone: customers.phone,
           instagramHandle: customers.instagramHandle
+        },
+        productType: {
+          id: productTypes.id,
+          name: productTypes.name
         }
       })
       .from(orders)
 
       .leftJoin(customers, eq(orders.customerId, customers.id))
+      .leftJoin(productTypes, eq(orders.productTypeId, productTypes.id))
       .where(finalWhere)
       .orderBy(...orderByClauses)
       .limit(limit)
@@ -863,6 +922,7 @@ export async function getOrders(
       .select({ value: count() })
       .from(orders)
       .leftJoin(customers, eq(orders.customerId, customers.id))
+      .leftJoin(productTypes, eq(orders.productTypeId, productTypes.id))
       .where(finalWhere);
 
     const totalOrders = totalResult[0]?.value ?? 0;
@@ -910,7 +970,13 @@ export async function saveOrder(orderInput: SaveOrderInput): Promise<Order> {
     amount: orderInput.amount.toString(),
     deliveryDate: orderInput.deliveryDate ? orderInput.deliveryDate : null,
     orderStatus: orderInput.orderStatus,
-    productType: orderInput.productType,
+    productTypeId: await db.query.productTypes.findFirst({
+      where: and(
+        eq(productTypes.name, orderInput.productType),
+        eq(businesses.id, orderInput.businessId)
+      )
+    }),
+    productType: 'toberemoved',
     customizationDetails: orderInput.customizationDetails,
     quantity: orderInput.quantity,
     sizeOrWeight: orderInput.sizeOrWeight,

@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   db,
-  updateOrder,
   orders,
   customers,
   teamMembers,
   users,
   TeamMemberWithUser,
   SelectOrder,
-  deleteOrderById
+  deleteOrderById,
+  productTypes
 } from '@/lib/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
-import {
-  UpdateOrderFormData,
-  updateOrderFormSchema
-} from '@/lib/validators/orders';
+import { updateOrderFormSchema } from '@/lib/validators/orders';
 import {
   calculateEndTime,
-  callCreateCalendarEvent,
   callDeleteCalendarEvent,
   callModifyCalendarEvent
 } from '@/lib/calendar-integration';
@@ -51,7 +47,8 @@ export async function GET(request: NextRequest) {
     const orderResult = await db.query.orders.findFirst({
       where: and(eq(orders.id, orderId), eq(orders.businessId, businessId)),
       with: {
-        customer: true
+        customer: true,
+        productType: true
       }
     });
 
@@ -185,14 +182,12 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  const [currentOrder]: SelectOrder[] = await db
-    .select({
-      deliveryDate: orders.deliveryDate,
-      googleCalendarEventId: orders.googleCalendarEventId
-    })
-    .from(orders)
-    .where(and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId)))
-    .limit(1);
+  const currentOrder = await db.query.orders.findFirst({
+    where: eq(orders.id, orderIdNum),
+    with: {
+      productType: true
+    }
+  });
 
   if (!currentOrder) {
     return NextResponse.json(
@@ -215,12 +210,120 @@ export async function PATCH(request: NextRequest) {
     }
   });
 
+  let resolvedProductTypeId: number | null | undefined =
+    currentOrder.productTypeId;
+
   try {
-    const [updatedOrderDb] = await db
-      .update(orders)
-      .set(dataToUpdateInDb)
-      .where(and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId)))
-      .returning();
+    const updatedOrderDb = await db.transaction(async (tx: any) => {
+      if (
+        validatedData.productType &&
+        typeof validatedData.productType === 'string'
+      ) {
+        const productTypeNameFromForm = validatedData.productType.trim();
+        if (
+          productTypeNameFromForm !== (currentOrder.productType?.name ?? '') ||
+          !currentOrder.productTypeId
+        ) {
+          console.log(
+            `[Order PATCH ${orderIdNum}] Resolviendo productType: "${productTypeNameFromForm}"`
+          );
+          const [existingPT] = await tx
+            .select({ id: productTypes.id })
+            .from(productTypes)
+            .where(
+              and(
+                eq(productTypes.businessId, businessId),
+                eq(
+                  sql`lower(${productTypes.name})`,
+                  productTypeNameFromForm.toLowerCase()
+                )
+              )
+            )
+            .limit(1);
+          if (existingPT) {
+            resolvedProductTypeId = existingPT.id;
+          } else {
+            const [newPT] = await tx
+              .insert(productTypes)
+              .values({ name: productTypeNameFromForm, businessId })
+              .returning({ id: productTypes.id });
+            if (!newPT?.id)
+              throw new Error('No se pudo crear el nuevo tipo de producto.');
+            resolvedProductTypeId = newPT.id;
+          }
+          console.log(
+            `[Order PATCH ${orderIdNum}] Usando productTypeId: ${resolvedProductTypeId}`
+          );
+        }
+      } else if (
+        validatedData.productType === null ||
+        validatedData.productType === ''
+      ) {
+        resolvedProductTypeId = null;
+      }
+
+      const {
+        deliveryTime,
+        createCalendarEvent,
+        productType: productTypeNameString,
+        images: imagesFromForm,
+        amount,
+        totalPrice,
+        depositAmount,
+        deliveryDate,
+        ...restOfValidatedFields
+      } = validatedData;
+
+      const dataToSet: Partial<typeof orders.$inferInsert> = {
+        ...restOfValidatedFields
+      };
+
+      if (dateUpdated) {
+        dataToSet.deliveryDate = finalDeliveryDateTime;
+      }
+      if (resolvedProductTypeId !== currentOrder.productTypeId) {
+        dataToSet.productTypeId = resolvedProductTypeId;
+      }
+
+      if (amount !== undefined) dataToSet.amount = amount.toString();
+      if (totalPrice !== undefined)
+        dataToSet.totalPrice = totalPrice.toString();
+      if (depositAmount !== undefined)
+        dataToSet.depositAmount = depositAmount.toString();
+
+      Object.keys(dataToSet).forEach((key) => {
+        if (dataToSet[key as keyof typeof dataToSet] === undefined) {
+          delete dataToSet[key as keyof typeof dataToSet];
+        }
+      });
+
+      if (
+        Object.keys(dataToSet).length <= 1 &&
+        resolvedProductTypeId === currentOrder.productTypeId &&
+        !dateUpdated
+      ) {
+        console.log(
+          `[Order PATCH ${orderIdNum}] No hay campos de pedido significativos que actualizar en DB.`
+        );
+        return currentOrder as typeof orders.$inferSelect;
+      }
+
+      console.log(
+        `[Order PATCH ${orderIdNum}] Updating orders table with:`,
+        dataToSet
+      );
+      const [result] = await tx
+        .update(orders)
+        .set(dataToSet)
+        .where(
+          and(eq(orders.id, orderIdNum), eq(orders.businessId, businessId))
+        )
+        .returning();
+      if (!result)
+        throw new Error('Fallo al actualizar el pedido en la base de datos.');
+      console.log(`[Order PATCH ${orderIdNum}] Pedido actualizado en BBDD.`);
+      return result;
+    });
 
     if (!updatedOrderDb) {
       throw new Error('No se pudo actualizar el pedido en la base de datos.');
@@ -312,6 +415,11 @@ export async function PATCH(request: NextRequest) {
       where: eq(orders.id, orderIdNum),
       with: {
         customer: {
+          columns: {
+            name: true
+          }
+        },
+        productType: {
           columns: {
             name: true
           }
