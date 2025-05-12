@@ -1,7 +1,18 @@
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { orders, customers } from '@/lib/db';
-import { eq, and, gte, lte, count, sum, desc, sql, gt } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  lte,
+  count,
+  sum,
+  desc,
+  sql,
+  gt,
+  inArray,
+  gte
+} from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -90,7 +101,8 @@ export default async function DashboardHomePage() {
     pendingOrdersData,
     processingOrdersData,
     readyOrdersData,
-    revenueData,
+    paidTotal,
+    depositTotal,
     pendingPaymentsData,
     recentOrdersRaw
   ] = await Promise.all([
@@ -161,9 +173,25 @@ export default async function DashboardHomePage() {
       ),
 
     db
+      .select({ value: sum(orders.depositAmount) })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.businessId, businessId),
+          inArray(orders.paymentStatus, [
+            PaymentStatusType.Parcial,
+            PaymentStatusType.Pendiente
+          ]),
+          gte(orders.deliveryDate, startOfCurrentMonth),
+          lte(orders.deliveryDate, endOfCurrentMonth),
+          gt(orders.depositAmount, sql`0`)
+        )
+      ),
+
+    db
       .select({
         value: sum(
-          sql<number>`COALESCE(${orders.totalPrice}, '0')::numeric - COALESCE(${orders.depositAmount}, '0')::numeric`
+          sql<number>`COALESCE(${orders.totalPrice}, 0)::numeric - COALESCE(${orders.depositAmount}, 0)::numeric`
         )
       })
       .from(orders)
@@ -201,7 +229,8 @@ export default async function DashboardHomePage() {
     readyOrders: readyOrdersData[0]?.value ?? 0
   };
   const financialStats: FinancialStats = {
-    revenueThisMonth: Number(revenueData[0]?.value ?? 0),
+    revenueThisMonth:
+      Number(paidTotal[0]?.value ?? 0) + Number(depositTotal[0]?.value ?? 0),
     pendingPaymentsAmount: Number(pendingPaymentsData[0]?.value ?? 0)
   };
 

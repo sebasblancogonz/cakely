@@ -237,7 +237,8 @@ export default async function OrderDetailPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm pt-2">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-muted-foreground" />
-                  <strong>Tipo:</strong> {displayData(order.productType.name)}
+                  <strong>Tipo:</strong>{' '}
+                  {displayData(order.productType && order.productType.name)}
                 </div>
                 <div className="flex items-center gap-2">
                   <Hash className="h-4 w-4 text-muted-foreground" />

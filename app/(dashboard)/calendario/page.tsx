@@ -67,7 +67,10 @@ function CalendarOrderCard({
     >
       <p className="font-medium truncate">{order.customer?.name}</p>
       <p className="text-gray-600 truncate">
-        {order.description || order.productType.name}
+        {order.description ||
+          (order.productType && order.productType.name
+            ? order.productType.name
+            : '-')}
       </p>
     </button>
   );

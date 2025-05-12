@@ -200,18 +200,23 @@ export default function StatisticsPage() {
       .map((order) => {
         if (order.paymentStatus === PaymentStatus.Pagado && order.totalPrice)
           return Number(order.totalPrice);
-        if (order.depositAmount && Number(order.depositAmount) > 0)
+        if (
+          order.depositAmount &&
+          Number(order.depositAmount) > 0 &&
+          [PaymentStatus.Pendiente, PaymentStatus.Parcial].includes(
+            order.paymentStatus as PaymentStatus
+          )
+        )
           return Number(order.depositAmount);
         return 0;
       })
       .reduce((sum, amount) => sum + amount, 0);
 
     const pending = filtered
-      .filter(
-        (order) =>
-          order.paymentStatus !== PaymentStatus.Pagado &&
-          order.paymentStatus !== PaymentStatus.Reembolsado &&
-          order.paymentStatus !== PaymentStatus.Cancelado
+      .filter((order) =>
+        [PaymentStatus.Pendiente, PaymentStatus.Parcial].includes(
+          order.paymentStatus as PaymentStatus
+        )
       )
       .reduce((sum, order) => {
         const total = Number(order.totalPrice || '0');
