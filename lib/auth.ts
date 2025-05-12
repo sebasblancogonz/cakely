@@ -2,10 +2,9 @@ import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db, invitations, teamMembers, users } from '@/lib/db';
-import { accounts, sessions, verificationTokens, teamRoleEnum } from '@/lib/db';
+import { accounts, sessions, verificationTokens } from '@/lib/db';
 import { and, asc, eq, gt } from 'drizzle-orm';
 import { TeamRole } from '@/types/next-auth';
-import { z } from 'zod';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -15,9 +14,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     verificationTokensTable: verificationTokens
   }),
   // @ts-ignore
-  allowDangerousEmailAccountLinking: true,
   providers: [
     GoogleProvider({
+      allowDangerousEmailAccountLinking: true,
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
@@ -53,6 +52,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         console.log(
           `AUTH SIGNIN: Verificando usuario existente para ${userEmailLower}`
         );
+
         const existingUser = await db.query.users.findFirst({
           where: eq(users.email, userEmailLower),
           columns: { id: true }
@@ -92,42 +92,69 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
 
-    async jwt({ token, user, trigger, session, account }) {
-      const currentUserId = (token.id as string) ?? user?.id;
-      const currentUserEmail = (token.email as string) ?? user?.email;
+    async jwt({ token, user, trigger, session: sessionUpdate, account }) {
+      const currentUserId = token.id || user?.id;
 
-      if (account) {
-        console.log(
-          "AUTH JWT - Callback received 'account' object:",
-          JSON.stringify(account, null, 2)
-        );
-        console.log(
-          "AUTH JWT - Refresh token present in received 'account' object?",
-          !!account.refresh_token
-        );
-      }
+      console.log(`[AUTH JWT] Trigger: ${trigger}, User ID: ${currentUserId}`);
 
-      if (trigger === 'update' && session) {
-        console.log(
-          'AUTH JWT: Update trigger detected. Merging session data:',
-          session
-        );
-        if (session.name) {
-          token.name = session.name;
+      if (
+        user ||
+        !token.email ||
+        token.isSuperAdmin === undefined ||
+        token.businessId === undefined
+      ) {
+        if (currentUserId) {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, currentUserId as string),
+            columns: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+              isSuperAdmin: true,
+              businessId: true
+            }
+          });
+
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.name = dbUser.name;
+            token.email = dbUser.email;
+            token.picture = dbUser.image;
+            token.isSuperAdmin = dbUser.isSuperAdmin ?? false;
+
+            if (dbUser.businessId) {
+              token.businessId = dbUser.businessId;
+              const membership = await db.query.teamMembers.findFirst({
+                where: and(
+                  eq(teamMembers.userId, currentUserId as string),
+                  eq(teamMembers.businessId, dbUser.businessId)
+                ),
+                columns: { role: true }
+              });
+              token.role = (membership?.role as TeamRole | null) ?? null;
+            } else {
+              const firstMembership = await db.query.teamMembers.findFirst({
+                where: eq(teamMembers.userId, currentUserId as string),
+                columns: { businessId: true, role: true },
+                orderBy: [asc(teamMembers.joinedAt)]
+              });
+              token.businessId = firstMembership?.businessId ?? null;
+              token.role = (firstMembership?.role as TeamRole | null) ?? null;
+            }
+            console.log(
+              `[AUTH JWT] DB User Data loaded for ${currentUserId}: isSuperAdmin=${token.isSuperAdmin}, businessId=${token.businessId}, role=${token.role}`
+            );
+          } else {
+            token.isSuperAdmin = false;
+            token.businessId = null;
+            token.role = null;
+          }
         }
-        if (session.image) {
-          token.picture = session.image;
-        }
       }
 
-      if (!currentUserId || !currentUserEmail) {
-        return { ...token, businessId: null, role: null };
-      }
-      if (!token.id) {
-        token.id = currentUserId;
-      }
-
-      if (trigger === 'signUp' && user) {
+      if (trigger === 'signUp' && user && token.email) {
+        const currentUserEmail = token.email.toLowerCase();
         console.log(
           `AUTH_CALLBACK: Procesando SignUp para ${currentUserEmail}...`
         );
@@ -195,7 +222,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             { bId: token.businessId, role: token.role }
           );
           const membership = await db.query.teamMembers.findFirst({
-            where: eq(teamMembers.userId, currentUserId),
+            where: eq(teamMembers.userId, currentUserId as string),
             columns: { businessId: true, role: true },
             orderBy: [asc(teamMembers.joinedAt)]
           });
@@ -222,70 +249,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      if (account) {
+      if (trigger === 'update' && sessionUpdate) {
         console.log(
-          `AUTH JWT: Processing account info from provider ${account.provider}`
+          '[AUTH JWT] Update trigger: Merging session data:',
+          sessionUpdate
         );
+        if (sessionUpdate.name) token.name = sessionUpdate.name;
+        if (sessionUpdate.image) token.picture = sessionUpdate.image;
+      }
+
+      if (account) {
         token.accessToken = account.access_token;
         token.accessTokenExpires = account.expires_at
           ? Date.now() + account.expires_at * 1000
           : undefined;
         token.refreshToken = account.refresh_token ?? token.refreshToken;
-        console.log(
-          `AUTH JWT: Tokens updated in JWT. AccessTokenExpires: ${token.accessTokenExpires ? new Date(token.accessTokenExpires as string).toISOString() : 'N/A'}, RefreshToken Received: ${!!account.refresh_token}`
-        );
       }
 
-      if (account && account.provider === 'google' && currentUserId) {
-        try {
-          console.log(
-            `AUTH JWT: Attempting manual DB upsert for account tokens of user ${currentUserId}`
-          );
-          await db
-            .insert(accounts)
-            .values({
-              userId: currentUserId,
-              type: account.type ?? 'oauth',
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: account.refresh_token,
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              token_type: account.token_type,
-              scope: account.scope,
-              id_token: account.id_token,
-              session_state: account.session_state
-            })
-            .onConflictDoUpdate({
-              target: [accounts.provider, accounts.providerAccountId],
-              set: {
-                access_token: account.access_token,
-                refresh_token: account.refresh_token ?? undefined,
-                expires_at: account.expires_at,
-                id_token: account.id_token,
-                scope: account.scope,
-                session_state: account.session_state,
-                token_type: account.token_type
-              }
-            });
-          console.log(
-            `AUTH JWT: Manual DB upsert finished for user ${currentUserId}`
-          );
-        } catch (dbError) {
-          console.error(
-            'AUTH JWT: Error during manual account token upsert:',
-            dbError
-          );
-        }
-      }
-
-      token.name = token.name ?? user?.name ?? null;
-      token.picture = token.picture ?? user?.image ?? null;
+      token.isSuperAdmin = token.isSuperAdmin ?? false;
       token.businessId = token.businessId ?? null;
       token.role = token.role ?? null;
-      token.accessToken = token.accessToken ?? null;
-      token.accessTokenExpires = token.accessTokenExpires ?? null;
-      token.refreshToken = token.refreshToken ?? null;
 
       return token;
     },
@@ -296,6 +279,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       if (session.user) {
         session.user.businessId = Number(token.businessId) ?? null;
+        session.user.isSuperAdmin = token.isSuperAdmin as boolean;
         session.user.role = (token.role as TeamRole) ?? null;
         session.user.image = token.picture ?? null;
         session.user.name = token.name ?? null;

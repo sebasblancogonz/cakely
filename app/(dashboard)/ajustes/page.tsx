@@ -336,7 +336,7 @@ export default function SettingsPage() {
     (sessionStatus === 'authenticated' && isLoadingProfile)
   ) {
     return (
-      <div className="flex justify-center items-center min-h-[calc(100vh-theme(space.14))]">
+      <div className="flex justify-center items-center min-h-[calc(100dvh-theme(space.14))]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -344,7 +344,7 @@ export default function SettingsPage() {
 
   if (sessionStatus !== 'authenticated' || !businessId || !currentUserRole) {
     return (
-      <div className="flex justify-center items-center min-h-[calc(100vh-theme(space.14))]">
+      <div className="flex justify-center items-center min-h-[calc(100dvh-theme(space.14))]">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Acceso Denegado</CardTitle>

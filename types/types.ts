@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import {
   Setting as SelectSetting,
   IngredientPrice as SelectIngredientPrice,
@@ -6,11 +5,22 @@ import {
   RecipeIngredient as SelectRecipeIngredient,
   SelectOrder as DbSelectOrder,
   SelectCustomer as DbSelectCustomer,
-  SelectProductType
+  SelectProductType,
+  SelectBusiness,
+  SelectUser,
+  teamRoleEnum,
+  invitationStatusEnum
 } from '@/lib/db';
-import { teamRoleEnum, invitationStatusEnum } from '@/lib/db';
 
 export type InvitationStatus = (typeof invitationStatusEnum.enumValues)[number];
+
+export interface ApiBusinesses {
+  businesses: AdminBusiness[];
+}
+export interface AdminBusiness extends Business {
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+}
 
 export type PendingInvitation = {
   id: number;
@@ -35,6 +45,12 @@ export type TeamMemberWithUser = {
   email: string;
 };
 
+export enum TeamRoleEnum {
+  EDITOR = 'EDITOR',
+  ADMIN = 'ADMIN',
+  OWNER = 'OWNER'
+}
+
 export type TeamRole = (typeof teamRoleEnum.enumValues)[number];
 
 export type Setting = SelectSetting;
@@ -42,6 +58,8 @@ export type IngredientPrice = SelectIngredientPrice;
 export type Recipe = SelectRecipe;
 export type RecipeIngredient = SelectRecipeIngredient;
 export type ProductType = SelectProductType;
+export type Business = SelectBusiness;
+export type User = SelectUser;
 
 export type Customer = DbSelectCustomer & {
   orders?: Order[];

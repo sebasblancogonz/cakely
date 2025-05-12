@@ -2,8 +2,8 @@ import { Suspense } from 'react';
 import './globals.css';
 
 import { Analytics } from '@vercel/analytics/react';
-import { SessionProvider } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
+import Providers from '@/components/common/Providers';
 
 export const metadata = {
   title: 'Cakely – CRM para Repostería',
@@ -55,7 +55,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="flex min-h-screen w-full flex-col">
-        <SessionProvider>
+        <Providers>
           <Suspense
             fallback={
               <div className="flex justify-center items-center min-h-screen">
@@ -65,7 +65,7 @@ export default function RootLayout({
           >
             {children}
           </Suspense>
-        </SessionProvider>
+        </Providers>
       </body>
       <Analytics />
     </html>

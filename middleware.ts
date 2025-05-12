@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from './lib/auth';
 
 const publicPaths = [
   '/login',
@@ -14,8 +15,26 @@ const sessionCookieName =
     ? (process.env.AUTH_COOKIE_NAME ?? '__Secure-authjs.session-token')
     : 'authjs.session-token';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const session = await auth();
+  const user = session?.user;
+
+  if (pathname.startsWith('/admin')) {
+    if (!user?.isSuperAdmin) {
+      console.warn(
+        `[Middleware] Acceso NO AUTORIZADO a /admin por: ${user?.email ?? 'Guest'}`
+      );
+      const targetUrl = user ? '/' : '/login';
+      const redirectUrl = new URL(targetUrl, request.url);
+      if (targetUrl === '/login' && pathname !== '/login') {
+        redirectUrl.searchParams.set('callbackUrl', pathname);
+      }
+      return NextResponse.redirect(redirectUrl);
+    }
+    console.log(`[Middleware] Acceso AUTORIZADO a /admin para: ${user.email}`);
+    return NextResponse.next();
+  }
 
   const isPublic = publicPaths.some(
     (path) =>

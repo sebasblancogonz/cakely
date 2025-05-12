@@ -14,7 +14,8 @@ import {
   uniqueIndex,
   foreignKey,
   primaryKey,
-  unique
+  unique,
+  boolean
 } from 'drizzle-orm/pg-core';
 import {
   and,
@@ -72,7 +73,8 @@ export const users = pgTable('users', {
   name: text('name'),
   email: text('email').notNull().unique(),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
-  image: text('image')
+  image: text('image'),
+  isSuperAdmin: boolean('is_superadmin').default(false).notNull()
 });
 
 export const businesses = pgTable('businesses', {

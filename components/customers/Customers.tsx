@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { Customer } from './CustomerRow';
 import { Customer as CustomerType } from '@types';
 import { JSX, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
 import { useBusinessProfile } from '@/hooks/use-business-profile';
 import { CustomerCard } from './CustomerCard';
 
