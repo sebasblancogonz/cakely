@@ -333,23 +333,6 @@ function AcceptInvitationClientContent() {
               >
                 <LogIn className="mr-2 h-4 w-4" /> Iniciar Sesión
               </Button>
-              {/* Botón Crear Cuenta (CORREGIDO) */}
-              <Button
-                onClick={() => {
-                  const emailToEncode = invitationDetails?.email ?? '';
-                  const currentToken = token ?? '';
-
-                  const callbackUrl = `/accept-invitation?token=${currentToken}`;
-
-                  const targetUrl = `/signup?email=${encodeURIComponent(emailToEncode)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
-                  console.log('Redirigiendo a Signup URL:', targetUrl);
-                  router.push(targetUrl);
-                }}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                <UserPlus className="mr-2 h-4 w-4" /> Crear Cuenta
-              </Button>
             </div>
           </CardContent>
         </Card>

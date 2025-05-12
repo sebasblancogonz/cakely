@@ -3,18 +3,16 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { businesses, users } from '@/lib/db';
 import { adminUpdateBusinessSchema } from '@/lib/validators/admin';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
-interface RouteParams {
-  params: { id: string };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.isSuperAdmin) {
     return NextResponse.json({ message: 'Acceso denegado' }, { status: 403 });
   }
-  const businessIdNum = parseInt(params.id, 10);
+
+  const { pathname } = request.nextUrl;
+  const businessIdNum = Number(pathname.split('/').pop());
   if (isNaN(businessIdNum))
     return NextResponse.json({ message: 'ID inválido' }, { status: 400 });
 
@@ -38,12 +36,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error: any) {}
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.isSuperAdmin) {
     return NextResponse.json({ message: 'Acceso denegado' }, { status: 403 });
   }
-  const businessIdNum = parseInt(params.id, 10);
+
+  const { pathname } = request.nextUrl;
+  const businessIdNum = Number(pathname.split('/').pop());
   if (isNaN(businessIdNum))
     return NextResponse.json({ message: 'ID inválido' }, { status: 400 });
 
@@ -87,12 +87,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   } catch (error: any) {}
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.isSuperAdmin) {
     return NextResponse.json({ message: 'Acceso denegado' }, { status: 403 });
   }
-  const businessIdNum = parseInt(params.id, 10);
+
+  const { pathname } = request.nextUrl;
+  const businessIdNum = Number(pathname.split('/').pop());
   if (isNaN(businessIdNum))
     return NextResponse.json({ message: 'ID inválido' }, { status: 400 });
 

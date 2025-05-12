@@ -3,7 +3,6 @@ import { auth } from './lib/auth';
 
 const publicPaths = [
   '/login',
-  '/signup',
   '/api/auth',
   '/accept-invitation',
   '/auth/denied',
