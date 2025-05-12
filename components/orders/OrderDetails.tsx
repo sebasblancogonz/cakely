@@ -143,7 +143,10 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
     },
     {
       label: 'Tipo de producto',
-      value: order.productType.name,
+      value:
+        order.productType && order.productType.name
+          ? order.productType.name
+          : '-',
       key: 'productType'
     },
     {

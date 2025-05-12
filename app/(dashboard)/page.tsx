@@ -24,11 +24,9 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   ArrowRight,
   CalendarCheck,
-  ClipboardList,
   Hourglass,
   ShoppingCart,
   Users,
@@ -48,7 +46,6 @@ import {
   startOfMonth,
   endOfMonth
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { displayData, formatCurrency, getStatusStyle } from '@/lib/utils';
 import {
   Order,
@@ -167,8 +164,8 @@ export default async function DashboardHomePage() {
         and(
           eq(orders.businessId, businessId),
           eq(orders.paymentStatus, PaymentStatusType.Pagado),
-          gte(orders.deliveryDate, startOfCurrentMonth),
-          lte(orders.deliveryDate, endOfCurrentMonth)
+          gte(orders.orderDate, startOfCurrentMonth),
+          lte(orders.orderDate, endOfCurrentMonth)
         )
       ),
 
@@ -182,8 +179,8 @@ export default async function DashboardHomePage() {
             PaymentStatusType.Parcial,
             PaymentStatusType.Pendiente
           ]),
-          gte(orders.deliveryDate, startOfCurrentMonth),
-          lte(orders.deliveryDate, endOfCurrentMonth),
+          gte(orders.orderDate, startOfCurrentMonth),
+          lte(orders.orderDate, endOfCurrentMonth),
           gt(orders.depositAmount, sql`0`)
         )
       ),
@@ -199,8 +196,8 @@ export default async function DashboardHomePage() {
         and(
           eq(orders.businessId, businessId),
           sql`${orders.paymentStatus} IN ('Pendiente', 'Parcial')`,
-          gte(orders.deliveryDate, startOfCurrentMonth),
-          lte(orders.deliveryDate, endOfCurrentMonth)
+          gte(orders.orderDate, startOfCurrentMonth),
+          lte(orders.orderDate, endOfCurrentMonth)
         )
       ),
 
