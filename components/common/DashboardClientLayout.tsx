@@ -15,8 +15,6 @@ import {
   Calendar,
   Calculator,
   Loader2,
-  BarChart,
-  BarChart2,
   BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -247,7 +245,7 @@ function DesktopNav({
           isExpanded={isExpanded}
           animationDuration={transitionDuration}
         >
-          <BarChart className="h-5 w-5" />
+          <BarChart3 className="h-5 w-5" />
         </NavItem>
         <NavItem
           href="/pedidos"
