@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           eq(orders.businessId, businessId),
-          gte(orders.deliveryDate, startDate),
-          lte(orders.deliveryDate, endDate),
+          gte(orders.orderDate, startDate),
+          lte(orders.orderDate, endDate),
           or(
             eq(orders.paymentStatus, DbPaymentStatus.Pagado),
             and(
