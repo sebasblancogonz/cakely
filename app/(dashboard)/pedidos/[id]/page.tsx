@@ -337,7 +337,7 @@ export default async function OrderDetailPage({
               <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2">
                 {order.customer?.phone && (
                   <a
-                    href={`https://wa.me/${order.customer.phone.replace(/\s/g, '')}`}
+                    href={`https://wa.me/${order.customer.phone}`}
                     target="_blank"
                     rel="noreferrer noopener"
                     className="text-xs inline-flex items-center gap-1 text-green-600 hover:underline"
