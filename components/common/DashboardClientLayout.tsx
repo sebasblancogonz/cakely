@@ -15,7 +15,8 @@ import {
   Calendar,
   Calculator,
   Loader2,
-  BarChart3
+  BarChart3,
+  Settings2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -279,6 +280,14 @@ function DesktopNav({
         >
           <Calculator className="h-5 w-5" />
         </NavItem>
+        <NavItem
+          href="/admin"
+          label="Admin area"
+          isExpanded={isExpanded}
+          animationDuration={transitionDuration}
+        >
+          <Settings2 className="h-5 w-5" />
+        </NavItem>
       </nav>
 
       <nav className="mt-auto flex flex-col gap-4 px-2 sm:py-5">
@@ -422,6 +431,14 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
               className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
             >
               <Calculator className="h-5 w-5" /> Presupuesto
+            </Link>
+          </SheetTrigger>
+          <SheetTrigger asChild>
+            <Link
+              href="/admin"
+              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <Settings2 className="h-5 w-5" /> Admin area
             </Link>
           </SheetTrigger>
           <SheetTrigger asChild>

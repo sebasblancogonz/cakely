@@ -36,7 +36,8 @@ import {
   ListOrdered,
   PlusCircle,
   BarChart3,
-  Settings
+  Settings,
+  Settings2
 } from 'lucide-react';
 import {
   format,
@@ -444,6 +445,11 @@ export default async function DashboardHomePage() {
           <Button variant="outline" asChild className="flex-col h-auto py-4">
             <Link href="/presupuesto">
               <ShoppingCart className="h-6 w-6 mb-1" /> Presupuestos
+            </Link>
+          </Button>
+          <Button variant="outline" asChild className="flex-col h-auto py-4">
+            <Link href="/admin">
+              <Settings2 className="h-6 w-6 mb-1" /> Admin area
             </Link>
           </Button>
           <Button variant="outline" asChild className="flex-col h-auto py-4">
