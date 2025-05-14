@@ -168,7 +168,7 @@ function AcceptInvitationClientContent() {
 
   if (verificationError) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-4">
+      <div className="flex justify-center items-center min-h-screen p-4 bg-[url('/img/background.svg')] bg-cover">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle className="flex items-center justify-center gap-2 text-destructive">
@@ -204,7 +204,7 @@ function AcceptInvitationClientContent() {
       invitationDetails.email.toLowerCase()
   ) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40">
+      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40 bg-[url('/img/background.svg')] bg-cover">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>¡Has sido invitado!</CardTitle>
@@ -262,7 +262,7 @@ function AcceptInvitationClientContent() {
       invitationDetails.email.toLowerCase()
   ) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40">
+      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40 bg-[url('/img/background.svg')] bg-cover">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>Cuenta Incorrecta</CardTitle>
@@ -299,7 +299,7 @@ function AcceptInvitationClientContent() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40">
+      <div className="flex justify-center items-center min-h-screen p-4 bg-muted/40 bg-[url('/img/background.svg')] bg-cover">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>¡Has sido invitado!</CardTitle>

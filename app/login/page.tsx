@@ -20,7 +20,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex justify-center items-start md:items-center p-4 sm:p-8">
+    <div className="min-h-screen flex justify-center items-start md:items-center p-4 sm:p-8 bg-[url('/img/background.svg')] bg-cover">
       <Card className="w-full max-w-sm border-none shadow-none">
         <CardHeader className="text-center">
           <Image
