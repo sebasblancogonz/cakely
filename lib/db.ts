@@ -85,7 +85,16 @@ export const businesses = pgTable('businesses', {
   name: varchar('name', { length: 255 }).notNull(),
   logoUrl: text('logo_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  stripeCustomerId: text('stripe_customer_id').unique(),
+  stripeSubscriptionId: text('stripe_subscription_id').unique(),
+  stripePriceId: text('stripe_price_id'),
+  stripeCurrentPeriodEnd: timestamp('stripe_current_period_end', {
+    mode: 'date',
+    withTimezone: true
+  }),
+  subscriptionStatus: text('subscription_status'),
+  isLifetime: boolean('is_lifetime').default(false).notNull()
 });
 
 export const usersBusinessFk = foreignKey({

@@ -64,6 +64,7 @@
     "serverless@latest": "link:neondatabase/serverless@latest",
     "shadcdn": "^0.0.8",
     "simple-icons": "^14.12.3",
+    "stripe": "^18.1.0",
     "swr": "^2.3.3",
     "tabs": "^0.2.0",
     "tailwind-merge": "^2.6.0",

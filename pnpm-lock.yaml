@@ -182,6 +182,9 @@ importers:
       simple-icons:
         specifier: ^14.12.3
         version: 14.12.3
+      stripe:
+        specifier: ^18.1.0
+        version: 18.1.0(@types/node@20.17.6)
       swr:
         specifier: ^2.3.3
         version: 2.3.3(react@18.3.1)
@@ -3262,6 +3265,15 @@ packages:
   strip-ansi@7.1.0:
     resolution: {integrity: sha512-iq6eVVI64nQQTRYq2KtEg2d2uU7LElhTJwsH4YzIHZshxlgZms/wIc4VoDQTlG/IvVIrBKG06CrZnp0qv7hkcQ==}
     engines: {node: '>=12'}
+
+  stripe@18.1.0:
+    resolution: {integrity: sha512-MLDiniPTHqcfIT3anyBPmOEcaiDhYa7/jRaNypQ3Rt2SJnayQZBvVbFghIziUCZdltGAndm/ZxVOSw6uuSCDig==}
+    engines: {node: '>=12.*'}
+    peerDependencies:
+      '@types/node': '>=12.x.x'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   styled-jsx@5.1.6:
     resolution: {integrity: sha512-qSVyDTeMotdvQYoHWLNGwRFJHC+i+ZvdBRYosOFgC+Wg1vx4frN2/RG/NA7SYqqvKNLf39P2LSRA2pu6n0XYZA==}
@@ -6518,6 +6530,12 @@ snapshots:
   strip-ansi@7.1.0:
     dependencies:
       ansi-regex: 6.1.0
+
+  stripe@18.1.0(@types/node@20.17.6):
+    dependencies:
+      qs: 6.14.0
+    optionalDependencies:
+      '@types/node': 20.17.6
 
   styled-jsx@5.1.6(react@18.3.1):
     dependencies:
