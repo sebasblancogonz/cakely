@@ -81,8 +81,6 @@ export function EditUserAdminForm({
       return;
     }
 
-    console.log('Sending PATCH data to API:', payload);
-
     try {
       const response = await fetch(`/api/admin/users/${user.id}`, {
         method: 'PATCH',

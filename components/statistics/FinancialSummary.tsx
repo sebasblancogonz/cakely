@@ -33,7 +33,6 @@ export default function FinancialSummary() {
   const handleFetchReport = async () => {
     setIsLoading(true);
     setData(null);
-    console.log(`Workspaceing report for month: ${selectedMonth}`);
 
     try {
       const response = await fetch(
@@ -45,7 +44,6 @@ export default function FinancialSummary() {
       const reportData = await response.json();
       setData(reportData);
     } catch (error) {
-      console.error(error);
       setData(null);
     }
     setIsLoading(false);

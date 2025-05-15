@@ -115,7 +115,6 @@ export default function OrdersPage() {
   };
 
   const handleUpdateSuccess = (updatedOrder: Order) => {
-    console.log('Customer updated, refreshing data...', updatedOrder);
     setOrders((prevOrders) =>
       prevOrders.map((order) =>
         order.id === updatedOrder.id ? updatedOrder : order
@@ -155,7 +154,6 @@ export default function OrdersPage() {
         setTotalOrders(data.totalOrders || 0);
       })
       .catch((error) => {
-        console.error('Failed fetch orders:', error);
         setOrders([]);
         setTotalOrders(0);
       })
@@ -164,11 +162,7 @@ export default function OrdersPage() {
 
   const handleUpdateStatus = useCallback(
     async (orderId: number, newStatus: OrderStatus | PaymentStatus) => {
-      console.log(newStatus);
       let orderData: UpdateOrderFormData;
-      console.log(
-        `OrdersPage: Attempting to update order ${orderId} to status: ${newStatus}`
-      );
 
       if (typeof newStatus === 'string' && newStatus in OrderStatus) {
         orderData = {
@@ -206,10 +200,6 @@ export default function OrdersPage() {
           finalUpdatedOrder = updatedOrderFromServer;
         }
         if (finalUpdatedOrder) {
-          console.log(
-            'OrdersPage: Status updated on server, updating local state with:',
-            finalUpdatedOrder
-          );
           setOrders((prev) =>
             prev.map((o) => (o.id === orderId ? finalUpdatedOrder! : o))
           );
@@ -217,7 +207,6 @@ export default function OrdersPage() {
           throw new Error('Unexpected API response format');
         }
       } catch (error) {
-        console.error('Error updating status:', error);
         setShowAlert(true);
         setAlertMessage(
           `Error actualizando estado: ${error instanceof Error ? error.message : String(error)}`

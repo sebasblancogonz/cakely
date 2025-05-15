@@ -105,7 +105,6 @@ const OrderForm = ({
             .sort((a, b) => a.label.localeCompare(b.label))
         );
       } catch (error) {
-        console.error('Error fetching product types:', error);
         setProductTypeOptions(
           Object.values(ProductTypeEnum).map((type) => ({
             value: type,
@@ -131,7 +130,6 @@ const OrderForm = ({
         setCustomers(data.customers || []);
       })
       .catch((error) => {
-        console.error('Error fetching customers:', error);
         toast({
           title: 'Error',
           description: 'No se pudieron cargar los clientes.',
@@ -148,7 +146,6 @@ const OrderForm = ({
   }, [reset]);
 
   const onSubmit: SubmitHandler<OrderFormData> = async (data) => {
-    console.log('OrderForm - Form Data Submitted:', data);
     const apiData = {
       ...data,
       amount: data.amount?.toString(),
@@ -187,7 +184,6 @@ const OrderForm = ({
 
       handleCancelOrClose();
     } catch (error) {
-      console.error('Error saving order:', error);
       toast({
         title: 'Error',
         description: `No se pudo guardar el pedido: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -197,7 +193,6 @@ const OrderForm = ({
   };
 
   const onValidationErrors = (validationErrors: any) => {
-    console.error('ORDER FORM - VALIDATION ERRORS (RHF):', validationErrors);
     toast({
       title: 'Error de Validación',
       description: 'Por favor, revisa los campos marcados en rojo.',

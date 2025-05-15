@@ -70,9 +70,7 @@ export async function generateMetadata({
       });
       if (customer?.name) customerName = customer.name;
     }
-  } catch (error) {
-    console.error('Metadata fetch failed:', error);
-  }
+  } catch (error) {}
 
   const title = `${customerName} | Ficha de Cliente | Cakely`;
   return {

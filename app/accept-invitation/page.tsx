@@ -72,7 +72,6 @@ function AcceptInvitationClientContent() {
         }
         setInvitationDetails(data as InvitationDetails);
       } catch (error) {
-        console.error('Verification error:', error);
         setVerificationError(
           error instanceof Error
             ? error.message
@@ -117,7 +116,6 @@ function AcceptInvitationClientContent() {
       });
       setTimeout(() => router.push('/'), 1500);
     } catch (error) {
-      console.error('Acceptance error:', error);
       const message =
         error instanceof Error ? error.message : 'Error desconocido';
       setActionError(message);
@@ -149,7 +147,6 @@ function AcceptInvitationClientContent() {
       toast({ title: 'Invitación Rechazada' });
       setTimeout(() => router.push('/'), 1500);
     } catch (error) {
-      console.error('Decline error:', error);
       const message =
         error instanceof Error ? error.message : 'Error desconocido';
       setActionError(message);

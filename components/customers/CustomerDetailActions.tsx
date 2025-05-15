@@ -38,7 +38,6 @@ export function CustomerDetailActions({
   };
 
   const handleUpdateSuccess = (updatedCustomer: Customer) => {
-    console.log('Customer updated, refreshing data...', updatedCustomer);
     closeEditModal();
 
     router.refresh();
@@ -61,7 +60,6 @@ export function CustomerDetailActions({
       router.back();
       toast({ title: 'Éxito', description: 'Cliente eliminado.' });
     } catch (error) {
-      console.error('Error deleting customer:', error);
       toast({
         title: 'Error',
         description: `No se pudo eliminar el cliente: ${error instanceof Error ? error.message : 'Error desconocido'}`,

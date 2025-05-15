@@ -16,10 +16,6 @@ export default function CreateNewOrderPage() {
   const { toast } = useToast();
 
   const handleCustomerCreated = (createdCustomer: Customer) => {
-    console.log(
-      'CreateNewOrderPage: Customer created successfully, ID:',
-      createdCustomer.id
-    );
     toast({
       title: 'Cliente Creado!',
       description: `El cliente #${createdCustomer.name ?? createdCustomer.id} ha sido dado de alta.`
@@ -29,7 +25,6 @@ export default function CreateNewOrderPage() {
   };
 
   const handleCancelCreation = () => {
-    console.log('CreateNewCustomerPage: Customer creation cancelled.');
     router.push('/clientes');
   };
 

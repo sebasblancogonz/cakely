@@ -576,11 +576,13 @@ const schema = {
 };
 
 let dbInstance: any;
+const IS_EDGE_RUNTIME = process.env.NEXT_RUNTIME === 'edge';
+const isProduction = process.env.NODE_ENV === 'production';
+const isNeonProduction =
+  isProduction && process.env.DATABASE_URL?.includes('neon.tech');
+if (IS_EDGE_RUNTIME || isNeonProduction) {
+  console.log('[DB] ✅ Usando driver Neon (Edge/Serverless compatible).');
 
-if (
-  process.env.NODE_ENV === 'production' &&
-  process.env.DATABASE_URL?.includes('neon.tech')
-) {
   if (!process.env.POSTGRES_URL) {
     throw new Error('POSTGRES_URL environment variable is not set.');
   }
@@ -589,6 +591,7 @@ if (
 
   dbInstance = drizzle(pool, { schema });
 } else {
+  console.log(IS_EDGE_RUNTIME);
   if (!process.env.POSTGRES_URL) {
     throw new Error('DATABASE_URL is required for development environment.');
   }

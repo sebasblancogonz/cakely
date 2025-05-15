@@ -106,7 +106,6 @@ export default function CustomersPage() {
         setCustomers(data.customers || []);
         setTotalCustomers(data.totalCustomers || 0);
       } catch (error) {
-        console.error('Failed to fetch customers:', error);
         setCustomers([]);
         setTotalCustomers(0);
       } finally {

@@ -122,7 +122,6 @@ export default function QuotesPage() {
           setValue('recipeId', recipesData[0].id);
         }
       } catch (error) {
-        console.error('Error loading prerequisites:', error);
         toast({
           title: 'Error',
           description: 'No se pudieron cargar datos esenciales.',
@@ -234,9 +233,6 @@ export default function QuotesPage() {
         } else if (recipeUnit === 'docena' && priceUnit === 'unidad') {
           conversionFactor = 12;
         } else {
-          console.error(
-            `Conversión de unidad no soportada para ${ingredientName}: ${recipeUnit} a ${priceUnit}`
-          );
           conversionErrors.push(
             `${ingredientName} (${recipeUnit} -> ${priceUnit})`
           );
@@ -245,10 +241,6 @@ export default function QuotesPage() {
 
         itemCost = recipeQty * conversionFactor * price;
         cogsIngredients += itemCost;
-
-        console.log(
-          `>>> Calc Ingredient ${ingredientName}: Qty=${recipeQty}${recipeUnit}, Price=${price}/${priceUnit}, Factor=${conversionFactor}, ItemCost=${itemCost.toFixed(4)}`
-        );
       }
 
       if (missingIngredients.length > 0) {
@@ -310,7 +302,6 @@ export default function QuotesPage() {
         finalPrice: parseFloat(finalPrice.toFixed(2))
       };
 
-      console.log('Calculated breakdown:', result);
       setIsCalculating(false);
       return result;
     },
@@ -325,16 +316,11 @@ export default function QuotesPage() {
   );
 
   const onSubmit = (data: QuoteFormData) => {
-    console.log('Quote Form Submitted Data:', data);
     const result = calculateQuote(data);
     setQuoteResult(result);
   };
 
   const onValidationErrors = (errors: any) => {
-    console.error(
-      'QUOTE FORM VALIDATION ERRORS:',
-      JSON.stringify(errors, null, 2)
-    );
     toast({
       title: 'Error de Validación',
       description: 'Por favor revisa los campos marcados en el formulario.',
@@ -432,17 +418,9 @@ export default function QuotesPage() {
                     render={({ field }) => (
                       <Select
                         onValueChange={(value) => {
-                          console.log(
-                            'Select onChange - value recibido (string):',
-                            value
-                          );
                           const parsedValue = value
                             ? parseInt(value, 10)
                             : undefined;
-                          console.log(
-                            'Select onChange - valor parseado (number/undefined):',
-                            parsedValue
-                          );
                           field.onChange(parsedValue);
                         }}
                         value={field.value?.toString()}

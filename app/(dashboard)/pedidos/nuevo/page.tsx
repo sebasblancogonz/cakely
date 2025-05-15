@@ -15,10 +15,6 @@ export default function CreateNewOrderPage() {
   const { toast } = useToast();
 
   const handleOrderCreated = (createdOrder: Order) => {
-    console.log(
-      'CreateNewOrderPage: Order created successfully, ID:',
-      createdOrder.id
-    );
     toast({
       title: '¡Pedido Creado!',
       description: `El pedido #${createdOrder.businessOrderNumber ?? createdOrder.id} ha sido creado.`
@@ -28,7 +24,6 @@ export default function CreateNewOrderPage() {
   };
 
   const handleCancelCreation = () => {
-    console.log('CreateNewOrderPage: Order creation cancelled.');
     router.push('/pedidos');
   };
 

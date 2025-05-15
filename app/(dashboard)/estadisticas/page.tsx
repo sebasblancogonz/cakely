@@ -102,9 +102,7 @@ export default function StatisticsPage() {
         }
         const data = await response.json();
         setOrders(data.orders || []);
-        console.log('Statistics: Orders fetched', data.orders?.length);
       } catch (error) {
-        console.error('Failed to fetch orders for statistics:', error);
         setOrders([]);
       } finally {
         setLoading(false);
@@ -114,12 +112,7 @@ export default function StatisticsPage() {
   }, []);
 
   const processedData = useMemo(() => {
-    console.log(
-      '[useMemo Statistics] Recalculating based on dateRange:',
-      dateRange
-    );
     if (!orders || orders.length === 0) {
-      console.log('[useMemo Statistics] No orders available.');
       return {
         statusData: [],
         productData: [],
@@ -140,10 +133,6 @@ export default function StatisticsPage() {
         ? new Date(to.setHours(23, 59, 59, 999))
         : new Date(new Date().setHours(23, 59, 59, 999));
 
-    console.log(
-      `[useMemo Statistics] Filtering between: ${startDate.toISOString()} and ${endDate.toISOString()}`
-    );
-
     const filtered = orders.filter((order) => {
       const dateToCompare = order.orderDate;
       if (!dateToCompare) return false;
@@ -159,10 +148,6 @@ export default function StatisticsPage() {
 
       return orderDateObj! >= startDate && orderDateObj! <= endDate;
     });
-
-    console.log(
-      `[useMemo Statistics] Filtered orders count: ${filtered.length}`
-    );
 
     const distinctProductTypes = Array.from(
       new Set(
@@ -224,13 +209,6 @@ export default function StatisticsPage() {
         return sum + (total - deposit);
       }, 0);
 
-    console.log('[useMemo Statistics] Processed Data:', {
-      statusData,
-      productData,
-      paymentData,
-      revenue,
-      pending
-    });
     return { statusData, productData, paymentData, revenue, pending };
   }, [orders, dateRange]);
 
@@ -269,10 +247,7 @@ export default function StatisticsPage() {
       case 'custom':
         return;
     }
-    console.log('Setting new date range based on type:', type, {
-      from: fromDate,
-      to: toDate
-    });
+
     setDateRange({ from: fromDate, to: toDate });
   }, []);
 

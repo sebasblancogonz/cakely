@@ -58,12 +58,10 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
       const res = await fetch('/api/images/auth');
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`Authentication error response: ${errText}`);
         throw new Error(`Authentication failed: ${res.statusText}`);
       }
       return await res.json();
     } catch (error) {
-      console.error('Failed to fetch authentication details:', error);
       throw new Error('Could not get upload credentials.');
     }
   }, []);
@@ -76,12 +74,7 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ urls: uploaded, orderId })
       });
-      if (!response.ok) {
-        console.error('Failed to store image metadata:', await response.text());
-      }
-    } catch (error) {
-      console.error('Error storing image metadata:', error);
-    }
+    } catch (error) {}
   };
 
   const updateGlobalProgress = useCallback(() => {
@@ -160,18 +153,11 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
     results.forEach((result: any) => {
       if (result.status === 'fulfilled') {
         const { uploadResult, fileKey } = result.value;
-
-        console.log(`Upload successful for ${fileKey}:`, uploadResult.filePath);
         if (uploadResult.fileId && uploadResult.url) {
           uploadedSuccessfully.push({
             id: uploadResult.fileId,
             url: uploadResult.url
           });
-        } else {
-          console.warn(
-            `Upload result for ${fileKey} missing fileId or url`,
-            uploadResult
-          );
         }
         delete progressRef.current[fileKey];
       } else {
@@ -225,7 +211,6 @@ export default function MultiUpload({ orderId }: { orderId: number }) {
 
   const handleAbort = () => {
     abortControllerRef.current.abort();
-    console.log('Upload cancellation requested.');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

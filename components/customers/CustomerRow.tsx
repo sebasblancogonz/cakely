@@ -105,7 +105,6 @@ export function Customer({
                       customers.filter((c) => c.id !== c.id)
                     );
                   } catch (error) {
-                    console.error('Error al eliminar el cliente:', error);
                     setShowAlert(true);
                   }
                 }}

@@ -37,7 +37,6 @@ export function OrderDetailActions({ order, size }: OrderDetailActionsProps) {
   };
 
   const handleUpdateSuccess = (updatedOrder: Order) => {
-    console.log('Order updated, refreshing page data...', updatedOrder);
     closeEditModal();
 
     router.refresh();
@@ -60,7 +59,6 @@ export function OrderDetailActions({ order, size }: OrderDetailActionsProps) {
       router.back();
       toast({ title: 'Éxito', description: 'Pedido eliminado.' });
     } catch (error) {
-      console.error('Error deleting order:', error);
       toast({
         title: 'Error',
         description: `No se pudo eliminar el pedido: ${error instanceof Error ? error.message : 'Error desconocido'}`,

@@ -57,7 +57,6 @@ export default function ProfilePictureUploadForm({
       if (!res.ok) throw new Error(`Authentication failed [${res.status}]`);
       return await res.json();
     } catch (err) {
-      console.error('Failed to fetch auth details:', err);
       const message =
         err instanceof Error ? err.message : 'Could not get credentials.';
       setError(`Error de autenticación: ${message}`);
@@ -77,7 +76,6 @@ export default function ProfilePictureUploadForm({
       toast({ description: 'Foto de perfil actualizada.' });
       onUploadSuccess(updatedUser.image);
     } catch (err) {
-      console.error('Error updating profile picture:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(`Error al guardar foto: ${message}`);
       toast({
@@ -129,14 +127,12 @@ export default function ProfilePictureUploadForm({
         }
       });
 
-      console.log('Upload successful:', result);
       if (result.url) {
         await updateProfilePicture(result.url);
       } else {
         throw new Error('ImageKit did not return a URL.');
       }
     } catch (err) {
-      console.error('Upload failed:', err);
       const message =
         err instanceof Error ? err.message : 'Unknown upload error.';
       if (!message.includes('aborted')) {

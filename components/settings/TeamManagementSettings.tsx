@@ -118,7 +118,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
       resetInviteForm();
       await mutatePendingInvitations();
     } catch (error) {
-      console.error('Error sending invitation:', error);
       toast({
         title: 'Error al Invitar',
         description:
@@ -162,7 +161,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
         { revalidate: false }
       );
     } catch (error) {
-      console.error('Error cancelling invitation:', error);
       toast({
         title: 'Error al Cancelar',
         description:
@@ -177,8 +175,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
   };
 
   const handleRemoveMember = async (memberUserId: string) => {
-    console.log(memberUserId);
-    console.log(currentUserId);
     if (
       !canManageTeam ||
       processingId ||
@@ -238,7 +234,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
         { revalidate: false }
       );
     } catch (error) {
-      console.error('Error removing member:', error);
       toast({
         title: 'Error al Eliminar',
         description:
@@ -283,7 +278,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
       return;
     }
 
-    console.log(`Changing role for ${memberUserId} to ${newRole}`);
     setProcessingId(memberUserId);
 
     try {
@@ -315,7 +309,6 @@ const TeamManagementSettings: React.FC<TeamManagementSettingsProps> = ({
         { revalidate: false }
       );
     } catch (error) {
-      console.error('Error changing role:', error);
       toast({
         title: 'Error al Cambiar Rol',
         description:

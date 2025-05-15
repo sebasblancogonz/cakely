@@ -48,10 +48,6 @@ const UpdateCustomerForm: React.FC<UpdateCustomerFormProps> = ({
   });
 
   useEffect(() => {
-    console.log(
-      'UpdateCustomerForm: Reseteando con customerToEdit:',
-      customerToEdit
-    );
     reset({
       name: customerToEdit.name || '',
       email: customerToEdit.email ?? null,
@@ -97,11 +93,6 @@ const UpdateCustomerForm: React.FC<UpdateCustomerFormProps> = ({
       return;
     }
 
-    console.log(
-      `Updating customer ${customerToEdit.id} with data:`,
-      customerDataToUpdate
-    );
-
     try {
       const response = await fetch(`/api/customers/${customerToEdit.id}`, {
         method: 'PATCH',
@@ -122,7 +113,6 @@ const UpdateCustomerForm: React.FC<UpdateCustomerFormProps> = ({
       onUpdateSuccess(savedCustomer);
       onCancel();
     } catch (error) {
-      console.error('Error updating customer:', error);
       toast({
         title: 'Error',
         description: `No se pudo actualizar el cliente: ${error instanceof Error ? error.message : 'Error desconocido'}`,

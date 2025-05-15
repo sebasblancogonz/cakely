@@ -161,7 +161,6 @@ const UpdateOrderForm = ({
             .sort((a, b) => a.label.localeCompare(b.label))
         );
       } catch (error) {
-        console.error('Error fetching product types:', error);
         setProductTypeOptions(
           Object.values(ProductTypeEnum).map((type) => ({
             value: type,
@@ -221,7 +220,6 @@ const UpdateOrderForm = ({
       setImageUrls([]);
       return;
     }
-    console.log('Form Data Submitted:', data);
 
     const apiData = {
       ...data,
@@ -232,14 +230,11 @@ const UpdateOrderForm = ({
       images: imageUrls
     };
 
-    console.log('API DATA BRO', apiData);
-
     delete (apiData as any).customerId;
 
     try {
       let savedOrUpdatedOrder: Order;
 
-      console.log('Updating order:', orderToEdit.id, apiData);
       const response = await fetch(`/api/orders/${orderToEdit.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -257,9 +252,6 @@ const UpdateOrderForm = ({
             const response = await fetch(`/api/images/${img.id}`, {
               method: 'DELETE'
             });
-            if (!response.ok) {
-              console.warn('Failed to delete image with ID:', img.id);
-            }
           })
         );
       }
@@ -272,7 +264,6 @@ const UpdateOrderForm = ({
 
       onCancel();
     } catch (error) {
-      console.error('Error saving/updating order:', error);
       toast({
         title: 'Error',
         description: `No se pudo guardar el pedido: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -282,7 +273,6 @@ const UpdateOrderForm = ({
   };
 
   const onValidationErrors = (validationErrors: any) => {
-    console.error('ORDER FORM - VALIDATION ERRORS (RHF):', validationErrors);
     toast({
       title: 'Error de Validación',
       description: 'Por favor, revisa los campos marcados en rojo.',

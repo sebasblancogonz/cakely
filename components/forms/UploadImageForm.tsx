@@ -57,7 +57,6 @@ export default function LogoUploadForm({
       }
       return await res.json();
     } catch (err) {
-      console.error('Failed to fetch authentication details:', err);
       const message =
         err instanceof Error
           ? err.message
@@ -83,14 +82,12 @@ export default function LogoUploadForm({
       }
 
       const updatedProfile = await response.json();
-      console.log('Business profile updated:', updatedProfile);
       toast({
         title: 'Éxito',
         description: 'Logo actualizado correctamente.'
       });
       onUploadSuccess(updatedProfile.logoUrl ?? newLogoUrl);
     } catch (err) {
-      console.error('Error updating business profile:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(`Error al guardar el logo: ${message}`);
       toast({
@@ -141,8 +138,6 @@ export default function LogoUploadForm({
         }
       });
 
-      console.log('Upload successful:', result);
-
       if (result.url) {
         await updateBusinessProfile(result.url);
       } else {
@@ -151,7 +146,6 @@ export default function LogoUploadForm({
         );
       }
     } catch (err) {
-      console.error('Upload failed:', err);
       const message =
         err instanceof Error
           ? err.message
@@ -177,7 +171,6 @@ export default function LogoUploadForm({
   const handleAbort = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort('Upload cancelled by user.');
-      console.log('Upload cancellation requested.');
       setError('Subida cancelada por el usuario.');
       setIsUploading(false);
       setUploadProgress(0);
@@ -229,7 +222,6 @@ export default function LogoUploadForm({
     try {
       await updateBusinessProfile('');
     } catch (e) {
-      console.error('Error removing logo', e);
     } finally {
       setIsUploading(false);
     }

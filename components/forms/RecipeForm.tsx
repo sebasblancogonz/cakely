@@ -118,7 +118,6 @@ export function RecipeForm({
           });
         }
       } catch (error) {
-        console.error('Error fetching product types for RecipeForm:', error);
         toast({
           title: 'Error',
           description: 'No se pudieron cargar los tipos de producto.',
@@ -166,7 +165,6 @@ export function RecipeForm({
   }, [recipe, reset, productTypeOptions]);
 
   const onSubmitHandler: SubmitHandler<RecipeFormData> = async (data) => {
-    console.log('Recipe form data to save:', data);
     const saveData = {
       ...data,
 

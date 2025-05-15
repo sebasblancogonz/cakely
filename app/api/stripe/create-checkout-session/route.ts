@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, teamMembers } from '@/lib/db';
 import { businesses } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { createCheckoutSessionSchema } from '@/lib/validators/stripe';
 import Stripe from 'stripe';
 import { getSessionInfo, checkPermission } from '@/lib/auth/utils';
+import { TeamRoleEnum } from '@/types/types';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error(
@@ -18,16 +19,22 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export async function POST(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { userId, businessId: currentBusinessId, session } = sessionInfo;
-  const userEmail = session.user?.email;
+  const session = await auth(); // Obtiene la sesión de NextAuth v5
 
-  const permissionCheck = await checkPermission(userId, currentBusinessId, [
-    'OWNER',
-    'ADMIN'
-  ]);
-  if (permissionCheck instanceof NextResponse) return permissionCheck;
+  if (!session?.user?.id || !session.user.email) {
+    console.warn(
+      '[Stripe Checkout] No autorizado - Falta sesión completa del usuario.'
+    );
+    return NextResponse.json(
+      { message: 'No autorizado - Se requiere inicio de sesión.' },
+      { status: 401 }
+    );
+  }
+
+  const userId = session.user.id;
+  const userEmail = session.user.email;
+  const userName = session.user.name; // Puede ser null
+  let currentBusinessId = session.user.businessId; // Puede ser null
 
   let reqBody;
   try {
@@ -48,42 +55,125 @@ export async function POST(request: NextRequest) {
   }
   const { priceId } = validation.data;
 
-  const businessData = await db.query.businesses.findFirst({
-    where: eq(businesses.id, currentBusinessId),
-    columns: { id: true, name: true, stripeCustomerId: true }
-  });
+  let targetBusinessId = currentBusinessId;
+  let businessForStripe: {
+    id: number;
+    name: string | null;
+    stripeCustomerId: string | null;
+  } | null = null;
 
-  if (!businessData) {
-    return NextResponse.json(
-      { message: 'Negocio no encontrado.' },
-      { status: 404 }
+  if (!targetBusinessId) {
+    // Usuario autenticado pero SIN businessId: Crear uno por defecto
+    console.log(
+      `[Stripe Checkout] Usuario ${userId} no tiene negocio. Creando uno por defecto.`
     );
+    const defaultBusinessName = userName
+      ? `Pastelería de ${userName.split(' ')[0]}`
+      : `Mi Negocio (${userId.substring(0, 6)})`;
+    try {
+      const newBusinessArray = await db
+        .insert(businesses)
+        .values({
+          ownerUserId: userId, // El usuario actual es el owner
+          name: defaultBusinessName,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning({
+          id: businesses.id,
+          name: businesses.name,
+          stripeCustomerId: businesses.stripeCustomerId
+        });
+
+      if (!newBusinessArray || newBusinessArray.length === 0) {
+        throw new Error('La creación del negocio no devolvió resultados.');
+      }
+      const newBusiness = newBusinessArray[0];
+      targetBusinessId = newBusiness.id; // ID del nuevo negocio
+
+      // Añadir al usuario como OWNER del nuevo negocio
+      await db
+        .insert(teamMembers)
+        .values({
+          userId: userId,
+          businessId: targetBusinessId,
+          role: TeamRoleEnum.OWNER, // Asegúrate que TeamRole.OWNER está definido
+          joinedAt: new Date()
+        })
+        .onConflictDoNothing(); // Por si acaso, aunque no debería haber conflicto
+
+      businessForStripe = {
+        id: newBusiness.id,
+        name: newBusiness.name,
+        stripeCustomerId: newBusiness.stripeCustomerId // Será null inicialmente
+      };
+      console.log(
+        `[Stripe Checkout] Negocio por defecto <span class="math-inline">\{targetBusinessId\} \('</span>{newBusiness.name}') creado y asignado a usuario ${userId}.`
+      );
+      // NOTA: La sesión del cliente (session.user.businessId) NO se actualiza inmediatamente aquí.
+      // Se actualizará en la próxima vez que se genere el JWT (ej: próximo login o refresco de página).
+      // Para la lógica de Stripe, usamos targetBusinessId.
+    } catch (dbError: any) {
+      console.error(
+        '[Stripe Checkout] Error creando negocio por defecto:',
+        dbError
+      );
+      return NextResponse.json(
+        {
+          message: 'Error al configurar tu cuenta de negocio.',
+          error: dbError.message
+        },
+        { status: 500 }
+      );
+    }
+  } else {
+    // El usuario ya tiene un businessId en su sesión, buscarlo
+    const existingBusiness = await db.query.businesses.findFirst({
+      where: eq(businesses.id, targetBusinessId),
+      columns: { id: true, name: true, stripeCustomerId: true }
+    });
+    if (!existingBusiness) {
+      console.error(
+        `[Stripe Checkout] Error: businessId ${targetBusinessId} en sesión no encontrado en BD para usuario ${userId}.`
+      );
+      return NextResponse.json(
+        { message: 'Error: No se encontró el negocio asociado a tu sesión.' },
+        { status: 403 }
+      );
+    }
+    businessForStripe = existingBusiness;
   }
 
-  let stripeCustomerId = businessData.stripeCustomerId;
+  // A partir de aquí, businessForStripe contiene el negocio (nuevo o existente)
+  // y targetBusinessId tiene el ID del negocio a usar.
+
+  // (Opcional) Chequeo de Permisos si fuera necesario (aquí el user es owner o ya tenía el businessId)
+  const permissionCheck = await checkPermission(userId, targetBusinessId, [
+    'OWNER',
+    'ADMIN'
+  ]);
+  if (permissionCheck instanceof NextResponse) return permissionCheck;
+
+  let stripeCustomerId = businessForStripe?.stripeCustomerId;
 
   if (!stripeCustomerId) {
     console.log(
-      `[Stripe Checkout] Creando nuevo cliente en Stripe para business ID: ${businessData.id}`
+      `[Stripe Checkout] Creando nuevo cliente en Stripe para business ID: ${targetBusinessId}`
     );
     try {
       const customer = await stripe.customers.create({
-        email: userEmail || undefined,
-        name: businessData.name || undefined,
+        email: userEmail,
+        name: businessForStripe?.name || undefined,
         metadata: {
-          cakelyBusinessId: businessData.id.toString(),
+          cakelyBusinessId: targetBusinessId.toString(),
           cakelyUserId: userId
         }
       });
       stripeCustomerId = customer.id;
-
       await db
         .update(businesses)
         .set({ stripeCustomerId: stripeCustomerId, updatedAt: new Date() })
-        .where(eq(businesses.id, businessData.id));
-      console.log(
-        `[Stripe Checkout] Cliente de Stripe ${stripeCustomerId} creado y guardado para business ID: ${businessData.id}`
-      );
+        .where(eq(businesses.id, targetBusinessId));
     } catch (error: any) {
       console.error(
         '[Stripe Checkout] Error creando cliente en Stripe:',
@@ -96,7 +186,7 @@ export async function POST(request: NextRequest) {
     }
   } else {
     console.log(
-      `[Stripe Checkout] Usando cliente de Stripe existente: ${stripeCustomerId} para business ID: ${businessData.id}`
+      `[Stripe Checkout] Usando cliente de Stripe existente: ${stripeCustomerId} para business ID: ${businessForStripe?.id}`
     );
   }
 
@@ -119,12 +209,12 @@ export async function POST(request: NextRequest) {
       cancel_url: cancelUrl,
 
       metadata: {
-        cakelyBusinessId: businessData.id.toString(),
+        cakelyBusinessId: businessForStripe!.id.toString(),
         cakelyUserId: userId
       },
       subscription_data: {
         metadata: {
-          cakelyBusinessId: businessData.id.toString(),
+          cakelyBusinessId: businessForStripe!.id.toString(),
           cakelyUserId: userId
         }
       }

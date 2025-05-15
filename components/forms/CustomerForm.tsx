@@ -149,7 +149,6 @@ const CustomerForm = ({
       setIsEditing(false);
       setIsCreating(false);
     } catch (error) {
-      console.error('Error saving customer:', error);
       toast({
         title: 'Error',
         description: `No se pudo guardar el cliente: ${error instanceof Error ? error.message : 'Error desconocido'}`,

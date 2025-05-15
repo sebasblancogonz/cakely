@@ -9,9 +9,7 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
+  useEffect(() => {}, [error]);
 
   return (
     <main className="p-4 md:p-6">

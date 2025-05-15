@@ -1,6 +1,7 @@
 import { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['postgres', '@neondatabase/serverless'],
   redirects: async () => {
     return [
       {

@@ -155,7 +155,6 @@ export default function SettingsPage() {
       ? `/api/ingredient-prices/${data.id}`
       : '/api/ingredient-prices';
     const method = isEditing ? 'PUT' : 'POST';
-    console.log('Saving ingredient:', data);
     try {
       const response = await fetch(url, {
         method: method,
@@ -174,7 +173,6 @@ export default function SettingsPage() {
         description: `Ingrediente ${isEditing ? 'actualizado' : 'añadido'}.`
       });
     } catch (error) {
-      console.error('Error saving ingredient:', error);
       toast({
         title: 'Error',
         description: `No se pudo guardar el ingrediente: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -186,7 +184,6 @@ export default function SettingsPage() {
   const handleDeleteIngredient = async (id: number) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este ingrediente?'))
       return;
-    console.log('Deleting ingredient:', id);
     try {
       const response = await fetch(`/api/ingredient-prices/${id}`, {
         method: 'DELETE'
@@ -203,7 +200,6 @@ export default function SettingsPage() {
 
       toast({ title: 'Éxito', description: 'Ingrediente eliminado.' });
     } catch (error) {
-      console.error('Error deleting ingredient:', error);
       toast({
         title: 'Error',
         description: `No se pudo eliminar el ingrediente: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -216,7 +212,6 @@ export default function SettingsPage() {
     const isEditing = !!data.id;
     const url = isEditing ? `/api/recipes/${data.id}` : '/api/recipes';
     const method = isEditing ? 'PUT' : 'POST';
-    console.log('Saving recipe:', data);
     try {
       const response = await fetch(url, {
         method: method,
@@ -235,7 +230,6 @@ export default function SettingsPage() {
         description: `Receta ${isEditing ? 'actualizada' : 'creada'}.`
       });
     } catch (error) {
-      console.error('Error saving recipe:', error);
       toast({
         title: 'Error',
         description: `No se pudo guardar la receta: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -250,7 +244,6 @@ export default function SettingsPage() {
       )
     )
       return;
-    console.log('Deleting recipe:', id);
     try {
       const response = await fetch(`/api/recipes/${id}`, { method: 'DELETE' });
       if (!response.ok) {
@@ -265,7 +258,6 @@ export default function SettingsPage() {
 
       toast({ title: 'Éxito', description: 'Receta eliminada.' });
     } catch (error) {
-      console.error('Error deleting recipe:', error);
       toast({
         title: 'Error',
         description: `No se pudo eliminar la receta: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -290,7 +282,6 @@ export default function SettingsPage() {
         const fullRecipeData = await res.json();
         setEditingRecipe(fullRecipeData);
       } catch (error) {
-        console.error('Error fetching recipe details:', error);
         toast({
           title: 'Error',
           description: 'No se pudo cargar detalles de la receta.',
@@ -302,7 +293,6 @@ export default function SettingsPage() {
   };
 
   const handleSaveProfileName = async (data: BusinessNameUpdateData) => {
-    console.log('Saving business profile name:', data);
     try {
       const response = await fetch('/api/business-profile', {
         method: 'PATCH',
@@ -322,7 +312,6 @@ export default function SettingsPage() {
         description: 'Nombre del negocio actualizado.'
       });
     } catch (error) {
-      console.error('Error saving business name:', error);
       toast({
         title: 'Error',
         description: `No se pudo guardar el nombre: ${error instanceof Error ? error.message : 'Error desconocido'}`,

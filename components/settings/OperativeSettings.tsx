@@ -63,12 +63,6 @@ const OperativeSettings = () => {
           settingsData = await settingsRes.value.json();
         } else {
           fetchOk = false;
-          console.error(
-            'Failed to fetch settings:',
-            settingsRes.status === 'fulfilled'
-              ? await settingsRes.value.text()
-              : settingsRes.reason
-          );
         }
 
         if (!isMounted) return;
@@ -118,7 +112,6 @@ const OperativeSettings = () => {
         };
         reset(formDefaults);
       } catch (error) {
-        console.error('Error loading page data:', error);
         if (isMounted) {
           toast({
             title: 'Error',
@@ -141,7 +134,6 @@ const OperativeSettings = () => {
 
   const onSettingsSubmit = async (data: SettingsFormData) => {
     setIsSavingSettings(true);
-    console.log('Saving settings:', data);
     try {
       const response = await fetch('/api/settings', {
         method: 'PUT',
@@ -157,7 +149,6 @@ const OperativeSettings = () => {
       reset(data);
       toast({ title: 'Éxito', description: 'Ajustes generales guardados.' });
     } catch (error) {
-      console.error('Error saving settings:', error);
       toast({
         title: 'Error',
         description: `No se pudieron guardar los ajustes: ${error instanceof Error ? error.message : 'Error desconocido'}`,

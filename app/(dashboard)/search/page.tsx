@@ -56,7 +56,6 @@ function SearchResultsContent() {
           setResults(data.results || []);
         })
         .catch((err) => {
-          console.error('Search fetch error:', err);
           setError(err.message || 'Failed to fetch search results.');
         })
         .finally(() => {
@@ -104,7 +103,6 @@ function SearchResultsContent() {
         setItemDetails(data);
       })
       .catch((err) => {
-        console.error(`Error fetching ${selectedItem.type} details:`, err);
         toast({
           title: 'Error',
           description: `No se pudieron cargar los detalles: ${err.message}`,

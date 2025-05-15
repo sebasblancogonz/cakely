@@ -66,10 +66,6 @@ export async function callCreateCalendarEvent(
       htmlLink: response.data.htmlLink ?? undefined
     };
   } catch (error: any) {
-    console.error(
-      'Error al llamar a Google Calendar API (events.insert):',
-      error
-    );
     const errorMessage =
       error?.response?.data?.error?.message ||
       error?.message ||

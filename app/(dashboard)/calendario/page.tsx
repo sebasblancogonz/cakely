@@ -113,7 +113,6 @@ export default function OrdersCalendarPage() {
       setLoading(true);
       const startDateStr = format(periodStart, 'yyyy-MM-dd');
       const endDateStr = format(periodEnd, 'yyyy-MM-dd');
-      console.log(`Workspaceing orders from ${startDateStr} to ${endDateStr}`);
       try {
         const response = await fetch(
           `/api/orders?startDate=${startDateStr}&endDate=${endDateStr}&limit=1000`
@@ -124,7 +123,6 @@ export default function OrdersCalendarPage() {
         const data = await response.json();
         setOrdersInPeriod(data.orders || []);
       } catch (error) {
-        console.error('Failed to fetch orders for period:', error);
         setOrdersInPeriod([]);
       } finally {
         setLoading(false);

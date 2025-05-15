@@ -68,7 +68,6 @@ export function CreateUserAdminForm({
       reset();
       onSuccess();
     } catch (error: any) {
-      console.error('Error creating user:', error);
       toast({
         title: 'Error',
         description: error.message || 'No se pudo crear el usuario.',

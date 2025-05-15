@@ -80,14 +80,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
 
       try {
         await updateSession({ name: updatedUser.name });
-
-        console.log('UserProfileSettings: updateSession call completed.');
       } catch (updateError) {
-        console.error(
-          'UserProfileSettings: Error calling updateSession:',
-          updateError
-        );
-
         toast({
           title: 'Info',
           description:
@@ -98,7 +91,6 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
 
       reset({ name: updatedUser.name });
     } catch (error) {
-      console.error('Error updating user name:', error);
       toast({
         title: 'Error',
         description: `No se pudo actualizar tu nombre: ${error instanceof Error ? error.message : 'Error desconocido'}`,
@@ -108,13 +100,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
   };
 
   const handlePictureUpdateSuccess = async (newImageUrl: string | null) => {
-    console.log('UserProfileSettings: Received new image URL:', newImageUrl);
-
     try {
       await updateSession({ image: newImageUrl });
       toast({ description: 'Sesión actualizada con la nueva foto.' });
     } catch (error) {
-      console.error('Error updating session with new image:', error);
       toast({
         description:
           'Foto guardada, pero hubo un problema al refrescar tu sesión.',

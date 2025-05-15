@@ -92,7 +92,6 @@ export function OrderRow({
         currentOrders.filter((o) => o.id !== order.id)
       );
     } catch (error) {
-      console.error('Error deleting order:', error);
       alert('No se pudo eliminar el pedido. Inténtalo de nuevo.');
     }
   };
