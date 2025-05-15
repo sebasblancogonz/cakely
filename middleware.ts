@@ -11,15 +11,10 @@ const publicPaths = [
   '/auth/invitation-required'
 ];
 
-const authenticatedAppPathsWithoutBusinessId = [
-  '/admin',
-  '/admin/negocios',
-  '/admin/usuarios',
-  '/perfil'
-];
+const authenticatedAppPathsWithoutBusinessId = ['/admin', '/negocios/crear'];
 
 const superAdminRootPath = '/admin';
-const appUserRootPath = '/pedidos';
+const appUserRootPath = '/';
 
 const nextAuthSecret = process.env.AUTH_SECRET;
 

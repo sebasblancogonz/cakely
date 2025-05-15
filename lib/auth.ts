@@ -13,8 +13,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens
   }),
-  // @ts-ignore
   providers: [
+    // @ts-ignore
     GoogleProvider({
       allowDangerousEmailAccountLinking: true,
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -94,64 +94,112 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, trigger, session: sessionUpdate, account }) {
       const currentUserId = token.id || user?.id;
 
-      console.log(`[AUTH JWT] Trigger: ${trigger}, User ID: ${currentUserId}`);
+      console.log(
+        `[AUTH JWT] Trigger: ${trigger}, User ID: ${currentUserId}, Email: ${token.email || user?.email}`
+      );
+      if (currentUserId) {
+        token.id = currentUserId as string;
 
-      if (
-        user ||
-        !token.email ||
-        token.isSuperAdmin === undefined ||
-        token.businessId === undefined
-      ) {
-        if (currentUserId) {
-          const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, currentUserId as string),
-            columns: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-              isSuperAdmin: true,
-              businessId: true
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, currentUserId as string),
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            isSuperAdmin: true,
+            businessId: true
+          }
+        });
+
+        if (!dbUser) {
+          console.warn(
+            `[AUTH JWT] Usuario ${currentUserId} no encontrado en DB. Invalidando token.`
+          );
+          return {
+            ...token,
+            id: undefined,
+            email: null,
+            name: null,
+            picture: null,
+            isSuperAdmin: false,
+            businessId: null,
+            role: null,
+            exp: 0
+          };
+        }
+
+        token.name = dbUser.name;
+        token.email = dbUser.email;
+        token.picture = dbUser.image;
+        token.isSuperAdmin = dbUser.isSuperAdmin ?? false;
+
+        let effectiveBusinessId: number | null = dbUser.businessId;
+        let effectiveRole: TeamRole | null = null;
+
+        if (effectiveBusinessId) {
+          const primaryMembership = await db.query.teamMembers.findFirst({
+            where: and(
+              eq(teamMembers.userId, currentUserId as string),
+              eq(teamMembers.businessId, effectiveBusinessId)
+            ),
+            columns: { role: true },
+            with: {
+              business: { columns: { id: true } }
             }
           });
 
-          if (dbUser) {
-            token.id = dbUser.id;
-            token.name = dbUser.name;
-            token.email = dbUser.email;
-            token.picture = dbUser.image;
-            token.isSuperAdmin = dbUser.isSuperAdmin ?? false;
-
-            if (dbUser.businessId) {
-              token.businessId = dbUser.businessId;
-              const membership = await db.query.teamMembers.findFirst({
-                where: and(
-                  eq(teamMembers.userId, currentUserId as string),
-                  eq(teamMembers.businessId, dbUser.businessId)
-                ),
-                columns: { role: true }
-              });
-              token.role = (membership?.role as TeamRole | null) ?? null;
-            } else {
-              const firstMembership = await db.query.teamMembers.findFirst({
-                where: eq(teamMembers.userId, currentUserId as string),
-                columns: { businessId: true, role: true },
-                orderBy: [asc(teamMembers.joinedAt)]
-              });
-              token.businessId = firstMembership?.businessId ?? null;
-              token.role = (firstMembership?.role as TeamRole | null) ?? null;
-            }
+          if (primaryMembership && primaryMembership.business) {
+            effectiveRole = primaryMembership.role as TeamRole;
             console.log(
-              `[AUTH JWT] DB User Data loaded for ${currentUserId}: isSuperAdmin=${token.isSuperAdmin}, businessId=${token.businessId}, role=${token.role}`
+              `[AUTH JWT] Usuario ${currentUserId} confirmado en negocio primario ${effectiveBusinessId} como ${effectiveRole}`
             );
           } else {
-            token.isSuperAdmin = false;
-            token.businessId = null;
-            token.role = null;
+            console.warn(
+              `[AUTH JWT] Negocio primario ${effectiveBusinessId} para usuario ${currentUserId} ya no es válido o el usuario no es miembro. Buscando alternativas...`
+            );
+            effectiveBusinessId = null;
+            effectiveRole = null;
+            await db
+              .update(users)
+              .set({ businessId: null })
+              .where(eq(users.id, currentUserId as string));
           }
         }
-      }
 
+        if (!effectiveBusinessId) {
+          console.log(
+            `[AUTH JWT] Buscando primera membresía válida para ${currentUserId}...`
+          );
+          const firstValidMembership = await db.query.teamMembers.findFirst({
+            where: eq(teamMembers.userId, currentUserId as string),
+            columns: { businessId: true, role: true },
+            orderBy: [asc(teamMembers.joinedAt)], // O el criterio que prefieras para "primera"
+            with: {
+              // Asegúrate que el negocio de esta membresía también exista
+              business: { columns: { id: true } }
+            }
+          });
+
+          if (firstValidMembership && firstValidMembership.business) {
+            effectiveBusinessId = firstValidMembership.businessId;
+            effectiveRole = firstValidMembership.role as TeamRole;
+            console.log(
+              `[AUTH JWT] Encontrada membresía alternativa: Negocio ${effectiveBusinessId}, Rol ${effectiveRole}`
+            );
+            db.update(users)
+              .set({ businessId: effectiveBusinessId })
+              .where(eq(users.id, currentUserId as string));
+          } else {
+            console.log(
+              `[AUTH JWT] Usuario ${currentUserId} no encontrado en ningún equipo válido.`
+            );
+          }
+        }
+
+        token.businessId = effectiveBusinessId;
+        token.role = effectiveRole;
+      }
       if (trigger === 'signUp' && user && token.email) {
         const currentUserEmail = token.email.toLowerCase();
         console.log(
