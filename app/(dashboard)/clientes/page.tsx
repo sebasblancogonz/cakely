@@ -156,6 +156,50 @@ export default function CustomersPage() {
     updateQueryParams({ q: currentSearch });
   };
 
+  const handleDeleteCustomerRequest = async (customerId: number) => {
+    const customerToDelete = customers.find((c) => c.id === customerId);
+    if (!customerToDelete) return;
+
+    if (
+      !confirm(
+        `¿Estás seguro de que quieres eliminar a ${customerToDelete.name}? Esta acción no se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/customers/${customerId}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || 'Error al eliminar el cliente desde la API.'
+        );
+      }
+
+      toast({
+        title: 'Cliente Eliminado',
+        description: `${customerToDelete.name} ha sido eliminado.`
+      });
+
+      if (customers.length === 1 && offsetParam > 0) {
+        const newOffset = Math.max(0, offsetParam - pageSize);
+        updateQueryParams({ offset: newOffset });
+      } else {
+        setRefreshTrigger(Date.now());
+      }
+    } catch (error: any) {
+      console.error('Error deleting customer:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo eliminar el cliente.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const downloadCSV = () => {
     if (customers.length === 0) {
       setShowAlert(true);
@@ -297,6 +341,7 @@ export default function CustomersPage() {
           customers={customers}
           setCustomers={setCustomers}
           editCustomer={editCustomer}
+          onDeleteRequested={handleDeleteCustomerRequest}
           showDetails={showDetails}
           offset={offset}
           limit={pageSize}

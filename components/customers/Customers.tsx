@@ -30,6 +30,7 @@ interface CustomersTableProps {
   totalCustomers: number;
   setCustomers: React.Dispatch<React.SetStateAction<CustomerType[]>>;
   editCustomer: (customer: CustomerType) => void;
+  onDeleteRequested: (customerId: number) => void;
   showDetails: (customer: CustomerType) => void;
 }
 
@@ -39,17 +40,9 @@ export function CustomersTable({
   limit,
   totalCustomers,
   setCustomers,
-  editCustomer
+  editCustomer,
+  onDeleteRequested
 }: CustomersTableProps): JSX.Element {
-  console.log(
-    '[CustomersTable] Props recibidas. totalCustomers:',
-    totalCustomers,
-    'offset:',
-    offset,
-    'limit:',
-    limit
-  );
-
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -133,8 +126,8 @@ export function CustomersTable({
                   customers.map((customer) => (
                     <Customer
                       key={customer.id}
+                      onDeleteRequested={onDeleteRequested}
                       customer={customer}
-                      setCustomers={setCustomers}
                       editCustomer={editCustomer}
                     />
                   ))

@@ -25,15 +25,19 @@ import {
 
 export function Customer({
   customer,
-  setCustomers,
-  editCustomer
+  editCustomer,
+  onDeleteRequested
 }: {
   customer: CustomerType;
-  setCustomers: React.Dispatch<React.SetStateAction<CustomerType[]>>;
   editCustomer: (customer: CustomerType) => void;
+  onDeleteRequested: (customerId: number) => void;
 }) {
   const router = useRouter();
   const [showAlert, setShowAlert] = useState(false);
+
+  const handleDeleteClick = async () => {
+    onDeleteRequested(customer.id!);
+  };
 
   return (
     <TableRow>
@@ -97,20 +101,7 @@ export function Customer({
               </button>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <button
-                onClick={async () => {
-                  try {
-                    await deleteCustomer(customer.id);
-                    setCustomers((customers) =>
-                      customers.filter((c) => c.id !== c.id)
-                    );
-                  } catch (error) {
-                    setShowAlert(true);
-                  }
-                }}
-              >
-                Eliminar
-              </button>
+              <button onClick={handleDeleteClick}>Eliminar</button>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
