@@ -7,7 +7,8 @@ const defaultProfileData: BusinessProfileData = {
   logoUrl: null,
   stripeCurrentPeriodEnd: null,
   isLifetime: null,
-  subscriptionStatus: null
+  subscriptionStatus: null,
+  stripePriceId: null
 };
 
 export function useBusinessProfile() {

@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
         id: businesses.id,
         subscribtionStatus: businesses.subscriptionStatus,
         stripeCurrentPeriodEnd: businesses.stripeCurrentPeriodEnd,
-        isLifetime: businesses.isLifetime
+        isLifetime: businesses.isLifetime,
+        stripePriceId: businesses.stripePriceId
       })
       .from(businesses)
       .where(eq(businesses.id, businessId))

@@ -155,4 +155,5 @@ export interface BusinessProfileData {
   stripeCurrentPeriodEnd: string | null;
   isLifetime: boolean | null;
   subscriptionStatus: string | null;
+  stripePriceId: string | null;
 }
