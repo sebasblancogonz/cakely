@@ -41,6 +41,15 @@ export function CustomersTable({
   setCustomers,
   editCustomer
 }: CustomersTableProps): JSX.Element {
+  console.log(
+    '[CustomersTable] Props recibidas. totalCustomers:',
+    totalCustomers,
+    'offset:',
+    offset,
+    'limit:',
+    limit
+  );
+
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

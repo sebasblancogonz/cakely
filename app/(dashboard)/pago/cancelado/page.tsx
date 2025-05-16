@@ -10,7 +10,7 @@ export default async function PaymentCancelledServerPage() {
     console.log(
       '[PaymentCancelledPage] No se encontró la cookie "stripe_checkout_cancel_flag". Redirigiendo...'
     );
-    redirect('/ajustes/suscripcion'); // O a '/'
+    redirect('/ajustes/suscripcion');
   }
   return <CancelledPageClientContent />;
 }

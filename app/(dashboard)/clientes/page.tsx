@@ -32,6 +32,7 @@ import {
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 import { useBusinessProfile } from '@/hooks/use-business-profile';
+import { useToast } from '@/hooks/use-toast';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
@@ -41,12 +42,14 @@ export default function CustomersPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { profile } = useBusinessProfile();
+  const { toast } = useToast();
 
   const search = searchParams.get('q') || '';
   const offsetParam = Number(searchParams.get('offset')) || 0;
   const limitParam = Number(searchParams.get('limit')) || DEFAULT_PAGE_SIZE;
 
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [offset, setOffset] = useState(offsetParam);
   const [pageSize, setPageSize] = useState(limitParam);
   const [totalCustomers, setTotalCustomers] = useState(0);
@@ -114,7 +117,7 @@ export default function CustomersPage() {
     }
 
     fetchCustomers();
-  }, [search, offsetParam, limitParam]);
+  }, [search, offsetParam, limitParam, refreshTrigger]);
 
   const updateQueryParams = useCallback(
     (newParams: Record<string, string | number>) => {
@@ -187,6 +190,18 @@ export default function CustomersPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleCustomerFormSuccess = (
+    savedCustomer: Customer,
+    wasEditing: boolean
+  ) => {
+    toast({
+      title: 'Éxito',
+      description: `Cliente "${savedCustomer.name}" ${wasEditing ? 'actualizado' : 'creado'}.`
+    });
+    closeModal();
+    setRefreshTrigger(Date.now());
   };
 
   return (
@@ -297,6 +312,7 @@ export default function CustomersPage() {
             setIsEditing={setIsEditing}
             setIsCreating={setIsCreating}
             customerToEdit={isEditing ? customerToEdit : null}
+            onSuccess={handleCustomerFormSuccess}
           />
         ) : customerToShow ? (
           <CustomerDetails customer={customerToShow} />

@@ -687,7 +687,7 @@ export async function getCustomers(
     .select()
     .from(customers)
     .where(whereClause)
-    .orderBy(asc(customers.name))
+    .orderBy(desc(customers.registrationDate))
     .limit(limit)
     .offset(offset)
     .$dynamic();

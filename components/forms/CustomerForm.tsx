@@ -22,6 +22,7 @@ interface CustomerFormProps {
   setIsEditing: (value: boolean) => void;
   setIsCreating: (value: boolean) => void;
   customerToEdit: Customer | null;
+  onSuccess: (customer: Customer, isEditing: boolean) => void;
   onCustomerCreated?: (createdCustomer: Customer) => void;
   onCancelForm?: () => void;
 }
@@ -33,6 +34,7 @@ const CustomerForm = ({
   setIsCreating,
   customerToEdit,
   onCustomerCreated,
+  onSuccess,
   onCancelForm
 }: CustomerFormProps) => {
   const { toast } = useToast();
@@ -134,12 +136,13 @@ const CustomerForm = ({
           throw new Error(errorData.message || 'Failed to create customer');
         }
         savedCustomer = await response.json();
-        setCustomers((prevCustomers) => [...prevCustomers, savedCustomer]);
         toast({ title: 'Éxito', description: 'Cliente creado correctamente.' });
-        if (onCustomerCreated) {
+        if (onSuccess) {
+          onSuccess(savedCustomer, false);
+        } else if (onCustomerCreated) {
           onCustomerCreated(savedCustomer);
         } else if (setCustomers) {
-          setCustomers((prevCustomers) => [...prevCustomers, savedCustomer]);
+          setCustomers((prevCustomers) => [savedCustomer, ...prevCustomers]);
         }
 
         handleCancel();

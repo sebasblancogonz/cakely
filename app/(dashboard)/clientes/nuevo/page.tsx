@@ -53,6 +53,7 @@ export default function CreateNewOrderPage() {
             setIsModalOpen={() => {}}
             setCustomers={() => {}}
             setIsCreating={() => {}}
+            onSuccess={() => {}}
           />
         </CardContent>
       </Card>
