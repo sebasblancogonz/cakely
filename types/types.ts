@@ -152,4 +152,7 @@ export interface DashboardBreadcrumbProps {
 export interface BusinessProfileData {
   name: string | null;
   logoUrl: string | null;
+  stripeCurrentPeriodEnd: string | null;
+  isLifetime: boolean | null;
+  subscriptionStatus: string | null;
 }

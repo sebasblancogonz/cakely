@@ -2,7 +2,13 @@ import useSWR from 'swr';
 import { fetcher } from '@/lib/fetcher';
 import { BusinessProfileData } from '@/types/types';
 
-const defaultProfileData: BusinessProfileData = { name: null, logoUrl: null };
+const defaultProfileData: BusinessProfileData = {
+  name: null,
+  logoUrl: null,
+  stripeCurrentPeriodEnd: null,
+  isLifetime: null,
+  subscriptionStatus: null
+};
 
 export function useBusinessProfile() {
   const { data, error, isLoading, mutate } = useSWR<BusinessProfileData>(

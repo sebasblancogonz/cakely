@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
       .select({
         name: businesses.name,
         logoUrl: businesses.logoUrl,
-        id: businesses.id
+        id: businesses.id,
+        subscribtionStatus: businesses.subscriptionStatus,
+        stripeCurrentPeriodEnd: businesses.stripeCurrentPeriodEnd,
+        isLifetime: businesses.isLifetime
       })
       .from(businesses)
       .where(eq(businesses.id, businessId))
