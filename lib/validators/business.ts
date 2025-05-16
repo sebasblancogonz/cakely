@@ -16,3 +16,13 @@ export const profilePatchSchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: 'Nada que actualizar'
   });
+
+export const createBusinessFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(3, 'El nombre del negocio debe tener al menos 3 caracteres.')
+    .max(100, 'El nombre no puede exceder los 100 caracteres.')
+});
+
+export type CreateBusinessFormData = z.infer<typeof createBusinessFormSchema>;

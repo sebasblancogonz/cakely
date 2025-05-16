@@ -80,8 +80,13 @@ type RecentOrder = Pick<
 
 export default async function DashboardHomePage() {
   const session = await auth();
+  const user = session?.user;
+  const businessId = user?.businessId;
+  const userName = user?.name;
 
-  const { businessId, name: userName } = session.user;
+  if (!businessId) {
+    redirect('/negocio/crear');
+  }
 
   const serverTodayStart = startOfToday();
   const serverTodayEnd = endOfToday();

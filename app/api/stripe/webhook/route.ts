@@ -4,12 +4,6 @@ import { db } from '@/lib/db';
 import { businesses } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 
-export const dynamicConfig = {
-  api: {
-    bodyParser: false
-  }
-};
-
 if (!process.env.STRIPE_SECRET_KEY) {
   console.error(
     'STRIPE_SECRET_KEY no está definida en las variables de entorno'

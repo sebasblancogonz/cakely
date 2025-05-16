@@ -591,7 +591,6 @@ if (IS_EDGE_RUNTIME || isNeonProduction) {
 
   dbInstance = drizzle(pool, { schema });
 } else {
-  console.log(IS_EDGE_RUNTIME);
   if (!process.env.POSTGRES_URL) {
     throw new Error('DATABASE_URL is required for development environment.');
   }

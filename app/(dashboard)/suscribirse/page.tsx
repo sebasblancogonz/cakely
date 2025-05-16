@@ -19,7 +19,7 @@ export default function SubscribePage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { data: session, status: sessionStatus } = useSession();
+  const { status: sessionStatus } = useSession();
   const { toast } = useToast();
 
   const [priceId, setPriceId] = useState<string | null>(null);

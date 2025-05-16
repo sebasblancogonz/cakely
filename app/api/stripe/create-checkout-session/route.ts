@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { db, teamMembers } from '@/lib/db';
+import { db, teamMembers, users } from '@/lib/db';
 import { businesses } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { createCheckoutSessionSchema } from '@/lib/validators/stripe';
 import Stripe from 'stripe';
-import { getSessionInfo, checkPermission } from '@/lib/auth/utils';
+import { checkPermission } from '@/lib/auth/utils';
 import { TeamRoleEnum } from '@/types/types';
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -18,8 +18,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   typescript: true
 });
 
+const TRIAL_PERIOD_DAYS = 14;
+
 export async function POST(request: NextRequest) {
-  const session = await auth(); // Obtiene la sesión de NextAuth v5
+  const session = await auth();
 
   if (!session?.user?.id || !session.user.email) {
     console.warn(
@@ -33,8 +35,8 @@ export async function POST(request: NextRequest) {
 
   const userId = session.user.id;
   const userEmail = session.user.email;
-  const userName = session.user.name; // Puede ser null
-  let currentBusinessId = session.user.businessId; // Puede ser null
+  const userName = session.user.name;
+  let currentBusinessId = session.user.businessId;
 
   let reqBody;
   try {
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const { priceId } = validation.data;
+  const { priceId, isTrial } = validation.data;
 
   let targetBusinessId = currentBusinessId;
   let businessForStripe: {
@@ -63,7 +65,6 @@ export async function POST(request: NextRequest) {
   } | null = null;
 
   if (!targetBusinessId) {
-    // Usuario autenticado pero SIN businessId: Crear uno por defecto
     console.log(
       `[Stripe Checkout] Usuario ${userId} no tiene negocio. Creando uno por defecto.`
     );
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       const newBusinessArray = await db
         .insert(businesses)
         .values({
-          ownerUserId: userId, // El usuario actual es el owner
+          ownerUserId: userId,
           name: defaultBusinessName,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -89,30 +90,31 @@ export async function POST(request: NextRequest) {
         throw new Error('La creación del negocio no devolvió resultados.');
       }
       const newBusiness = newBusinessArray[0];
-      targetBusinessId = newBusiness.id; // ID del nuevo negocio
+      targetBusinessId = newBusiness.id;
 
-      // Añadir al usuario como OWNER del nuevo negocio
       await db
         .insert(teamMembers)
         .values({
           userId: userId,
           businessId: targetBusinessId,
-          role: TeamRoleEnum.OWNER, // Asegúrate que TeamRole.OWNER está definido
+          role: TeamRoleEnum.OWNER,
           joinedAt: new Date()
         })
-        .onConflictDoNothing(); // Por si acaso, aunque no debería haber conflicto
+        .onConflictDoNothing();
+
+      await db
+        .update(users)
+        .set({ businessId: targetBusinessId })
+        .where(eq(users.id, userId));
 
       businessForStripe = {
         id: newBusiness.id,
         name: newBusiness.name,
-        stripeCustomerId: newBusiness.stripeCustomerId // Será null inicialmente
+        stripeCustomerId: newBusiness.stripeCustomerId
       };
       console.log(
         `[Stripe Checkout] Negocio por defecto <span class="math-inline">\{targetBusinessId\} \('</span>{newBusiness.name}') creado y asignado a usuario ${userId}.`
       );
-      // NOTA: La sesión del cliente (session.user.businessId) NO se actualiza inmediatamente aquí.
-      // Se actualizará en la próxima vez que se genere el JWT (ej: próximo login o refresco de página).
-      // Para la lógica de Stripe, usamos targetBusinessId.
     } catch (dbError: any) {
       console.error(
         '[Stripe Checkout] Error creando negocio por defecto:',
@@ -127,7 +129,6 @@ export async function POST(request: NextRequest) {
       );
     }
   } else {
-    // El usuario ya tiene un businessId en su sesión, buscarlo
     const existingBusiness = await db.query.businesses.findFirst({
       where: eq(businesses.id, targetBusinessId),
       columns: { id: true, name: true, stripeCustomerId: true }
@@ -144,11 +145,7 @@ export async function POST(request: NextRequest) {
     businessForStripe = existingBusiness;
   }
 
-  // A partir de aquí, businessForStripe contiene el negocio (nuevo o existente)
-  // y targetBusinessId tiene el ID del negocio a usar.
-
-  // (Opcional) Chequeo de Permisos si fuera necesario (aquí el user es owner o ya tenía el businessId)
-  const permissionCheck = await checkPermission(userId, targetBusinessId, [
+  const permissionCheck = await checkPermission(userId, targetBusinessId!, [
     'OWNER',
     'ADMIN'
   ]);
@@ -165,7 +162,7 @@ export async function POST(request: NextRequest) {
         email: userEmail,
         name: businessForStripe?.name || undefined,
         metadata: {
-          cakelyBusinessId: targetBusinessId.toString(),
+          cakelyBusinessId: targetBusinessId!.toString(),
           cakelyUserId: userId
         }
       });
@@ -173,7 +170,7 @@ export async function POST(request: NextRequest) {
       await db
         .update(businesses)
         .set({ stripeCustomerId: stripeCustomerId, updatedAt: new Date() })
-        .where(eq(businesses.id, targetBusinessId));
+        .where(eq(businesses.id, targetBusinessId!));
     } catch (error: any) {
       console.error(
         '[Stripe Checkout] Error creando cliente en Stripe:',
@@ -197,7 +194,7 @@ export async function POST(request: NextRequest) {
   try {
     const checkoutSessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'paypal'],
       line_items: [
         {
           price: priceId,
@@ -219,6 +216,35 @@ export async function POST(request: NextRequest) {
         }
       }
     };
+
+    const currentBusinessSubscription = await db.query.businesses.findFirst({
+      where: eq(businesses.id, targetBusinessId!),
+      columns: { subscriptionStatus: true }
+    });
+
+    const wantsTrial =
+      isTrial ||
+      !currentBusinessSubscription?.subscriptionStatus ||
+      currentBusinessSubscription.subscriptionStatus === 'canceled';
+
+    if (wantsTrial) {
+      checkoutSessionParams.subscription_data!.trial_period_days =
+        TRIAL_PERIOD_DAYS;
+
+      checkoutSessionParams.payment_method_collection = 'if_required';
+      checkoutSessionParams.subscription_data!.trial_settings = {
+        end_behavior: {
+          missing_payment_method: 'cancel'
+        }
+      };
+      console.log(
+        `[Stripe Checkout] Iniciando sesión de checkout con prueba de ${TRIAL_PERIOD_DAYS} días para business ${targetBusinessId}.`
+      );
+    } else {
+      console.log(
+        `[Stripe Checkout] Iniciando sesión de checkout SIN prueba para business ${targetBusinessId}.`
+      );
+    }
 
     const session = await stripe.checkout.sessions.create(
       checkoutSessionParams

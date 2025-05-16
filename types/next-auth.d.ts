@@ -1,5 +1,6 @@
 import NextAuth, { DefaultSession, DefaultUser } from 'next-auth';
 import { teamRoleEnum } from '@/lib/db';
+import type { JWT as NextAuthJWT } from 'next-auth/jwt';
 
 type TeamRole = (typeof teamRoleEnum.enumValues)[number];
 declare module 'next-auth' {
@@ -20,10 +21,16 @@ declare module 'next-auth' {
 }
 
 declare module 'next-auth/jwt' {
-  interface JWT {
+  interface JWT extends NextAuthJWT {
     id: string;
+    name?: string | null;
+    email?: string | null;
+    picture?: string | null;
     businessId?: number | null;
     role?: TeamRole | null;
     isSuperAdmin: boolean;
+    accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpires?: number;
   }
 }
