@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { businesses, customers, db, productTypes } from '@/lib/db';
+import { businesses, db, productTypes } from '@/lib/db';
 import { orders } from '@/lib/db';
 import { getOrders } from '@/lib/db';
 import { OrderStatus } from '@types';

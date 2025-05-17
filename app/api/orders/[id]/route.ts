@@ -11,7 +11,6 @@ import {
   productTypes
 } from '@/lib/db';
 import { eq, and, sql } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
 import { updateOrderFormSchema } from '@/lib/validators/orders';
 import {
   calculateEndTime,
