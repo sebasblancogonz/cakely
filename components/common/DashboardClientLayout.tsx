@@ -42,6 +42,8 @@ import Providers from '../../app/(dashboard)/providers';
 import { SearchInput } from '../../app/(dashboard)/search';
 import { NavItem } from '../../app/(dashboard)/nav-item';
 import { BusinessProfileData } from '@/types/types';
+import { getToken } from 'next-auth/jwt';
+import { useSession } from 'next-auth/react';
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -55,6 +57,8 @@ export default function DashboardClientLayout({
   const pathname = usePathname();
   const { profile, isLoadingProfile } = useBusinessProfile();
   const [isNavExpanded, setIsNavExpanded] = useState(false);
+  const { data: session } = useSession();
+  const user = session?.user;
   const baseTitle = 'Panel de Control';
   const defaultBusinessName = 'Cakely';
 
@@ -110,6 +114,7 @@ export default function DashboardClientLayout({
       <Providers>
         <main className="flex min-h-screen w-full flex-col bg-muted/40">
           <DesktopNav
+            isSuperAdmin={user?.isSuperAdmin}
             isExpanded={isNavExpanded}
             onToggle={() => setIsNavExpanded(!isNavExpanded)}
             profile={profile}
@@ -124,6 +129,7 @@ export default function DashboardClientLayout({
             <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
               <MobileNav
                 profile={profile}
+                isSuperAdmin={user?.isSuperAdmin}
                 isLoadingProfile={isLoadingProfile}
               />
               <DashboardBreadcrumb trail={breadcrumbTrail} />
@@ -146,14 +152,19 @@ interface DesktopNavProps {
   onToggle: () => void;
   profile: BusinessProfileData | null;
   isLoadingProfile: boolean;
+  isSuperAdmin: boolean | undefined;
 }
 
 function DesktopNav({
   profile,
+  isSuperAdmin,
   isLoadingProfile,
   isExpanded,
   onToggle
 }: DesktopNavProps) {
+  const { data: session } = useSession();
+  const user = session?.user;
+
   const transitionDuration = 'duration-500';
   const defaultBusinessName = 'Mi Negocio';
   return (
@@ -280,14 +291,16 @@ function DesktopNav({
         >
           <Calculator className="h-5 w-5" />
         </NavItem>
-        <NavItem
-          href="/admin"
-          label="Admin area"
-          isExpanded={isExpanded}
-          animationDuration={transitionDuration}
-        >
-          <Settings2 className="h-5 w-5" />
-        </NavItem>
+        {isSuperAdmin && (
+          <NavItem
+            href="/admin"
+            label="Admin area"
+            isExpanded={isExpanded}
+            animationDuration={transitionDuration}
+          >
+            <Settings2 className="h-5 w-5" />
+          </NavItem>
+        )}
       </nav>
 
       <nav className="mt-auto flex flex-col gap-4 px-2 sm:py-5">
@@ -334,9 +347,14 @@ function DesktopNav({
 interface MobileNavProps {
   profile: BusinessProfileData | null;
   isLoadingProfile: boolean;
+  isSuperAdmin: boolean | undefined;
 }
 
-function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
+function MobileNav({
+  profile,
+  isLoadingProfile,
+  isSuperAdmin
+}: MobileNavProps) {
   const defaultBusinessName = 'Mi Negocio';
   return (
     <Sheet>
@@ -433,14 +451,16 @@ function MobileNav({ profile, isLoadingProfile }: MobileNavProps) {
               <Calculator className="h-5 w-5" /> Presupuesto
             </Link>
           </SheetTrigger>
-          <SheetTrigger asChild>
-            <Link
-              href="/admin"
-              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-            >
-              <Settings2 className="h-5 w-5" /> Admin area
-            </Link>
-          </SheetTrigger>
+          {isSuperAdmin && (
+            <SheetTrigger asChild>
+              <Link
+                href="/admin"
+                className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+              >
+                <Settings2 className="h-5 w-5" /> Admin area
+              </Link>
+            </SheetTrigger>
+          )}
           <SheetTrigger asChild>
             <Link
               href="/ajustes"

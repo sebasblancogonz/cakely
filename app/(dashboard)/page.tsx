@@ -448,11 +448,14 @@ export default async function DashboardHomePage() {
               <ShoppingCart className="h-6 w-6 mb-1" /> Presupuestos
             </Link>
           </Button>
-          <Button variant="outline" asChild className="flex-col h-auto py-4">
-            <Link href="/admin">
-              <Settings2 className="h-6 w-6 mb-1" /> Admin area
-            </Link>
-          </Button>
+          {user.isSuperAdmin && (
+            <Button variant="outline" asChild className="flex-col h-auto py-4">
+              <Link href="/admin">
+                <Settings2 className="h-6 w-6 mb-1" /> Admin area
+              </Link>
+            </Button>
+          )}
+
           <Button variant="outline" asChild className="flex-col h-auto py-4">
             <Link href="/ajustes">
               <Settings className="h-6 w-6 mb-1" /> Ajustes

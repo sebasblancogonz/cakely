@@ -42,6 +42,15 @@ export default function CreateBusinessPage() {
     }
   });
 
+  const onValidationErrors = (errors: any) => {
+    toast({
+      title: 'Error de Validación',
+      description: 'Por favor revisa los campos marcados en el formulario.',
+      variant: 'destructive'
+    });
+    console.log(errors);
+  };
+
   const onSubmit: SubmitHandler<CreateBusinessFormData> = async (data) => {
     setIsSubmittingForm(true);
     console.log('Creando negocio con:', data);
@@ -125,7 +134,10 @@ export default function CreateBusinessPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={handleSubmit(onSubmit, onValidationErrors)}
+            className="space-y-6"
+          >
             <div className="space-y-1.5">
               <Label htmlFor="business-name-create">
                 Nombre de tu Negocio/Pastelería
@@ -142,7 +154,6 @@ export default function CreateBusinessPage() {
                 </p>
               )}
             </div>
-            {/* Podrías añadir más campos aquí si quieres */}
             <Button
               type="submit"
               className="w-full"

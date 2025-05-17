@@ -3,11 +3,10 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { businesses, users, teamMembers, businessSettings } from '@/lib/db';
 import { createBusinessFormSchema } from '@/lib/validators/business';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { TeamRoleEnum } from '@/types/types';
 
 export async function POST(request: NextRequest) {
-  console.log('IN THE POST');
   const session = await auth();
 
   if (!session?.user?.id || !session.user.email) {

@@ -152,6 +152,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           let effectiveBusinessId: number | null = dbUser.businessId;
           let effectiveRole: TeamRole | null = null;
+          let subStatus: string | null = null;
+          let subPeriodEnd: string | null = null;
+          let subIsLifetime: boolean = false;
 
           if (effectiveBusinessId) {
             const membership = await db.query.teamMembers.findFirst({
@@ -160,10 +163,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 eq(teamMembers.businessId, effectiveBusinessId)
               ),
               columns: { role: true },
-              with: { business: { columns: { id: true } } }
+              with: {
+                business: {
+                  columns: {
+                    id: true,
+                    subscriptionStatus: true,
+                    stripeCurrentPeriodEnd: true,
+                    isLifetime: true
+                  }
+                }
+              }
             });
             if (membership?.business) {
               effectiveRole = membership.role as TeamRole;
+              subStatus = membership.business.subscriptionStatus ?? null;
+              subPeriodEnd = membership.business.stripeCurrentPeriodEnd
+                ? new Date(
+                    membership.business.stripeCurrentPeriodEnd
+                  ).toISOString()
+                : null;
+              subIsLifetime = membership.business.isLifetime ?? false;
             } else {
               effectiveBusinessId = null;
               effectiveRole = null;
@@ -175,15 +194,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               where: eq(teamMembers.userId, dbUser.id),
               columns: { businessId: true, role: true },
               orderBy: [asc(teamMembers.joinedAt)],
-              with: { business: { columns: { id: true } } }
+              with: {
+                business: {
+                  columns: {
+                    id: true,
+                    subscriptionStatus: true,
+                    stripeCurrentPeriodEnd: true,
+                    isLifetime: true
+                  }
+                }
+              }
             });
             if (firstMembership?.business) {
               effectiveBusinessId = firstMembership.businessId;
               effectiveRole = firstMembership.role as TeamRole;
+              subStatus = firstMembership.business.subscriptionStatus ?? null;
+              subPeriodEnd = firstMembership.business.stripeCurrentPeriodEnd
+                ? new Date(
+                    firstMembership.business.stripeCurrentPeriodEnd
+                  ).toISOString()
+                : null;
+              subIsLifetime = firstMembership.business.isLifetime ?? false;
             }
           }
           workingToken.businessId = effectiveBusinessId;
           workingToken.role = effectiveRole;
+          workingToken.subscriptionStatus = subStatus;
+          workingToken.stripeCurrentPeriodEnd = subPeriodEnd;
+          workingToken.isLifetime = subIsLifetime;
         } else {
           console.warn(
             `[AUTH JWT] Usuario ${currentUserId} referenciado en token/user no encontrado en DB. Invalidando sesión.`
@@ -254,7 +292,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       workingToken.picture = workingToken.picture ?? null;
       workingToken.businessId = workingToken.businessId ?? null;
       workingToken.role = workingToken.role ?? null;
-
+      workingToken.subscriptionStatus = workingToken.subscriptionStatus ?? null;
+      workingToken.stripeCurrentPeriodEnd =
+        workingToken.stripeCurrentPeriodEnd ?? null;
+      workingToken.isLifetime = workingToken.isLifetime ?? false;
       workingToken.accessToken = workingToken.accessToken ?? undefined;
       workingToken.refreshToken = workingToken.refreshToken ?? undefined;
       workingToken.accessTokenExpires =
@@ -268,15 +309,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async session({ session, token }) {
-      if (token.id && session.user) {
-        session.user.id = token.id as string;
-      }
+      if (!token?.id) return session;
       if (session.user) {
-        session.user.businessId = Number(token.businessId) ?? null;
-        session.user.isSuperAdmin = token.isSuperAdmin as boolean;
-        session.user.role = (token.role as TeamRole) ?? null;
-        session.user.image = token.picture ?? null;
-        session.user.name = token.name ?? null;
+        session.user.id = token.id;
+        session.user.name = token.name;
+        session.user.email = token.email as string;
+        session.user.image = token.picture;
+        session.user.isSuperAdmin = token.isSuperAdmin;
+        session.user.businessId = token.businessId;
+        session.user.role = token.role as TeamRole;
+        session.user.subscriptionStatus = token.subscriptionStatus;
+        session.user.stripeCurrentPeriodEnd = token.stripeCurrentPeriodEnd;
+        session.user.isLifetime = token.isLifetime;
       }
       return session;
     }

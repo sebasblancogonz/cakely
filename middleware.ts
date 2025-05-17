@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { auth } from './lib/auth';
 
 const publicPaths = [
   '/login',
@@ -11,104 +11,127 @@ const publicPaths = [
   '/auth/invitation-required'
 ];
 
-const authenticatedAppPathsWithoutBusinessId = ['/admin', '/negocios/crear'];
+const authenticatedPathsWithoutBusinessOrSubscription = [
+  '/negocio/crear',
+  '/perfil',
+  '/ajustes/suscripcion',
+  '/pago/exito',
+  '/pago/cancelado'
+];
 
 const superAdminRootPath = '/admin';
-const appUserRootPath = '/';
-
-const nextAuthSecret = process.env.AUTH_SECRET;
+const appUserRootPath = '/pedidos';
+const subscriptionPagePath = '/ajustes/suscripcion';
+const defaultAppPathForUsersWithoutBusiness = '/negocio/crear';
 
 export async function middleware(request: NextRequest) {
   const { pathname, search, origin } = request.nextUrl;
   const fullPathWithQuery = pathname + search;
 
-  if (!nextAuthSecret) {
-    console.error('[Middleware] FATAL: NEXTAUTH_SECRET no está definido.');
-
-    return NextResponse.next();
-  }
-
-  const token = await getToken({ req: request, secret: nextAuthSecret });
+  const session = await auth();
+  const user = session?.user;
 
   console.log(
-    `[Middleware] Path: ${pathname}, Token valid?: ${!!token}, Email: ${token?.email ?? 'Guest'}, SuperAdmin: ${!!token?.isSuperAdmin}, BusinessID: ${token?.businessId}`
+    `[Middleware] Path: ${pathname}, User: ${user?.email ?? 'Guest'}, SuperAdmin: ${!!user?.isSuperAdmin}, BusinessID: ${user?.businessId}, SubStatus: ${user?.subscriptionStatus}`
   );
 
-  if (token?.isSuperAdmin) {
-    if (pathname.startsWith('/admin')) {
-      return NextResponse.next();
-    }
+  if (user?.isSuperAdmin) {
+    if (pathname.startsWith(superAdminRootPath)) return NextResponse.next();
   }
 
-  if (pathname.startsWith('/admin') && token && !token.isSuperAdmin) {
-    console.warn(
-      `[Middleware] Usuario ${token.email} (NO SuperAdmin) intentando acceder a /admin. Redirigiendo.`
-    );
-    return NextResponse.redirect(
-      new URL(token.businessId ? appUserRootPath : '/negocio/crear', origin)
-    );
+  if (pathname.startsWith(superAdminRootPath) && !user?.isSuperAdmin) {
+    const fallbackUrl = user
+      ? user.businessId
+        ? appUserRootPath
+        : defaultAppPathForUsersWithoutBusiness
+      : '/login';
+    const url = new URL(fallbackUrl, origin);
+    if (fallbackUrl === '/login') url.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(url);
   }
 
   const isPathPublic = publicPaths.some(
-    (publicPath) =>
-      pathname === publicPath ||
-      (publicPath !== '/' && pathname.startsWith(publicPath + '/'))
+    (p) => pathname === p || (p !== '/' && pathname.startsWith(p + '/'))
   );
-
   if (isPathPublic) {
-    if (token && (pathname === '/login' || pathname === '/signup')) {
-      const userDashboard = token.isSuperAdmin
+    if (user && (pathname === '/login' || pathname === '/signup')) {
+      const userDashboard = user.isSuperAdmin
         ? superAdminRootPath
-        : token.businessId
+        : user.businessId
           ? appUserRootPath
-          : '/negocio/crear';
-      console.log(
-        `[Middleware] Usuario con token ${token.email} en ${pathname}, redirigiendo a ${userDashboard}`
-      );
+          : defaultAppPathForUsersWithoutBusiness;
       return NextResponse.redirect(new URL(userDashboard, origin));
     }
     return NextResponse.next();
   }
 
-  if (!token) {
-    console.log(
-      `[Middleware] No hay token para ruta protegida ${pathname}, redirigiendo a /login`
-    );
+  if (!user) {
     const loginUrl = new URL('/login', origin);
     loginUrl.searchParams.set('callbackUrl', fullPathWithQuery);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (!token.isSuperAdmin) {
-    const isPathAllowedWithoutBusinessId =
-      authenticatedAppPathsWithoutBusinessId.some((allowedPath) =>
-        pathname.startsWith(allowedPath)
+  if (!user.isSuperAdmin) {
+    const isAllowedWithoutBusiness =
+      authenticatedPathsWithoutBusinessOrSubscription.some((p) =>
+        pathname.startsWith(p)
       );
-    if (!token.businessId && !isPathAllowedWithoutBusinessId) {
+
+    if (!user.businessId && !isAllowedWithoutBusiness) {
       console.log(
-        `[Middleware] Usuario ${token.email} SIN businessId intentando acceder a ${pathname}. Redirigiendo a /negocio/crear`
+        `[Middleware] User ${user.email} SIN businessId en ${pathname}. Redirigiendo a /negocio/crear.`
       );
       const createBusinessUrl = new URL('/negocio/crear', origin);
       createBusinessUrl.searchParams.set('redirectTo', fullPathWithQuery);
       return NextResponse.redirect(createBusinessUrl);
     }
 
-    if (pathname === '/' && token.businessId) {
-      console.log(
-        `[Middleware] Usuario ${token.email} con businessId en '/', redirigiendo a ${appUserRootPath}`
-      );
-      return NextResponse.redirect(new URL(appUserRootPath, origin));
+    if (user.businessId) {
+      const requiresActiveSubscription = !isAllowedWithoutBusiness;
+
+      if (requiresActiveSubscription) {
+        const hasLifetime = user.isLifetime === true;
+        const isActiveSub = user.subscriptionStatus === 'active';
+        let isTrialValid = false;
+        if (
+          user.subscriptionStatus === 'trialing' &&
+          user.stripeCurrentPeriodEnd
+        ) {
+          isTrialValid = new Date(user.stripeCurrentPeriodEnd) > new Date();
+        }
+
+        console.log('Subscription status', user.subscriptionStatus);
+
+        if (!hasLifetime && !isActiveSub && !isTrialValid) {
+          console.log(
+            `[Middleware] User ${user.email}, Business ${user.businessId}: Suscripción NO válida para ${pathname}. Status: ${user.subscriptionStatus}, TrialEnd: ${user.stripeCurrentPeriodEnd}. Redirigiendo a ${subscriptionPagePath}.`
+          );
+          const subRedirectUrl = new URL(subscriptionPagePath, origin);
+
+          subRedirectUrl.searchParams.set('reason', 'subscription_required');
+          if (pathname !== subscriptionPagePath) {
+            subRedirectUrl.searchParams.set('redirectTo', fullPathWithQuery);
+          }
+          return NextResponse.redirect(subRedirectUrl);
+        }
+      }
+
+      if (
+        pathname === '/' &&
+        (user.isLifetime ||
+          user.subscriptionStatus === 'active' ||
+          (user.subscriptionStatus === 'trialing' &&
+            user.stripeCurrentPeriodEnd &&
+            new Date(user.stripeCurrentPeriodEnd) > new Date()))
+      ) {
+        return NextResponse.redirect(new URL(appUserRootPath, origin));
+      }
     }
   }
 
-  console.log(
-    `[Middleware] Acceso permitido para ${token.email ?? 'usuario con token'} a ${pathname}`
-  );
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/((?!api/auth/|api/stripe/webhook|_next/static|_next/image|favicon.ico|logo.webp|img/).*)'
-  ]
+  matcher: ['/((?!api/|_next/static|_next/image|favicon.ico|logo.webp|img/).*)']
 };

@@ -10,6 +10,9 @@ declare module 'next-auth' {
       businessId?: number | null;
       role: TeamRole | null;
       isSuperAdmin: boolean;
+      subscriptionStatus?: string | null;
+      stripeCurrentPeriodEnd?: string | null;
+      isLifetime?: boolean;
     } & DefaultSession['user'];
   }
 
@@ -29,6 +32,9 @@ declare module 'next-auth/jwt' {
     businessId?: number | null;
     role?: TeamRole | null;
     isSuperAdmin: boolean;
+    subscriptionStatus?: string | null;
+    stripeCurrentPeriodEnd?: string | null;
+    isLifetime?: boolean;
     accessToken?: string;
     refreshToken?: string;
     accessTokenExpires?: number;
