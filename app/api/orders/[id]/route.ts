@@ -21,10 +21,14 @@ import {
 import { getGoogleAuthClient } from '@/lib/auth/google-auth';
 import { format } from 'date-fns';
 import { checkPermission, getSessionInfo } from '@/lib/auth/utils';
+import { withApiProtection } from '@/lib/api/withApiProtection';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
 
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+async function getOrderHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -69,11 +73,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { userId, businessId } = sessionInfo;
+export const GET = withApiProtection(getOrderHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
 
+async function deleteOrderHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, userId, businessId } = authContext;
   const permissionCheck = await checkPermission(userId, businessId, [
     'OWNER',
     'ADMIN',
@@ -443,3 +451,7 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
+
+export const DELETE = withApiProtection(deleteOrderHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

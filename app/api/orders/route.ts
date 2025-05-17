@@ -11,10 +11,14 @@ import {
   createCalendarEventIfNeeded,
   prepareOrderDataForInsert
 } from '@/lib/order';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+async function getOrdersHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -64,10 +68,15 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+export const GET = withApiProtection(getOrdersHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
 
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+async function createOrderHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, businessId } = authContext;
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
@@ -197,3 +206,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withApiProtection(createOrderHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
