@@ -10,7 +10,6 @@ const publicPaths = [
   '/auth/denied',
   '/auth/invitation-required'
 ];
-
 const authenticatedPathsWithoutBusinessOrSubscription = [
   '/negocio/crear',
   '/perfil',
@@ -18,10 +17,9 @@ const authenticatedPathsWithoutBusinessOrSubscription = [
   '/pago/exito',
   '/pago/cancelado'
 ];
-
 const superAdminRootPath = '/admin';
-const appUserRootPath = '/pedidos';
-const subscriptionPagePath = '/ajustes/suscripcion';
+const appUserRootPath = '/';
+
 const defaultAppPathForUsersWithoutBusiness = '/negocio/crear';
 
 export async function middleware(request: NextRequest) {
@@ -37,6 +35,9 @@ export async function middleware(request: NextRequest) {
 
   if (user?.isSuperAdmin) {
     if (pathname.startsWith(superAdminRootPath)) return NextResponse.next();
+    if (!pathname.startsWith('/api/auth')) {
+      return NextResponse.redirect(new URL(superAdminRootPath, origin));
+    }
   }
 
   if (pathname.startsWith(superAdminRootPath) && !user?.isSuperAdmin) {
@@ -72,60 +73,18 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!user.isSuperAdmin) {
-    const isAllowedWithoutBusiness =
-      authenticatedPathsWithoutBusinessOrSubscription.some((p) =>
-        pathname.startsWith(p)
+    const isPathAllowedWithoutSubscriptionLogic =
+      authenticatedPathsWithoutBusinessOrSubscription.some((allowedPath) =>
+        pathname.startsWith(allowedPath)
       );
 
-    if (!user.businessId && !isAllowedWithoutBusiness) {
+    if (!user.businessId && !isPathAllowedWithoutSubscriptionLogic) {
       console.log(
         `[Middleware] User ${user.email} SIN businessId en ${pathname}. Redirigiendo a /negocio/crear.`
       );
       const createBusinessUrl = new URL('/negocio/crear', origin);
       createBusinessUrl.searchParams.set('redirectTo', fullPathWithQuery);
       return NextResponse.redirect(createBusinessUrl);
-    }
-
-    if (user.businessId) {
-      const requiresActiveSubscription = !isAllowedWithoutBusiness;
-
-      if (requiresActiveSubscription) {
-        const hasLifetime = user.isLifetime === true;
-        const isActiveSub = user.subscriptionStatus === 'active';
-        let isTrialValid = false;
-        if (
-          user.subscriptionStatus === 'trialing' &&
-          user.stripeCurrentPeriodEnd
-        ) {
-          isTrialValid = new Date(user.stripeCurrentPeriodEnd) > new Date();
-        }
-
-        console.log('Subscription status', user.subscriptionStatus);
-
-        if (!hasLifetime && !isActiveSub && !isTrialValid) {
-          console.log(
-            `[Middleware] User ${user.email}, Business ${user.businessId}: Suscripción NO válida para ${pathname}. Status: ${user.subscriptionStatus}, TrialEnd: ${user.stripeCurrentPeriodEnd}. Redirigiendo a ${subscriptionPagePath}.`
-          );
-          const subRedirectUrl = new URL(subscriptionPagePath, origin);
-
-          subRedirectUrl.searchParams.set('reason', 'subscription_required');
-          if (pathname !== subscriptionPagePath) {
-            subRedirectUrl.searchParams.set('redirectTo', fullPathWithQuery);
-          }
-          return NextResponse.redirect(subRedirectUrl);
-        }
-      }
-
-      if (
-        pathname === '/' &&
-        (user.isLifetime ||
-          user.subscriptionStatus === 'active' ||
-          (user.subscriptionStatus === 'trialing' &&
-            user.stripeCurrentPeriodEnd &&
-            new Date(user.stripeCurrentPeriodEnd) > new Date()))
-      ) {
-        return NextResponse.redirect(new URL(appUserRootPath, origin));
-      }
     }
   }
 
