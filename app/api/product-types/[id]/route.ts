@@ -3,12 +3,15 @@ import { db } from '@/lib/db';
 import { productTypes } from '@/lib/db';
 import { updateProductTypeSchema } from '@/lib/validators/productTypes';
 import { eq, and, ne } from 'drizzle-orm';
-import { getSessionInfo, checkPermission } from '@/lib/auth/utils';
+import { checkPermission } from '@/lib/auth/utils';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
-export async function GET(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { businessId, userId } = sessionInfo;
+async function getProductTypeHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   const { pathname } = request.nextUrl;
   const id = Number(pathname.split('/').pop());
@@ -43,10 +46,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { userId, businessId } = sessionInfo;
+export const GET = withApiProtection(getProductTypeHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function updateProductTypeHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { userId, businessId } = authContext;
 
   const permissionCheck = await checkPermission(userId, businessId, [
     'OWNER',
@@ -131,10 +139,15 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { userId, businessId } = sessionInfo;
+export const PATCH = withApiProtection(updateProductTypeHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function deleteProductTypeHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { userId, businessId } = authContext;
 
   const permissionCheck = await checkPermission(userId, businessId, [
     'OWNER',
@@ -178,3 +191,7 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const DELETE = withApiProtection(deleteProductTypeHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

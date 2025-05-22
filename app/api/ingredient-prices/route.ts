@@ -3,11 +3,14 @@ import { db } from '@/lib/db';
 import { ingredientPrices } from '@/lib/db';
 import { ingredientSchema } from '@/lib/validators/ingredients';
 import { ilike, or, asc, eq, and, SQL } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+async function getIngredientPricesHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -54,9 +57,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+export const GET = withApiProtection(getIngredientPricesHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function createIngredientHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -117,3 +126,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withApiProtection(createIngredientHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

@@ -4,15 +4,15 @@ import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
 import { eq, and, inArray } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { updateRecipeSchema } from '@/lib/validators/recipes';
-import {
-  IngredientPrice,
-  RecipeIngredient,
-  RecipeWithIngredients
-} from '@/types/types';
+import { RecipeIngredient, RecipeWithIngredients } from '@/types/types';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+async function getRecipeHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -62,9 +62,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+export const GET = withApiProtection(getRecipeHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function updateRecipeHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -285,9 +291,15 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+export const PUT = withApiProtection(updateRecipeHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function deleteRecipeHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -336,3 +348,7 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const DELETE = withApiProtection(deleteRecipeHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

@@ -4,6 +4,8 @@ import { businessSettings } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
 const SettingsUpdateSchema = z
   .object({
@@ -34,9 +36,11 @@ const defaultSettingsValues = {
   overheadMarkupPercent: '20.00'
 };
 
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+async function getSettingsHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -70,9 +74,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+export const GET = withApiProtection(getSettingsHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function updateSettingsHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -151,3 +161,7 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export const PUT = withApiProtection(updateSettingsHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

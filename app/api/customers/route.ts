@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getCustomers, saveCustomer } from '@/lib/db';
 import { Customer } from '@/types/types';
-import { auth } from '@/lib/auth';
 import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
 import { withApiProtection } from '@/lib/api/withApiProtection';
 

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { recipes, recipeIngredients, ingredientPrices } from '@/lib/db';
+import { recipes, recipeIngredients } from '@/lib/db';
 import { recipeFormSchema } from '@/lib/validators/recipes';
-import { asc, eq, and } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+async function getRecipesHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -41,9 +45,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+export const GET = withApiProtection(getRecipesHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function createRecipeHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -148,3 +158,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withApiProtection(createRecipeHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

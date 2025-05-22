@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateCustomer, db, customers, deleteCustomerById } from '@/lib/db';
 import { and, eq } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
 import {
   UpdateCustomerFormData,
   updateCustomerSchema

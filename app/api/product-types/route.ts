@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { productTypes, businesses } from '@/lib/db';
+import { productTypes } from '@/lib/db';
 import { createProductTypeSchema } from '@/lib/validators/productTypes';
-import { eq, and, asc, ilike, sql, ne } from 'drizzle-orm';
-import { getSessionInfo, checkPermission } from '@/lib/auth/utils';
+import { eq, and, asc, ilike } from 'drizzle-orm';
+import { checkPermission } from '@/lib/auth/utils';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
-export async function GET(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { businessId, userId } = sessionInfo;
+async function getProductTypesHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -40,10 +43,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { userId, businessId } = sessionInfo;
+export const GET = withApiProtection(getProductTypesHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function saveProductTypeHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { userId, businessId } = authContext;
 
   const permissionCheck = await checkPermission(userId, businessId, [
     'OWNER',
@@ -114,3 +122,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withApiProtection(saveProductTypeHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

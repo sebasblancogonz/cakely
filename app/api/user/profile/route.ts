@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { getSessionInfo } from '@/lib/auth/utils';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
 const updateProfileSchema = z
   .object({
@@ -18,10 +20,11 @@ const updateProfileSchema = z
     message: 'Nada que actualizar.'
   });
 
-export async function PATCH(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { userId } = sessionInfo;
+async function updateProfileHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { userId } = authContext;
 
   let body;
   try {
@@ -96,3 +99,7 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
+
+export const PATCH = withApiProtection(updateProfileHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

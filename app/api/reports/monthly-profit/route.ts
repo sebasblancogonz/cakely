@@ -5,6 +5,8 @@ import { orders, businessSettings } from '@/lib/db';
 import { PaymentStatus as DbPaymentStatus } from '@/types/types';
 import { eq, and, gte, lte, sql, sum, or } from 'drizzle-orm';
 import { startOfMonth, endOfMonth, parse, isValid } from 'date-fns';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
 function getMonthDateRange(
   dateString: string
@@ -17,10 +19,11 @@ function getMonthDateRange(
   };
 }
 
-export async function GET(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { userId, businessId } = sessionInfo;
+async function getMonthlyProfitHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { userId, businessId } = authContext;
   const permissionCheck = await checkPermission(userId, businessId, [
     'OWNER',
     'ADMIN'
@@ -120,3 +123,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withApiProtection(getMonthlyProfitHandler, {
+  requiredRole: ['OWNER', 'ADMIN']
+});
