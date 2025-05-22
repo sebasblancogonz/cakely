@@ -127,7 +127,6 @@ function DashboardCoreLogic({
       {children}
       <SubscriptionRequiredModal
         isOpen={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
         subscriptionPageUrl="/ajustes/suscripcion"
       />
       {showSubscriptionModal && (

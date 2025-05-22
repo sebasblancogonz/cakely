@@ -3,10 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCustomers, saveCustomer } from '@/lib/db';
 import { Customer } from '@/types/types';
 import { auth } from '@/lib/auth';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
-export async function GET(req: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+async function getCustomersHandler(
+  req: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -42,9 +46,15 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+export const GET = withApiProtection(getCustomersHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function createCustomerHandler(
+  req: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -73,3 +83,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withApiProtection(createCustomerHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});

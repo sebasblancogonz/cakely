@@ -7,12 +7,16 @@ import {
   updateCustomerSchema
 } from '@/lib/validators/customers';
 import { checkPermission, getSessionInfo } from '@/lib/auth/utils';
+import { AuthenticatedRequestContext } from '@/lib/api/authTypes';
+import { withApiProtection } from '@/lib/api/withApiProtection';
 
-export async function GET(request: NextRequest) {
+async function getCustomerHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
   const { pathname } = request.nextUrl;
   const customerId = Number(pathname.split('/').pop());
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+  const { session, businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -54,12 +58,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  const sessionInfo = await getSessionInfo(request);
-  if (sessionInfo instanceof NextResponse) return sessionInfo;
-  const { userId, businessId } = sessionInfo;
+export const GET = withApiProtection(getCustomerHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
 
-  const permissionCheck = await checkPermission(userId, businessId, [
+async function deleteCustomerHandler(
+  request: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, businessId } = authContext;
+
+  const permissionCheck = await checkPermission(session.user.id, businessId, [
     'OWNER',
     'ADMIN',
     'EDITOR'
@@ -94,9 +103,15 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  const businessId = session?.user?.businessId;
+export const DELETE = withApiProtection(deleteCustomerHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
+
+async function updateCustomerHandler(
+  req: NextRequest,
+  authContext: AuthenticatedRequestContext
+) {
+  const { session, businessId } = authContext;
 
   if (!businessId) {
     return NextResponse.json(
@@ -163,3 +178,7 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+export const PATCH = withApiProtection(updateCustomerHandler, {
+  requiredRole: ['OWNER', 'ADMIN', 'EDITOR']
+});
