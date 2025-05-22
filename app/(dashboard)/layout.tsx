@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  Suspense,
+  useCallback,
+  useRef
+} from 'react';
 import { useSession } from 'next-auth/react';
 import { SubscriptionRequiredModal } from '@/components/modals/SubscriptionRequiredModal';
 import DashboardClientLayout from '@/components/common/DashboardClientLayout';
@@ -34,7 +40,8 @@ function DashboardCoreLogic({
   const currentSearchParams = useSearchParams();
   const router = useRouter();
 
-  // Efecto para refrescar la sesión si viene el flag en la URL
+  const processingRefreshReqRef = useRef(false);
+
   useEffect(() => {
     const mutableSearchParams = new URLSearchParams(
       currentSearchParams.toString()
@@ -42,26 +49,41 @@ function DashboardCoreLogic({
     const needsRefresh =
       mutableSearchParams.get('session_refresh_required') === 'true';
 
-    if (needsRefresh && sessionStatus === 'authenticated') {
-      console.log(
-        '[Layout] session_refresh_required detectado. Llamando a updateNextAuthSessionHook().'
-      );
+    if (needsRefresh) {
+      if (
+        sessionStatus === 'authenticated' &&
+        !processingRefreshReqRef.current
+      ) {
+        console.log(
+          '[Layout] session_refresh_required detectado. Iniciando proceso de refresco.'
+        );
+        processingRefreshReqRef.current = true;
 
-      // Llama a update() de useSession para forzar el refresco del token/sesión
-      // Esto invocará el callback `jwt` en el backend.
-      updateNextAuthSessionHook();
+        updateNextAuthSessionHook();
 
-      // Limpia el query param para que no se refresque en cada F5 o navegación interna
-      mutableSearchParams.delete('session_refresh_required');
-      router.replace(`${pathname}?${mutableSearchParams.toString()}`, {
-        scroll: false
-      });
-      console.log(
-        '[Layout] Parámetro session_refresh_required eliminado de la URL.'
-      );
+        mutableSearchParams.delete('session_refresh_required');
+        const queryString = mutableSearchParams.toString();
+        const newPath = queryString ? `${pathname}?${queryString}` : pathname;
+
+        router.replace(newPath, {
+          scroll: false
+        });
+        console.log(
+          '[Layout] Parámetro session_refresh_required eliminado de la URL. Refresco de sesión en curso.'
+        );
+      } else if (processingRefreshReqRef.current) {
+        console.log(
+          '[Layout] Refresco de sesión ya en curso, esperando estabilización.'
+        );
+      }
+    } else {
+      if (processingRefreshReqRef.current) {
+        console.log(
+          '[Layout] Parámetro session_refresh_required ya no presente. Reseteando flag de proceso.'
+        );
+        processingRefreshReqRef.current = false;
+      }
     }
-    // La dependencia currentSearchParams asegura que se re-evalúe si la URL cambia.
-    // sessionStatus asegura que solo se haga si estamos autenticados.
   }, [
     sessionStatus,
     currentSearchParams,
@@ -70,12 +92,10 @@ function DashboardCoreLogic({
     router
   ]);
 
-  // Efecto para mostrar el modal de suscripción (usa la sesión, que ahora debería estar fresca)
   useEffect(() => {
     console.log(
       `[Layout Suscripción Check] Path: ${pathname}, Status Sesión: ${sessionStatus}, User SubStatus: ${session?.user?.subscriptionStatus}`
     );
-    // ... (tu lógica existente para setShowSubscriptionModal basada en session?.user)
     if (
       session?.user &&
       !session.user.isSuperAdmin &&
@@ -101,16 +121,25 @@ function DashboardCoreLogic({
     }
   }, [session, sessionStatus, pathname]);
 
-  if (sessionStatus === 'loading') {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <DashboardClientLayout userComponent={userComponentInstance}>
+      {sessionStatus === 'loading' && !processingRefreshReqRef.current && (
+        <div className="fixed inset-0 z-[100] flex h-screen w-full items-center justify-center bg-background/80 backdrop-blur-sm">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      )}
+      {/* Consider if the loader overlay should appear even when processingRefreshReqRef.current is true.
+           The current !processingRefreshReqRef.current condition on the loader might be too restrictive
+           if you want a visual cue during the session_refresh_required update.
+           Simpler: always show overlay if sessionStatus is 'loading', as children are now always mounted.
+       */}
+      {/* Simpler loader condition:
+       {sessionStatus === 'loading' && (
+        <div className="fixed inset-0 z-[100] flex h-screen w-full items-center justify-center bg-background/80 backdrop-blur-sm">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      )}
+      */}
       {children}
       <SubscriptionRequiredModal
         isOpen={showSubscriptionModal}

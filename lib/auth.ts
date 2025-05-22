@@ -445,6 +445,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async session({ session, token }) {
+      console.log('[AUTH SESSION CALLBACK] Token recibido:', token);
+
       if (!token?.id) return session;
       if (session.user) {
         session.user.id = token.id;
