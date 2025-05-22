@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -102,18 +102,120 @@ const plans = [
   }
 ];
 
-function SubscriptionPageContent() {
+export function SubscriptionPageContentInternal() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
   const {
     profile: businessProfile,
     isLoadingProfile,
-    mutateProfile
+    mutateProfile: mutateProfile
   } = useBusinessProfile();
 
   const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
+
+  const handleManageSubscription = useCallback(async () => {
+    if (!businessProfile?.stripeCustomerId) {
+      toast({
+        title: 'Error',
+        description: 'Configuración de cliente no encontrada.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    setLoadingActionId('manage_portal');
+    toast({
+      title: 'Redirigiendo...',
+      description: 'Abriendo portal de gestión.'
+    });
+    try {
+      const response = await fetch('/api/stripe/create-portal-session', {
+        method: 'POST'
+      });
+      const portalData = await response.json();
+      if (!response.ok || !portalData.url) {
+        throw new Error(portalData.message || 'No se pudo abrir el portal.');
+      }
+      window.location.href = portalData.url;
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+      setLoadingActionId(null);
+    }
+  }, [businessProfile?.stripeCustomerId, toast]);
+
+  const handleSubscribe = useCallback(
+    async (priceId: string, planName: string, isTrialFlow: boolean) => {
+      setLoadingActionId(priceId);
+      toast({
+        title: 'Procesando...',
+        description: `Iniciando ${isTrialFlow ? 'prueba' : 'suscripción'} para ${planName}.`
+      });
+      try {
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ priceId, isTrial: isTrialFlow })
+        });
+        const sessionData = await response.json();
+        if (!response.ok) {
+          if (
+            response.status === 400 &&
+            sessionData.action === 'manage_subscription'
+          ) {
+            toast({
+              title: 'Suscripción Existente',
+              description: sessionData.message,
+              action: (
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={handleManageSubscription}
+                >
+                  Gestionar
+                </Button>
+              )
+            });
+          } else if (
+            response.status === 403 &&
+            sessionData.message?.includes('vitalicio')
+          ) {
+            toast({
+              title: 'Acceso Vitalicio',
+              description: sessionData.message
+            });
+          } else {
+            throw new Error(
+              sessionData.message || 'No se pudo iniciar checkout.'
+            );
+          }
+          setLoadingActionId(null);
+          return;
+        }
+        if (!sessionData.sessionId)
+          throw new Error('Falta sessionId en respuesta.');
+        const stripe = await getStripe();
+        if (!stripe) throw new Error('Stripe.js no cargó.');
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: sessionData.sessionId
+        });
+        if (error) throw error;
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive'
+        });
+        setLoadingActionId(null);
+      }
+    },
+    [toast, handleManageSubscription]
+  );
 
   useEffect(() => {
     const priceIdFromUrl = searchParams.get('priceId');
@@ -123,31 +225,37 @@ function SubscriptionPageContent() {
       priceIdFromUrl &&
       sessionStatus === 'authenticated' &&
       businessProfile &&
-      !isLoadingProfile
+      !isLoadingProfile &&
+      !loadingActionId
     ) {
       const planExists = plans.some((p) => p.priceIdStripe === priceIdFromUrl);
       if (planExists) {
-        if (
-          !businessProfile.subscriptionStatus ||
-          businessProfile.subscriptionStatus === 'canceled'
-        ) {
+        const canStartNew =
+          !businessProfile.isLifetime &&
+          (!businessProfile.subscriptionStatus ||
+            businessProfile.subscriptionStatus === 'canceled' ||
+            businessProfile.subscriptionStatus === 'past_due' ||
+            businessProfile.subscriptionStatus === 'unpaid' ||
+            (businessProfile.subscriptionStatus === 'trialing' &&
+              businessProfile.stripeCurrentPeriodEnd &&
+              new Date(businessProfile.stripeCurrentPeriodEnd) <= new Date()));
+        if (canStartNew) {
           console.log(
-            `Iniciando checkout para priceId desde URL: ${priceIdFromUrl}, es prueba: ${initiateTrial}`
+            `[SubscriptionPage] Iniciando checkout automático desde URL para priceId: ${priceIdFromUrl}, es prueba: ${initiateTrial}`
           );
-          handleSubscribe(
-            priceIdFromUrl,
-            `Plan con ID ${priceIdFromUrl}`,
-            initiateTrial
+          handleSubscribe(priceIdFromUrl, `Plan (desde URL)`, initiateTrial);
+        } else {
+          console.log(
+            `[SubscriptionPage] No se inicia checkout automático desde URL. Estado actual: ${businessProfile.subscriptionStatus}, Vitalicio: ${businessProfile.isLifetime}`
           );
         }
       } else {
         toast({
           title: 'Plan no válido',
-          description: 'El plan seleccionado desde la URL no es válido.',
+          description: 'El plan de la URL no es válido.',
           variant: 'destructive'
         });
       }
-      router.replace(pathname, { scroll: false });
     }
   }, [
     searchParams,
@@ -155,97 +263,22 @@ function SubscriptionPageContent() {
     businessProfile,
     isLoadingProfile,
     router,
-    toast
+    toast,
+    pathname,
+    handleSubscribe,
+    loadingActionId
   ]);
 
-  const pathname = usePathname();
-
-  const handleSubscribe = async (
-    priceId: string,
-    planName: string,
-    isTrialFlow: boolean
-  ) => {
-    setLoadingActionId(priceId);
-    toast({
-      title: 'Procesando...',
-      description: `Iniciando ${isTrialFlow ? 'prueba gratuita' : 'suscripción'} para ${planName}.`
-    });
-
-    try {
-      const response = await fetch('/api/stripe/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, isTrial: isTrialFlow })
+  useEffect(() => {
+    if (!isLoadingProfile && businessProfile) {
+      console.log('[SubscriptionPage] Datos de businessProfile para render:', {
+        status: businessProfile.subscriptionStatus,
+        periodEnd: businessProfile.stripeCurrentPeriodEnd,
+        priceId: businessProfile.stripePriceId,
+        isLifetime: businessProfile.isLifetime
       });
-      const sessionData = await response.json();
-      if (!response.ok || !sessionData.sessionId) {
-        if (
-          response.status === 400 &&
-          sessionData.action === 'manage_subscription'
-        ) {
-          toast({
-            title: 'Suscripción Existente',
-            description:
-              sessionData.message ||
-              'Ya tienes una suscripción activa o de prueba. Puedes gestionarla.',
-            variant: 'default',
-            action: (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleManageSubscription}
-              >
-                Gestionar
-              </Button>
-            )
-          });
-        }
-        throw new Error(
-          sessionData.message || 'No se pudo iniciar el checkout.'
-        );
-      }
-      const stripe = await getStripe();
-      if (!stripe) throw new Error('Stripe.js no se cargó.');
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: sessionData.sessionId
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'No se pudo procesar la acción.',
-        variant: 'destructive'
-      });
-      setLoadingActionId(null);
     }
-  };
-
-  const handleManageSubscription = async () => {
-    setLoadingActionId('manage_portal');
-    toast({
-      title: 'Redirigiendo...',
-      description: 'Abriendo el portal de gestión de suscripción.'
-    });
-    try {
-      const response = await fetch('/api/stripe/create-portal-session', {
-        method: 'POST'
-      });
-      const portalData = await response.json();
-      if (!response.ok || !portalData.url) {
-        throw new Error(
-          portalData.message || 'No se pudo abrir el portal de cliente.'
-        );
-      }
-      router.push(portalData.url);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
-      setLoadingActionId(null);
-    }
-  };
+  }, [businessProfile, isLoadingProfile]);
 
   if (sessionStatus === 'loading' || isLoadingProfile) {
     return (
@@ -270,7 +303,13 @@ function SubscriptionPageContent() {
           Para gestionar suscripciones, primero necesitas crear o seleccionar un
           negocio.
         </p>
-        <Button onClick={() => router.push('/negocio/crear')}>
+        <Button
+          onClick={() =>
+            router.push(
+              `/negocio/crear?redirectTo=${encodeURIComponent(pathname + searchParams.toString())}`
+            )
+          }
+        >
           Crear Negocio
         </Button>
       </div>
@@ -288,6 +327,7 @@ function SubscriptionPageContent() {
     subscriptionStatus === 'trialing' &&
     stripeCurrentPeriodEnd &&
     new Date(stripeCurrentPeriodEnd) > new Date();
+  const currentPlanIsActiveOrTrialing = isActive || isEffectivelyTrialing;
 
   return (
     <div className="container mx-auto max-w-5xl py-8 px-4 md:px-6">
@@ -297,48 +337,47 @@ function SubscriptionPageContent() {
         </h1>
         <p className="text-lg text-muted-foreground mt-2">
           {isLifetime
-            ? 'Disfrutas de acceso vitalicio. ¡Gracias!'
+            ? 'Disfrutas de acceso vitalicio. ¡Gracias por ser parte de Cakely!'
             : isActive
-              ? 'Gestiona tu plan actual o explora otras opciones.'
+              ? 'Actualmente tienes un plan activo.'
               : isEffectivelyTrialing
                 ? `Estás en tu periodo de prueba. Finaliza el ${displayDate(stripeCurrentPeriodEnd)}.`
-                : 'Elige el plan que mejor se adapte a las necesidades de tu negocio.'}
+                : 'Elige el plan que mejor se adapte a las necesidades de tu pastelería.'}
         </p>
       </div>
 
-      {(isActive || isEffectivelyTrialing || isLifetime) && (
-        <Card className="mb-10 shadow-md bg-gradient-to-r from-primary/10 via-transparent to-transparent">
+      {(currentPlanIsActiveOrTrialing || isLifetime) && (
+        <Card className="mb-10 shadow-md">
           <CardHeader>
             <CardTitle className="text-xl text-primary flex items-center">
-              <Zap className="mr-2 h-6 w-6" /> Tu Plan Actual
+              <Zap className="mr-2 h-5 w-5" /> Tu Plan Actual
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-1">
             {isLifetime ? (
               <p className="text-lg font-semibold">Plan Vitalicio</p>
             ) : (
               <p className="text-lg font-semibold">
                 {plans.find((p) => p.priceIdStripe === stripePriceId)?.name ||
-                  'Plan Actual Desconocido'}
+                  'Plan Actual'}
               </p>
             )}
             {isEffectivelyTrialing && stripeCurrentPeriodEnd && (
               <p className="text-sm text-muted-foreground">
-                Periodo de prueba finaliza el:{' '}
-                {displayDate(stripeCurrentPeriodEnd)}
+                Prueba finaliza el: {displayDate(stripeCurrentPeriodEnd)}
               </p>
             )}
             {isActive && !isLifetime && stripeCurrentPeriodEnd && (
               <p className="text-sm text-muted-foreground">
-                Próxima renovación el: {displayDate(stripeCurrentPeriodEnd)}
+                Renueva el: {displayDate(stripeCurrentPeriodEnd)}
               </p>
             )}
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm">
               Estado:{' '}
               <span
                 className={cn(
                   'font-semibold',
-                  isActive || isEffectivelyTrialing || isLifetime
+                  currentPlanIsActiveOrTrialing || isLifetime
                     ? 'text-green-600'
                     : 'text-red-600'
                 )}
@@ -347,7 +386,7 @@ function SubscriptionPageContent() {
               </span>
             </p>
           </CardContent>
-          {!isLifetime && (
+          {!isLifetime && businessProfile.stripeCustomerId && (
             <CardFooter>
               <Button
                 onClick={handleManageSubscription}
@@ -357,15 +396,14 @@ function SubscriptionPageContent() {
                 {loadingActionId === 'manage_portal' && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                <Settings className="mr-2 h-4 w-4" /> Gestionar Suscripción y
-                Facturación
+                <Settings className="mr-2 h-4 w-4" /> Gestionar Suscripción
               </Button>
             </CardFooter>
           )}
         </Card>
       )}
 
-      {!isLifetime && !isActive && !isEffectivelyTrialing && (
+      {!isLifetime && !currentPlanIsActiveOrTrialing && (
         <>
           <h2 className="text-2xl font-semibold text-center mb-8">
             Nuestros Planes
@@ -375,12 +413,12 @@ function SubscriptionPageContent() {
               <Card
                 key={plan.id}
                 className={cn(
-                  'flex flex-col hover:shadow-xl transition-shadow',
+                  'flex flex-col',
                   plan.popular && 'border-primary ring-2 ring-primary'
                 )}
               >
                 {plan.popular && (
-                  <div className="px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-t-lg text-center tracking-wider">
+                  <div className="px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-t-lg text-center">
                     MÁS POPULAR
                   </div>
                 )}
@@ -390,7 +428,7 @@ function SubscriptionPageContent() {
                   </CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="mt-4">
-                    <span className="text-4xl font-extrabold tracking-tight">
+                    <span className="text-4xl font-extrabold">
                       {plan.priceDisplay}
                     </span>
                     <span className="ml-1 text-xl font-medium text-muted-foreground">
@@ -398,7 +436,7 @@ function SubscriptionPageContent() {
                     </span>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-grow space-y-3">
+                <CardContent className="flex-grow">
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-start">
@@ -440,8 +478,7 @@ function SubscriptionPageContent() {
       )}
 
       <p className="text-center text-xs text-muted-foreground mt-12">
-        Los precios no incluyen IVA donde aplique. Puedes gestionar o cancelar
-        tu suscripción en cualquier momento desde esta página.
+        Precios sin IVA. Cancela o gestiona tu plan en cualquier momento.
       </p>
     </div>
   );
@@ -456,7 +493,7 @@ export default function SubscriptionPageContainer() {
         </div>
       }
     >
-      <SubscriptionPageContent />
+      <SubscriptionPageContentInternal />
     </Suspense>
   );
 }

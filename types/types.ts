@@ -156,4 +156,5 @@ export interface BusinessProfileData {
   isLifetime: boolean | null;
   subscriptionStatus: string | null;
   stripePriceId: string | null;
+  stripeCustomerId: string | null;
 }

@@ -124,23 +124,6 @@ function DashboardCoreLogic({
 
   return (
     <DashboardClientLayout userComponent={userComponentInstance}>
-      {sessionStatus === 'loading' && !processingRefreshReqRef.current && (
-        <div className="fixed inset-0 z-[100] flex h-screen w-full items-center justify-center bg-background/80 backdrop-blur-sm">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      )}
-      {/* Consider if the loader overlay should appear even when processingRefreshReqRef.current is true.
-           The current !processingRefreshReqRef.current condition on the loader might be too restrictive
-           if you want a visual cue during the session_refresh_required update.
-           Simpler: always show overlay if sessionStatus is 'loading', as children are now always mounted.
-       */}
-      {/* Simpler loader condition:
-       {sessionStatus === 'loading' && (
-        <div className="fixed inset-0 z-[100] flex h-screen w-full items-center justify-center bg-background/80 backdrop-blur-sm">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      )}
-      */}
       {children}
       <SubscriptionRequiredModal
         isOpen={showSubscriptionModal}

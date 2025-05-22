@@ -31,6 +31,7 @@ import { useRecipes } from '@/hooks/use-recipes';
 import { motion } from 'framer-motion';
 import FinancialSummary from '@/components/statistics/FinancialSummary';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
+import { SubscriptionPageContentInternal } from './suscripcion/page';
 
 type BusinessNameUpdateData = { name: string };
 
@@ -75,6 +76,8 @@ export default function SettingsPage() {
     currentUserRole === 'EDITOR';
   const canViewFinances =
     currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const canAccessSubscription =
+    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
 
   const hasAnyBusinessAccess =
     canEditBusinessProfile ||
@@ -82,7 +85,8 @@ export default function SettingsPage() {
     canManageTeam ||
     canAccessIngredients ||
     canAccessRecipes ||
-    canViewFinances;
+    canViewFinances ||
+    canAccessSubscription;
 
   const {
     ingredients,
@@ -107,6 +111,7 @@ export default function SettingsPage() {
     if (canManageTeam) return 'team';
     if (canAccessIngredients) return 'ingredients';
     if (canAccessRecipes) return 'recipes';
+    if (canAccessSubscription) return 'subscription';
     return 'no-access';
   }, [
     canEditUserProfile,
@@ -115,7 +120,8 @@ export default function SettingsPage() {
     canEditOperationalSettings,
     canManageTeam,
     canAccessIngredients,
-    canAccessRecipes
+    canAccessRecipes,
+    canAccessSubscription
   ]);
 
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -357,6 +363,7 @@ export default function SettingsPage() {
     else if (canManageTeam) defaultTabValue = 'team';
     else if (canAccessIngredients) defaultTabValue = 'ingredients';
     else if (canAccessRecipes) defaultTabValue = 'recipes';
+    else if (canAccessSubscription) defaultTabValue = 'subscription';
     else defaultTabValue = 'no-access';
   }
 
@@ -397,6 +404,9 @@ export default function SettingsPage() {
             )}
             {canAccessRecipes && (
               <TabsTrigger value="recipes">Recetas</TabsTrigger>
+            )}
+            {canAccessSubscription && (
+              <TabsTrigger value="subscription">Suscripción</TabsTrigger>
             )}
           </TabsList>
 
@@ -511,6 +521,19 @@ export default function SettingsPage() {
                   openRecipeDialog={openRecipeDialog}
                   handleSaveRecipe={handleSaveRecipe}
                 />
+              </motion.div>
+            </TabsContent>
+          )}
+
+          {canAccessSubscription && (
+            <TabsContent value="subscription">
+              <motion.div
+                key="subscription"
+                initial={{ x: 10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <SubscriptionPageContentInternal />
               </motion.div>
             </TabsContent>
           )}

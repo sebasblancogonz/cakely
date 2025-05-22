@@ -18,10 +18,11 @@ export async function GET(request: NextRequest) {
         name: businesses.name,
         logoUrl: businesses.logoUrl,
         id: businesses.id,
-        subscribtionStatus: businesses.subscriptionStatus,
+        subscriptionStatus: businesses.subscriptionStatus,
         stripeCurrentPeriodEnd: businesses.stripeCurrentPeriodEnd,
         isLifetime: businesses.isLifetime,
-        stripePriceId: businesses.stripePriceId
+        stripePriceId: businesses.stripePriceId,
+        stripeCustomerId: businesses.stripeCustomerId
       })
       .from(businesses)
       .where(eq(businesses.id, businessId))
