@@ -13,6 +13,7 @@ import DashboardClientLayout from '@/components/common/DashboardClientLayout';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { User } from './user';
+import { Toaster } from '@/components/ui/toaster';
 
 const NON_SUBSCRIPTION_GATE_PATHS = [
   '/negocio/crear',
@@ -173,6 +174,7 @@ export default function LayoutForDashboardPagesContainer({
       <DashboardCoreLogic userComponentInstance={userComponentInstance}>
         {children}
       </DashboardCoreLogic>
+      <Toaster />
     </Suspense>
   );
 }

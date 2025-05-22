@@ -187,6 +187,24 @@ export async function POST(request: NextRequest) {
       { status: 403 }
     );
   }
+  if (
+    businessDataForStripe.subscriptionStatus === 'active' ||
+    (businessDataForStripe.subscriptionStatus === 'trialing' &&
+      businessDataForStripe.stripeCurrentPeriodEnd &&
+      new Date(businessDataForStripe.stripeCurrentPeriodEnd) > new Date())
+  ) {
+    console.log(
+      `[Stripe Checkout] Negocio ${targetBusinessId} ya tiene una suscripción activa o de prueba vigente (Status: ${businessDataForStripe.subscriptionStatus}).`
+    );
+    return NextResponse.json(
+      {
+        message:
+          'Este negocio ya tiene una suscripción activa o un periodo de prueba vigente. Puedes gestionarla desde tu panel.',
+        action: 'manage_subscription'
+      },
+      { status: 400 }
+    );
+  }
 
   let stripeCustomerId = businessDataForStripe.stripeCustomerId;
 

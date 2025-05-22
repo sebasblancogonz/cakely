@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
-import SuccessPageContent from './SuccessPageContent';
+import SuccessPageContent from '@/components/payments/SuccessPageContent';
 
 export default function SuccessPageContainer() {
   return (

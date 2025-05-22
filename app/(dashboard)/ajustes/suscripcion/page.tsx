@@ -179,6 +179,27 @@ function SubscriptionPageContent() {
       });
       const sessionData = await response.json();
       if (!response.ok || !sessionData.sessionId) {
+        if (
+          response.status === 400 &&
+          sessionData.action === 'manage_subscription'
+        ) {
+          toast({
+            title: 'Suscripción Existente',
+            description:
+              sessionData.message ||
+              'Ya tienes una suscripción activa o de prueba. Puedes gestionarla.',
+            variant: 'default',
+            action: (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManageSubscription}
+              >
+                Gestionar
+              </Button>
+            )
+          });
+        }
         throw new Error(
           sessionData.message || 'No se pudo iniciar el checkout.'
         );
