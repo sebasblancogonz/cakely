@@ -1,6 +1,7 @@
 import NextAuth, { DefaultSession, DefaultUser } from 'next-auth';
 import { teamRoleEnum } from '@/lib/db';
 import type { JWT as NextAuthJWT } from 'next-auth/jwt';
+import { PlanId } from '@/config/plans';
 
 type TeamRole = (typeof teamRoleEnum.enumValues)[number];
 declare module 'next-auth' {
@@ -13,6 +14,8 @@ declare module 'next-auth' {
       subscriptionStatus?: string | null;
       stripeCurrentPeriodEnd?: string | null;
       isLifetime?: boolean;
+      stripePriceId?: string | null;
+      planId?: PlanId | null;
     } & DefaultSession['user'];
   }
 
@@ -38,5 +41,7 @@ declare module 'next-auth/jwt' {
     accessToken?: string;
     refreshToken?: string;
     accessTokenExpires?: number;
+    planId?: PlanId | null;
+    stripePriceId?: string | null;
   }
 }

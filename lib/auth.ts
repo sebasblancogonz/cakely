@@ -6,6 +6,7 @@ import { accounts, sessions, verificationTokens } from '@/lib/db';
 import { and, asc, eq, gt } from 'drizzle-orm';
 import { TeamRole } from '@/types/next-auth';
 import type { JWT as NextAuthJWTContract } from 'next-auth/jwt';
+import { PlanId, STRIPE_PRICE_ID_TO_PLAN_ID } from '@/config/plans';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -15,7 +16,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     verificationTokensTable: verificationTokens
   }),
   providers: [
-    // @ts-ignore
     GoogleProvider({
       allowDangerousEmailAccountLinking: true,
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -99,8 +99,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session: sessionUpdateData,
       account
     }): Promise<NextAuthJWTContract | null> {
-      // Debe devolver JWT o null
-
       let currentUserId: string | undefined = undefined;
       if (token?.id && typeof token.id === 'string') {
         currentUserId = token.id;
@@ -108,7 +106,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         currentUserId = user.id;
       } else if (token?.sub && typeof token.sub === 'string') {
         currentUserId = token.sub;
-      } // 'sub' es el ID de usuario estándar en JWT
+      }
 
       if (!currentUserId) {
         console.warn(
@@ -117,18 +115,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return null;
       }
 
-      // Preparamos el workingToken. Empezamos con el token existente (si hay)
-      // y aseguramos que 'id' y 'isSuperAdmin' (requeridos por tu interfaz JWT) tengan un valor base.
       const workingToken: Partial<NextAuthJWTContract> & {
         id: string;
         isSuperAdmin: boolean;
       } = {
         ...token,
         id: currentUserId,
-        isSuperAdmin: token.isSuperAdmin ?? false // Default a false
+        isSuperAdmin: token.isSuperAdmin ?? false
       };
 
-      const isInitialPopulation = !!user; // True en el primer login/signup
+      const isInitialPopulation = !!user;
       const isSignUpTrigger = trigger === 'signUp';
       const isSpecificSubscriptionUpdate =
         trigger === 'update' &&
@@ -137,20 +133,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const isGenericUpdateTrigger =
         trigger === 'update' && !isSpecificSubscriptionUpdate;
 
-      // Decidir si necesitamos una recarga completa desde la base de datos
       const needsFullDbRefresh =
         isInitialPopulation ||
-        isSignUpTrigger || // En signUp, siempre recargamos para asegurar consistencia después de la invitación
-        isGenericUpdateTrigger || // En un update genérico, recargamos por seguridad
-        workingToken.isSuperAdmin === undefined || // Faltan datos críticos
+        isSignUpTrigger ||
+        isGenericUpdateTrigger ||
+        workingToken.isSuperAdmin === undefined ||
         workingToken.businessId === undefined ||
         (workingToken.businessId !== undefined &&
-          workingToken.subscriptionStatus === undefined); // Tiene negocio pero no sabemos su estado de sub
+          workingToken.subscriptionStatus === undefined);
       console.log('TRIGGER', trigger);
       console.log('SESSION UPDATE DATA', sessionUpdateData);
       if (isSpecificSubscriptionUpdate && sessionUpdateData?.triggerInfo) {
-        // Si es nuestro trigger custom desde /pago/exito, confiamos en los datos que nos pasa
-        // porque ya fueron verificados por /api/stripe/checkout-session-status
         console.log(
           '[AUTH JWT] Trigger "SUBSCRIPTION_UPDATED_AFTER_PAYMENT" con sessionUpdateData:',
           sessionUpdateData.triggerInfo
@@ -168,11 +161,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         workingToken.stripeCurrentPeriodEnd = newStripeCurrentPeriodEnd ?? null;
         workingToken.isLifetime = newIsLifetime ?? false;
 
-        // Podríamos necesitar refrescar name, email, picture, role si no vienen en triggerInfo
-        // o si el businessId cambió y el rol podría ser diferente.
-        // Por ahora, asumimos que el resto del token está razonablemente actualizado
-        // o se refrescará en la siguiente carga si needsFullDbRefresh se activa por otra razón.
-        // Para ser más completo, si updatedBusinessId se actualizó, deberíamos obtener el rol para ese.
         if (updatedBusinessId && currentUserId) {
           const dbUserForBasicInfo = await db.query.users.findFirst({
             where: eq(users.id, currentUserId),
@@ -181,14 +169,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               email: true,
               image: true,
               isSuperAdmin: true
-            } // No necesitamos businessId de users aquí
+            }
           });
           if (dbUserForBasicInfo) {
             workingToken.name = dbUserForBasicInfo.name;
             workingToken.email = dbUserForBasicInfo.email;
             workingToken.picture = dbUserForBasicInfo.image;
             workingToken.isSuperAdmin =
-              dbUserForBasicInfo.isSuperAdmin ?? false; // Reconfirmar isSuperAdmin
+              dbUserForBasicInfo.isSuperAdmin ?? false;
           }
           const membership = await db.query.teamMembers.findFirst({
             where: and(
@@ -231,12 +219,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         workingToken.picture = dbUser.image;
         workingToken.isSuperAdmin = dbUser.isSuperAdmin ?? false;
 
-        // Resetea y recarga info de negocio y suscripción
         workingToken.businessId = null;
         workingToken.role = null;
         workingToken.subscriptionStatus = null;
         workingToken.stripeCurrentPeriodEnd = null;
         workingToken.isLifetime = false;
+        workingToken.planId = null;
+        workingToken.stripePriceId = null;
+
         let effectiveBusinessId: number | null = dbUser.businessId;
 
         if (effectiveBusinessId) {
@@ -272,6 +262,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   ? new Date(businessData.stripeCurrentPeriodEnd).toISOString()
                   : null;
               workingToken.isLifetime = businessData.isLifetime ?? false;
+              workingToken.stripePriceId = businessData.stripePriceId ?? null;
+
+              if (workingToken.isLifetime) {
+                workingToken.planId = PlanId.VITALICIO;
+              } else if (
+                workingToken.subscriptionStatus === 'active' ||
+                workingToken.subscriptionStatus === 'trialing'
+              ) {
+                const currentStripePriceId = businessData.stripePriceId;
+                if (
+                  currentStripePriceId &&
+                  STRIPE_PRICE_ID_TO_PLAN_ID[currentStripePriceId]
+                ) {
+                  workingToken.planId =
+                    STRIPE_PRICE_ID_TO_PLAN_ID[currentStripePriceId];
+                } else {
+                  workingToken.planId = null;
+                }
+              } else {
+                workingToken.planId = null;
+              }
+              console.log(
+                `[AUTH JWT] Plan asignado al token: ${workingToken.planId}`
+              );
             } else {
               effectiveBusinessId = null;
             }
@@ -285,7 +299,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         if (!workingToken.businessId && !effectiveBusinessId) {
-          // Fallback
           const firstMembership = await db.query.teamMembers.findFirst({
             where: eq(teamMembers.userId, currentUserId),
             orderBy: [asc(teamMembers.joinedAt)],
@@ -296,6 +309,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   name: true,
                   subscriptionStatus: true,
                   stripeCurrentPeriodEnd: true,
+                  stripePriceId: true,
                   isLifetime: true
                 }
               }
@@ -314,12 +328,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               : null;
             workingToken.isLifetime =
               firstMembership.business.isLifetime ?? false;
+            workingToken.planId =
+              STRIPE_PRICE_ID_TO_PLAN_ID[
+                firstMembership.business.stripePriceId ?? ''
+              ] ?? null;
+            workingToken.stripePriceId =
+              firstMembership.business.stripePriceId ?? null;
           }
         }
       }
 
-      // Lógica de signUp con invitación (puede sobreescribir businessId/role/suscripción si es necesario)
-      // Esta lógica se ejecuta después del bloque needsFullDbRefresh si trigger es 'signUp'
       if (isSignUpTrigger && user && workingToken.email && currentUserId) {
         const userEmailLower = workingToken.email.toLowerCase();
         const pendingInvite = await db.query.invitations.findFirst({
@@ -331,9 +349,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           columns: { id: true, businessId: true, role: true }
         });
         if (pendingInvite?.businessId) {
-          workingToken.businessId = pendingInvite.businessId; // Asigna businessId de la invitación
-          workingToken.role = pendingInvite.role as TeamRole; // Asigna rol de la invitación
-          // Carga datos de suscripción para este nuevo businessId
+          workingToken.businessId = pendingInvite.businessId;
+          workingToken.role = pendingInvite.role as TeamRole;
+
           const invitedBusinessData = await db.query.businesses.findFirst({
             where: eq(businesses.id, pendingInvite.businessId),
             columns: {
@@ -352,6 +370,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   ).toISOString()
                 : null;
             workingToken.isLifetime = invitedBusinessData.isLifetime ?? false;
+            workingToken.planId =
+              STRIPE_PRICE_ID_TO_PLAN_ID[
+                invitedBusinessData.stripePriceId ?? ''
+              ] ?? null;
+            workingToken.stripePriceId =
+              invitedBusinessData.stripePriceId ?? null;
           }
           try {
             await db.transaction(async (tx: any) => {
@@ -375,8 +399,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      // Lógica para `trigger === 'update'` genérico (si no fue el de suscripción)
-      // Solo actualiza campos que el cliente puede modificar de forma segura, como name/image
       if (isGenericUpdateTrigger && sessionUpdateData) {
         console.log(
           '[AUTH JWT] Procesando trigger "update" GENÉRICO con sessionUpdateData (name/image):',
@@ -388,27 +410,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           workingToken.picture = sessionUpdateData.image;
       }
 
-      // Manejo de tokens de proveedor OAuth
       if (account) {
         workingToken.accessToken = account.access_token;
         workingToken.accessTokenExpires = account.expires_at
           ? Date.now() + account.expires_at * 1000
           : undefined;
         workingToken.refreshToken =
-          account.refresh_token ?? workingToken.refreshToken; // Conserva el anterior si el nuevo es null
-        // Upsert manual en accounts (si es necesario)
+          account.refresh_token ?? workingToken.refreshToken;
+
         if (account.provider === 'google' && currentUserId) {
-          // ... tu lógica de upsert en accounts ...
         }
       }
 
-      // --- Asegurar valores finales para todas las propiedades de la interfaz JWT ---
-      // 'id' ya está garantizado como string.
-      // 'isSuperAdmin' se carga de dbUser y se asegura que sea boolean.
       workingToken.isSuperAdmin = workingToken.isSuperAdmin ?? false;
 
-      // Los demás campos pueden ser null/undefined según tu interface JWT.
-      // Se establecen a null si no tienen valor para consistencia.
       workingToken.name = workingToken.name ?? null;
       workingToken.email = workingToken.email ?? null;
       workingToken.picture = workingToken.picture ?? null;
@@ -419,13 +434,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         workingToken.stripeCurrentPeriodEnd ?? null;
       workingToken.isLifetime = workingToken.isLifetime ?? false;
 
-      // OAuth tokens pueden ser undefined si no hay 'account'
       workingToken.accessToken = workingToken.accessToken ?? undefined;
       workingToken.refreshToken = workingToken.refreshToken ?? undefined;
       workingToken.accessTokenExpires =
         workingToken.accessTokenExpires ?? undefined;
+      workingToken.planId = workingToken.planId ?? null;
+      workingToken.stripePriceId = workingToken.stripePriceId ?? null;
 
-      // Comprobación final de sanidad para propiedades NO opcionales en tu JWT interface
       if (
         typeof workingToken.id !== 'string' ||
         typeof workingToken.isSuperAdmin !== 'boolean'
@@ -434,14 +449,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           '[AUTH JWT] Error Crítico: Token final antes de retornar es inválido. Faltan id o isSuperAdmin, o sus tipos son incorrectos.',
           JSON.parse(JSON.stringify(workingToken))
         );
-        return null; // Token inválido
+        return null;
       }
 
       console.log(
         `[AUTH JWT] Token FINAL a retornar:`,
         JSON.parse(JSON.stringify(workingToken))
       );
-      return workingToken as NextAuthJWTContract; // Castea al tipo JWT final
+      return workingToken as NextAuthJWTContract;
     },
 
     async session({ session, token }) {
@@ -459,6 +474,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.subscriptionStatus = token.subscriptionStatus;
         session.user.stripeCurrentPeriodEnd = token.stripeCurrentPeriodEnd;
         session.user.isLifetime = token.isLifetime;
+        session.user.planId = token.planId;
+        session.user.stripePriceId = token.stripePriceId;
       }
       return session;
     }
