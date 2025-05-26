@@ -21,6 +21,7 @@ export interface PlanFeatureConfig {
   multiplesUsuarios: boolean;
   soportePrioritario: boolean;
   integracionesPersonalizadas: boolean;
+  calculadoraPresupuesto: boolean;
 }
 
 export const PLANS_CONFIG: Record<PlanId, PlanFeatureConfig> = {
@@ -31,7 +32,8 @@ export const PLANS_CONFIG: Record<PlanId, PlanFeatureConfig> = {
     analiticasAvanzadas: false,
     multiplesUsuarios: false,
     soportePrioritario: false,
-    integracionesPersonalizadas: false
+    integracionesPersonalizadas: false,
+    calculadoraPresupuesto: false
   },
   [PlanId.BASICO]: {
     maxPedidosMes: 50,
@@ -40,7 +42,8 @@ export const PLANS_CONFIG: Record<PlanId, PlanFeatureConfig> = {
     analiticasAvanzadas: false,
     multiplesUsuarios: false,
     soportePrioritario: false,
-    integracionesPersonalizadas: false
+    integracionesPersonalizadas: false,
+    calculadoraPresupuesto: false
   },
   [PlanId.PRO]: {
     maxPedidosMes: 'unlimited',
@@ -49,7 +52,8 @@ export const PLANS_CONFIG: Record<PlanId, PlanFeatureConfig> = {
     analiticasAvanzadas: true,
     multiplesUsuarios: true,
     soportePrioritario: true,
-    integracionesPersonalizadas: true
+    integracionesPersonalizadas: true,
+    calculadoraPresupuesto: true
   },
   [PlanId.VITALICIO]: {
     maxPedidosMes: 'unlimited',
@@ -58,7 +62,8 @@ export const PLANS_CONFIG: Record<PlanId, PlanFeatureConfig> = {
     analiticasAvanzadas: true,
     multiplesUsuarios: true,
     soportePrioritario: true,
-    integracionesPersonalizadas: true
+    integracionesPersonalizadas: true,
+    calculadoraPresupuesto: true
   }
 };
 

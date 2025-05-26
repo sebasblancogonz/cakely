@@ -42,8 +42,8 @@ import Providers from '../../app/(dashboard)/providers';
 import { SearchInput } from '../../app/(dashboard)/search';
 import { NavItem } from '../../app/(dashboard)/nav-item';
 import { BusinessProfileData } from '@/types/types';
-import { getToken } from 'next-auth/jwt';
 import { useSession } from 'next-auth/react';
+import { PLANS_CONFIG } from '@/config/plans';
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -164,6 +164,13 @@ function DesktopNav({
 }: DesktopNavProps) {
   const { data: session } = useSession();
   const user = session?.user;
+  const planId = user?.planId;
+  const userPlanConfig = planId ? PLANS_CONFIG[planId] : null;
+  const hasAnalyticsAccess =
+    userPlanConfig && userPlanConfig?.analiticasAvanzadas;
+  const hasQuoteCalculatorAccess =
+    userPlanConfig && userPlanConfig?.calculadoraPresupuesto;
+  const hasPlan = userPlanConfig !== null;
 
   const transitionDuration = 'duration-500';
   const defaultBusinessName = 'Mi Negocio';
@@ -251,94 +258,107 @@ function DesktopNav({
         >
           <Home className="h-5 w-5" />
         </NavItem>
-        <NavItem
-          href="/estadisticas"
-          label="Estadísticas"
-          isExpanded={isExpanded}
-          animationDuration={transitionDuration}
-        >
-          <BarChart3 className="h-5 w-5" />
-        </NavItem>
-        <NavItem
-          href="/pedidos"
-          label="Pedidos"
-          isExpanded={isExpanded}
-          animationDuration={transitionDuration}
-        >
-          <ShoppingCart className="h-5 w-5" />
-        </NavItem>
-        <NavItem
-          href="/clientes"
-          label="Clientes"
-          isExpanded={isExpanded}
-          animationDuration={transitionDuration}
-        >
-          <Users2 className="h-5 w-5" />
-        </NavItem>
-        <NavItem
-          href="/calendario"
-          label="Calendario"
-          isExpanded={isExpanded}
-          animationDuration={transitionDuration}
-        >
-          <Calendar className="h-5 w-5" />
-        </NavItem>
-        <NavItem
-          href="/presupuesto"
-          label="Presupuesto"
-          isExpanded={isExpanded}
-          animationDuration={transitionDuration}
-        >
-          <Calculator className="h-5 w-5" />
-        </NavItem>
-        {isSuperAdmin && (
-          <NavItem
-            href="/admin"
-            label="Admin area"
-            isExpanded={isExpanded}
-            animationDuration={transitionDuration}
-          >
-            <Settings2 className="h-5 w-5" />
-          </NavItem>
+        {hasPlan && (
+          <>
+            {hasAnalyticsAccess && (
+              <NavItem
+                href="/estadisticas"
+                label="Estadísticas"
+                isExpanded={isExpanded}
+                animationDuration={transitionDuration}
+              >
+                <BarChart3 className="h-5 w-5" />
+              </NavItem>
+            )}
+
+            <NavItem
+              href="/pedidos"
+              label="Pedidos"
+              isExpanded={isExpanded}
+              animationDuration={transitionDuration}
+            >
+              <ShoppingCart className="h-5 w-5" />
+            </NavItem>
+            <NavItem
+              href="/clientes"
+              label="Clientes"
+              isExpanded={isExpanded}
+              animationDuration={transitionDuration}
+            >
+              <Users2 className="h-5 w-5" />
+            </NavItem>
+            <NavItem
+              href="/calendario"
+              label="Calendario"
+              isExpanded={isExpanded}
+              animationDuration={transitionDuration}
+            >
+              <Calendar className="h-5 w-5" />
+            </NavItem>
+            {hasQuoteCalculatorAccess && (
+              <NavItem
+                href="/presupuesto"
+                label="Presupuesto"
+                isExpanded={isExpanded}
+                animationDuration={transitionDuration}
+              >
+                <Calculator className="h-5 w-5" />
+              </NavItem>
+            )}
+            {isSuperAdmin && (
+              <NavItem
+                href="/admin"
+                label="Admin area"
+                isExpanded={isExpanded}
+                animationDuration={transitionDuration}
+              >
+                <Settings2 className="h-5 w-5" />
+              </NavItem>
+            )}
+          </>
         )}
       </nav>
 
       <nav className="mt-auto flex flex-col gap-4 px-2 sm:py-5">
-        <NavItem
-          href="/ajustes"
-          label="Ajustes"
-          isExpanded={isExpanded}
-          animationDuration={transitionDuration}
-        >
-          <Settings className="h-5 w-5" />
-        </NavItem>
-        <div
-          className={cn(
-            'flex w-full mt-2',
-            isExpanded ? 'justify-end pr-1' : 'justify-center'
-          )}
-        >
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={onToggle}
-                variant="ghost"
-                size="icon"
-                className="rounded-full h-8 w-8 border"
-                aria-label={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
-              >
-                {isExpanded ? (
-                  <ChevronLeft className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={5}>
-              {isExpanded ? 'Colapsar' : 'Expandir'}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {hasPlan && (
+          <>
+            <NavItem
+              href="/ajustes"
+              label="Ajustes"
+              isExpanded={isExpanded}
+              animationDuration={transitionDuration}
+            >
+              <Settings className="h-5 w-5" />
+            </NavItem>
+            <div
+              className={cn(
+                'flex w-full mt-2',
+                isExpanded ? 'justify-end pr-1' : 'justify-center'
+              )}
+            >
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={onToggle}
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full h-8 w-8 border"
+                    aria-label={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
+                  >
+                    {isExpanded ? (
+                      <ChevronLeft className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={5}>
+                  {isExpanded ? 'Colapsar' : 'Expandir'}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </>
+        )}
       </nav>
     </aside>
   );
