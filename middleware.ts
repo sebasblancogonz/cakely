@@ -10,12 +10,19 @@ const publicPaths = [
   '/auth/denied',
   '/auth/invitation-required'
 ];
+
 const authenticatedPathsWithoutBusinessOrSubscription = [
   '/negocio/crear',
   '/perfil',
   '/ajustes/suscripcion',
   '/pago/exito',
   '/pago/cancelado'
+];
+
+const pathsUnnaccessibleForBasicPlanUsers = [
+  '/presupuesto',
+  '/estadisticas',
+  '/ajustes?tab=team'
 ];
 const superAdminRootPath = '/admin';
 const appUserRootPath = '/';

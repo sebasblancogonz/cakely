@@ -253,6 +253,7 @@ export async function POST(request: NextRequest) {
     customer: stripeCustomerId,
     payment_method_types: ['card', 'paypal'],
     line_items: [{ price: priceId, quantity: 1 }],
+    locale: 'es',
     mode: 'subscription',
     success_url: successUrl,
     cancel_url: cancelUrl,

@@ -382,7 +382,15 @@ export function SubscriptionPageContentInternal() {
                     : 'text-red-600'
                 )}
               >
-                {isLifetime ? 'Vitalicio' : subscriptionStatus}
+                {isLifetime
+                  ? 'Vitalicio'
+                  : subscriptionStatus === 'trialing'
+                    ? 'En Prueba'
+                    : subscriptionStatus === 'canceled'
+                      ? 'Cancelada'
+                      : subscriptionStatus === 'active'
+                        ? 'Activa'
+                        : subscriptionStatus}
               </span>
             </p>
           </CardContent>
