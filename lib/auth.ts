@@ -9,6 +9,10 @@ import type { JWT as NextAuthJWTContract } from 'next-auth/jwt';
 import { PlanId, STRIPE_PRICE_ID_TO_PLAN_ID } from '@/config/plans';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  pages: {
+    signIn: '/login',
+    error: '/auth/error'
+  },
   adapter: DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,

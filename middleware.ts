@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from './lib/auth';
+import { getPlanConfig, PlanId, PLANS_CONFIG } from './config/plans';
 
 const publicPaths = [
   '/login',
@@ -85,6 +86,11 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith(allowedPath)
       );
 
+    const isForbiddenForBasicPlanUsers =
+      pathsUnnaccessibleForBasicPlanUsers.some((forbiddenPath) =>
+        pathname.startsWith(forbiddenPath)
+      );
+
     if (!user.businessId && !isPathAllowedWithoutSubscriptionLogic) {
       console.log(
         `[Middleware] User ${user.email} SIN businessId en ${pathname}. Redirigiendo a /negocio/crear.`
@@ -92,6 +98,21 @@ export async function middleware(request: NextRequest) {
       const createBusinessUrl = new URL('/negocio/crear', origin);
       createBusinessUrl.searchParams.set('redirectTo', fullPathWithQuery);
       return NextResponse.redirect(createBusinessUrl);
+    }
+
+    if (!user.planId) {
+      const errorUrl = new URL('/auth/error', request.url);
+      errorUrl.searchParams.set('error', 'missing_plan');
+      return NextResponse.redirect(errorUrl);
+    }
+
+    if (
+      (user.planId === PlanId.BASICO || user.planId === PlanId.FREE) &&
+      isForbiddenForBasicPlanUsers
+    ) {
+      const errorUrl = new URL('/auth/error', request.url);
+      errorUrl.searchParams.set('error', 'ProPlanRequired');
+      return NextResponse.redirect(errorUrl);
     }
   }
 
