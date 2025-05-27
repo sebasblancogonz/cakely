@@ -32,6 +32,7 @@ import { motion } from 'framer-motion';
 import FinancialSummary from '@/components/statistics/FinancialSummary';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { SubscriptionPageContentInternal } from './suscripcion/page';
+import { PLANS_CONFIG } from '@/config/plans';
 
 type BusinessNameUpdateData = { name: string };
 
@@ -51,10 +52,12 @@ export default function SettingsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
   const currentUserRole = session?.user?.role as TeamRole | undefined | null;
   const currentUserId = session?.user?.id;
   const businessId = session?.user?.businessId;
+  const plan = session?.user?.planId;
+  const hasPlan = !!session?.user?.planId;
+  const planConfig = hasPlan ? PLANS_CONFIG[plan!] : null;
   const isLoadingSession = sessionStatus === 'loading';
   const currentUserName = session?.user?.name;
   const currentUserImage = session?.user?.image;
@@ -65,15 +68,18 @@ export default function SettingsPage() {
   const canEditOperationalSettings =
     currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
   const canManageTeam =
-    currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+    planConfig?.multiplesUsuarios &&
+    (currentUserRole === 'OWNER' || currentUserRole === 'ADMIN');
   const canAccessIngredients =
-    currentUserRole === 'OWNER' ||
-    currentUserRole === 'ADMIN' ||
-    currentUserRole === 'EDITOR';
+    planConfig?.calculadoraPresupuesto &&
+    (currentUserRole === 'OWNER' ||
+      currentUserRole === 'ADMIN' ||
+      currentUserRole === 'EDITOR');
   const canAccessRecipes =
-    currentUserRole === 'OWNER' ||
-    currentUserRole === 'ADMIN' ||
-    currentUserRole === 'EDITOR';
+    planConfig?.calculadoraPresupuesto &&
+    (currentUserRole === 'OWNER' ||
+      currentUserRole === 'ADMIN' ||
+      currentUserRole === 'EDITOR');
   const canViewFinances =
     currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
   const canAccessSubscription =

@@ -95,6 +95,7 @@ export function withApiProtection<Params = Record<string, string | string[]>>(
     let finalBusinessPlanConfig: PlanFeatureConfig = getPlanConfig(
       null,
       false,
+      null,
       null
     );
     let actualBusinessPlanId: PlanId | null = PlanId.FREE;
@@ -124,7 +125,8 @@ export function withApiProtection<Params = Record<string, string | string[]>>(
       finalBusinessPlanConfig = getPlanConfig(
         businessDataFromDb.stripePriceId,
         businessDataFromDb.isLifetime,
-        businessDataFromDb.subscriptionStatus
+        businessDataFromDb.subscriptionStatus,
+        businessDataFromDb.stripeCurrentPeriodEnd
       );
       if (businessDataFromDb.isLifetime)
         actualBusinessPlanId = PlanId.VITALICIO;

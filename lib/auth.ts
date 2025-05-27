@@ -237,7 +237,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               name: true,
               subscriptionStatus: true,
               stripeCurrentPeriodEnd: true,
-              isLifetime: true
+              isLifetime: true,
+              stripePriceId: true
             }
           });
           console.log(

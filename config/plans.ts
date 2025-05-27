@@ -70,25 +70,49 @@ export const PLANS_CONFIG: Record<PlanId, PlanFeatureConfig> = {
 export function getPlanConfig(
   stripePriceId?: string | null,
   isLifetime?: boolean | null,
-  subscriptionStatus?: string | null
+  subscriptionStatus?: string | null,
+  stripeCurrentPeriodEnd?: Date | string | null
 ): PlanFeatureConfig {
-  if (isLifetime) {
+  console.log(
+    `[getPlanConfig] Input: stripePriceId=${stripePriceId}, isLifetime=${isLifetime}, status=${subscriptionStatus}, periodEnd=${stripeCurrentPeriodEnd}`
+  );
+
+  if (isLifetime === true) {
+    console.log('[getPlanConfig] Devolviendo configuración VITALICIO.');
     return PLANS_CONFIG[PlanId.VITALICIO];
   }
 
-  const isActiveOrTrialing =
-    subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  let isActive = subscriptionStatus === 'active';
+  let isTrialing = subscriptionStatus === 'trialing';
+
+  if (isTrialing && stripeCurrentPeriodEnd) {
+    if (new Date(stripeCurrentPeriodEnd) <= new Date()) {
+      isTrialing = false;
+      console.log('[getPlanConfig] Periodo de prueba expirado.');
+    } else {
+      console.log('[getPlanConfig] En periodo de prueba activo.');
+    }
+  } else if (isTrialing && !stripeCurrentPeriodEnd) {
+    isTrialing = false;
+    console.warn(
+      "[getPlanConfig] Estado 'trialing' sin stripeCurrentPeriodEnd válido."
+    );
+  }
 
   if (
-    isActiveOrTrialing &&
+    (isActive || isTrialing) &&
     stripePriceId &&
     STRIPE_PRICE_ID_TO_PLAN_ID[stripePriceId]
   ) {
     const planId = STRIPE_PRICE_ID_TO_PLAN_ID[stripePriceId];
+    console.log(
+      `[getPlanConfig] Devolviendo configuración para PlanId: ${planId} (derivado de PriceId ${stripePriceId})`
+    );
     return PLANS_CONFIG[planId];
   }
 
-  throw new Error(
-    `No plan found for stripePriceId: ${stripePriceId}, isLifetime: ${isLifetime}, subscriptionStatus: ${subscriptionStatus}`
+  console.log(
+    '[getPlanConfig] No hay plan activo/trial/vitalicio. Devolviendo configuración FREE.'
   );
+  return PLANS_CONFIG[PlanId.FREE];
 }
