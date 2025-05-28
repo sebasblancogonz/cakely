@@ -209,7 +209,50 @@ export default function StatisticsPage() {
         return sum + (total - deposit);
       }, 0);
 
-    return { statusData, productData, paymentData, revenue, pending };
+    const totalPaidOrders = filtered.filter(
+      (order) => order.paymentStatus === PaymentStatus.Pagado
+    ).length;
+    const averageOrderValue =
+      totalPaidOrders > 0 ? revenue / totalPaidOrders : 0;
+
+    const customerOrderCounts: Record<string, number> = {};
+    filtered.forEach((order) => {
+      if (order.customerId) {
+        customerOrderCounts[order.customerId] =
+          (customerOrderCounts[order.customerId] || 0) + 1;
+      }
+    });
+    const totalUniqueCustomers = Object.keys(customerOrderCounts).length;
+    const averageOrdersPerCustomer =
+      totalUniqueCustomers > 0 ? filtered.length / totalUniqueCustomers : 0;
+
+    const purchaseFrequencyData: ChartData[] = [];
+    if (totalUniqueCustomers > 0) {
+      const counts = Object.values(customerOrderCounts);
+      const maxCount = Math.max(...counts);
+      for (let i = 1; i <= maxCount; i++) {
+        const numCustomers = counts.filter((c) => c === i).length;
+        if (numCustomers > 0) {
+          purchaseFrequencyData.push({
+            name: `${i} compra${i > 1 ? 's' : ''}`,
+            value: numCustomers
+          });
+        }
+      }
+    }
+
+    return {
+      statusData,
+      productData,
+      paymentData,
+      revenue,
+      pending,
+      averageOrderValue,
+      averageOrdersPerCustomer,
+      totalPaidOrders,
+      totalUniqueCustomers,
+      purchaseFrequencyData
+    };
   }, [orders, dateRange]);
 
   const handleRangeTypeChange = useCallback((value: string) => {
@@ -574,6 +617,82 @@ export default function StatisticsPage() {
               Suma de lo pendiente en pedidos no pagados/parciales.
             </p>
           </div>
+        </CardContent>
+      </Card>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Métricas Clave de Clientes y Pedidos</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* ... Ingresos Registrados y Pendiente (como antes) ... */}
+          <div className="p-4 border rounded-lg">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Ticket Promedio (Pedidos Pagados)
+            </h3>
+            <p className="text-2xl font-bold">
+              {new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR'
+              }).format(processedData?.averageOrderValue ?? 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Total {processedData?.totalPaidOrders} pedidos pagados.
+            </p>
+          </div>
+          <div className="p-4 border rounded-lg">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Pedidos Promedio por Cliente
+            </h3>
+            <p className="text-2xl font-bold">
+              {processedData?.averageOrdersPerCustomer?.toFixed(1) ?? 0}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Total {processedData?.totalUniqueCustomers} clientes únicos.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Nuevo Gráfico de Frecuencia de Compra */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-lg">
+            Frecuencia de Compra de Clientes
+          </CardTitle>
+          <CardDescription>
+            Distribución de clientes por número de compras realizadas en el
+            periodo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {processedData?.purchaseFrequencyData &&
+          processedData.purchaseFrequencyData.length > 0 ? (
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer>
+                <BarChart
+                  data={processedData.purchaseFrequencyData}
+                  margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis allowDecimals={false} fontSize={12} />
+                  <Tooltip formatter={(value: number) => `${value} clientes`} />
+                  <Legend />
+                  <Bar
+                    dataKey="value"
+                    name="Nº Clientes"
+                    fill="#8884d8"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground h-[300px] flex items-center justify-center">
+              No hay suficientes datos de frecuencia de compra para este
+              periodo.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
