@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  Suspense,
+  useCallback,
+  useRef
+} from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -115,6 +121,8 @@ export function SubscriptionPageContentInternal() {
   } = useBusinessProfile();
 
   const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
+  const { update: updateNextAuthSession } = useSession();
+  const hasRefreshedAfterPortalReturn = useRef(false);
 
   const handleManageSubscription = useCallback(async () => {
     if (!businessProfile?.stripeCustomerId) {
@@ -148,6 +156,31 @@ export function SubscriptionPageContentInternal() {
       setLoadingActionId(null);
     }
   }, [businessProfile?.stripeCustomerId, toast]);
+
+  useEffect(() => {
+    const fromPortal = searchParams.get('from_portal') === 'true';
+
+    if (
+      fromPortal &&
+      sessionStatus === 'authenticated' &&
+      !hasRefreshedAfterPortalReturn.current
+    ) {
+      console.log(
+        '[SubscriptionPage] Detectado regreso del portal de Stripe. Refrescando sesión...'
+      );
+      hasRefreshedAfterPortalReturn.current = true;
+
+      updateNextAuthSession({
+        triggerInfo: {
+          businessId: session?.user?.businessId
+        }
+      });
+
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete('from_portal');
+      router.replace(`${pathname}?${newParams.toString()}`, { scroll: false });
+    }
+  }, [searchParams, sessionStatus, updateNextAuthSession, router, pathname]);
 
   const handleSubscribe = useCallback(
     async (priceId: string, planName: string, isTrialFlow: boolean) => {

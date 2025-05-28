@@ -145,8 +145,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         workingToken.businessId === undefined ||
         (workingToken.businessId !== undefined &&
           workingToken.subscriptionStatus === undefined);
-      console.log('TRIGGER', trigger);
-      console.log('SESSION UPDATE DATA', sessionUpdateData);
       if (isSpecificSubscriptionUpdate && sessionUpdateData?.triggerInfo) {
         console.log(
           '[AUTH JWT] Trigger "SUBSCRIPTION_UPDATED_AFTER_PAYMENT" con sessionUpdateData:',

@@ -100,12 +100,6 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(createBusinessUrl);
     }
 
-    if (!user.planId) {
-      const errorUrl = new URL('/auth/error', request.url);
-      errorUrl.searchParams.set('error', 'missing_plan');
-      return NextResponse.redirect(errorUrl);
-    }
-
     if (
       (user.planId === PlanId.BASICO || user.planId === PlanId.FREE) &&
       isForbiddenForBasicPlanUsers
@@ -113,6 +107,24 @@ export async function middleware(request: NextRequest) {
       const errorUrl = new URL('/auth/error', request.url);
       errorUrl.searchParams.set('error', 'ProPlanRequired');
       return NextResponse.redirect(errorUrl);
+    }
+    const hasLifetime = user.isLifetime === true;
+    const isActiveSub = user.subscriptionStatus === 'active';
+    let isTrialValid = false;
+    if (user.subscriptionStatus === 'trialing' && user.stripeCurrentPeriodEnd) {
+      isTrialValid = new Date(user.stripeCurrentPeriodEnd) > new Date();
+    }
+
+    if (!hasLifetime && !isActiveSub && !isTrialValid) {
+      console.log(
+        `[Middleware] User ${user.email}, Business ${user.businessId}: Suscripción NO válida para ${pathname}. Status: ${user.subscriptionStatus}. Redirigiendo a ${'/ajustes/suscripcion'}.`
+      );
+      const subRedirectUrl = new URL('/ajustes/suscripcion', origin);
+      subRedirectUrl.searchParams.set('reason', 'subscription_required');
+      if (pathname !== '/ajustes/suscripcion') {
+        subRedirectUrl.searchParams.set('redirectTo', fullPathWithQuery);
+      }
+      return NextResponse.redirect(subRedirectUrl);
     }
   }
 

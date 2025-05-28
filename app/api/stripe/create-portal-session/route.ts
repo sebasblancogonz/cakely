@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const returnUrl = `${appUrl}/ajustes/suscripcion`;
+    const returnUrl = `${appUrl}/ajustes/suscripcion?from_portal=true`;
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: businessData.stripeCustomerId,
