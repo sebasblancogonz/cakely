@@ -86,6 +86,11 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith(allowedPath)
       );
 
+    const requiresActiveSubscription =
+      !isPathAllowedWithoutSubscriptionLogic &&
+      pathname !== '/' &&
+      !pathname.startsWith('/api/auth');
+
     const isForbiddenForBasicPlanUsers =
       pathsUnnaccessibleForBasicPlanUsers.some((forbiddenPath) =>
         pathname.startsWith(forbiddenPath)
@@ -108,23 +113,29 @@ export async function middleware(request: NextRequest) {
       errorUrl.searchParams.set('error', 'ProPlanRequired');
       return NextResponse.redirect(errorUrl);
     }
-    const hasLifetime = user.isLifetime === true;
-    const isActiveSub = user.subscriptionStatus === 'active';
-    let isTrialValid = false;
-    if (user.subscriptionStatus === 'trialing' && user.stripeCurrentPeriodEnd) {
-      isTrialValid = new Date(user.stripeCurrentPeriodEnd) > new Date();
-    }
 
-    if (!hasLifetime && !isActiveSub && !isTrialValid) {
-      console.log(
-        `[Middleware] User ${user.email}, Business ${user.businessId}: Suscripción NO válida para ${pathname}. Status: ${user.subscriptionStatus}. Redirigiendo a ${'/ajustes/suscripcion'}.`
-      );
-      const subRedirectUrl = new URL('/ajustes/suscripcion', origin);
-      subRedirectUrl.searchParams.set('reason', 'subscription_required');
-      if (pathname !== '/ajustes/suscripcion') {
-        subRedirectUrl.searchParams.set('redirectTo', fullPathWithQuery);
+    if (requiresActiveSubscription) {
+      const hasLifetime = user.isLifetime === true;
+      const isActiveSub = user.subscriptionStatus === 'active';
+      let isTrialValid = false;
+      if (
+        user.subscriptionStatus === 'trialing' &&
+        user.stripeCurrentPeriodEnd
+      ) {
+        isTrialValid = new Date(user.stripeCurrentPeriodEnd) > new Date();
       }
-      return NextResponse.redirect(subRedirectUrl);
+
+      if (!hasLifetime && !isActiveSub && !isTrialValid) {
+        console.log(
+          `[Middleware] User ${user.email}, Business ${user.businessId}: Suscripción NO válida para ${pathname}. Status: ${user.subscriptionStatus}. Redirigiendo a ${'/ajustes/suscripcion'}.`
+        );
+        const subRedirectUrl = new URL('/ajustes/suscripcion', origin);
+        subRedirectUrl.searchParams.set('reason', 'subscription_required');
+        if (pathname !== '/ajustes/suscripcion') {
+          subRedirectUrl.searchParams.set('redirectTo', fullPathWithQuery);
+        }
+        return NextResponse.redirect(subRedirectUrl);
+      }
     }
   }
 

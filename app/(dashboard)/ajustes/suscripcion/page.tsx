@@ -32,21 +32,6 @@ import { cn, displayDate } from '@/lib/utils';
 
 const plans = [
   {
-    id: 'plan_basico_mensual_trial',
-    name: 'Plan Básico - Prueba Gratuita',
-    description: 'Ideal para empezar y probar todas las funcionalidades.',
-    priceIdStripe: 'price_1RObViDMvGCWBYUyH37UyLMy',
-    priceDisplay: 'Gratis por 14 días',
-    priceNumerical: 0,
-    interval: 'luego 19.99€/mes',
-    features: [
-      'Gestión de hasta 100 pedidos/mes',
-      'Soporte por email',
-      'Analíticas básicas'
-    ],
-    isTrialOption: true
-  },
-  {
     id: 'plan_basico_mensual',
     name: 'Plan Básico',
     description: 'Todas las herramientas esenciales para crecer.',
@@ -58,7 +43,8 @@ const plans = [
       'Gestión de hasta 100 pedidos/mes',
       'Soporte por email',
       'Analíticas básicas'
-    ]
+    ],
+    isTrialOption: true
   },
   {
     id: 'plan_basico_anual',
@@ -114,11 +100,9 @@ export function SubscriptionPageContentInternal() {
   const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
-  const {
-    profile: businessProfile,
-    isLoadingProfile,
-    mutateProfile: mutateProfile
-  } = useBusinessProfile();
+  const { profile: businessProfile, isLoadingProfile } = useBusinessProfile();
+
+  const planAlreadyUsedTrial = businessProfile?.hasUsedTrial;
 
   const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
   const { update: updateNextAuthSession } = useSession();
@@ -392,7 +376,8 @@ export function SubscriptionPageContentInternal() {
             ) : (
               <p className="text-lg font-semibold">
                 {plans.find((p) => p.priceIdStripe === stripePriceId)?.name ||
-                  'Plan Actual'}
+                  'Plan Actual'}{' '}
+                {isEffectivelyTrialing && '- Prueba Gratuita'}
               </p>
             )}
             {isEffectivelyTrialing && stripeCurrentPeriodEnd && (
@@ -494,10 +479,13 @@ export function SubscriptionPageContentInternal() {
                       handleSubscribe(
                         plan.priceIdStripe,
                         plan.name,
-                        !!plan.isTrialOption
+                        !!plan.isTrialOption && !planAlreadyUsedTrial
                       )
                     }
-                    disabled={!!loadingActionId}
+                    disabled={
+                      !!loadingActionId ||
+                      (plan.isTrialOption && planAlreadyUsedTrial)
+                    }
                     variant={plan.popular ? 'default' : 'outline'}
                     size="lg"
                   >

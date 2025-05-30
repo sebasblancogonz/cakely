@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
     stripeCustomerId: string | null;
     subscriptionStatus: string | null;
     stripeCurrentPeriodEnd: Date | null;
-    isLifetime: boolean | null;
+    isLifetime?: boolean;
+    hasUsedTrial?: boolean;
   } | null = null;
 
   try {
@@ -289,7 +290,14 @@ export async function POST(request: NextRequest) {
     );
   } else {
     if (frontendRequestsTrial === true) {
-      applyTrialToThisCheckout = true;
+      if (businessDataForStripe.hasUsedTrial) {
+        console.log(
+          `[Stripe Checkout] Negocio ${targetBusinessId} ya usó una prueba. No se aplicará nueva prueba.`
+        );
+        applyTrialToThisCheckout = false;
+      } else {
+        applyTrialToThisCheckout = true;
+      }
     } else if (
       frontendRequestsTrial === undefined &&
       (!currentDbStatus ||
@@ -304,7 +312,6 @@ export async function POST(request: NextRequest) {
   if (applyTrialToThisCheckout) {
     checkoutSessionParams.subscription_data!.trial_period_days =
       TRIAL_PERIOD_DAYS;
-    checkoutSessionParams.payment_method_collection = 'if_required';
     checkoutSessionParams.subscription_data!.trial_settings = {
       end_behavior: { missing_payment_method: 'cancel' }
     };

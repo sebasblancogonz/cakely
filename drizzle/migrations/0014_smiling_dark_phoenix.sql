@@ -1,0 +1,1 @@
+ALTER TABLE "businesses" ADD COLUMN "has_used_trial" boolean DEFAULT false NOT NULL;

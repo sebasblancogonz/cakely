@@ -157,4 +157,5 @@ export interface BusinessProfileData {
   subscriptionStatus: string | null;
   stripePriceId: string | null;
   stripeCustomerId: string | null;
+  hasUsedTrial?: boolean;
 }

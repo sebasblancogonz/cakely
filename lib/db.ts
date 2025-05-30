@@ -94,6 +94,7 @@ export const businesses = pgTable('businesses', {
     withTimezone: true
   }),
   subscriptionStatus: text('subscription_status'),
+  hasUsedTrial: boolean('has_used_trial').default(false).notNull(),
   isLifetime: boolean('is_lifetime').default(false).notNull()
 });
 

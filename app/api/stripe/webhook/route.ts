@@ -115,16 +115,23 @@ export async function POST(request: NextRequest) {
             `[Stripe Webhook] Actualizando negocio ${cakelyBusinessId} con subscripción ${subscriptionId}, priceId ${priceId}, customerId ${stripeCustomerId}, periodEnd ${currentPeriodEnd.toISOString()}, status ${subscriptionStatus}`
           );
 
-          await db
-            .update(businesses)
-            .set({
+          const dataToSetForBusiness: Partial<typeof businesses.$inferInsert> =
+            {
               stripeSubscriptionId: subscriptionId,
               stripeCustomerId: stripeCustomerId,
               stripePriceId: priceId,
               stripeCurrentPeriodEnd: currentPeriodEnd,
               subscriptionStatus: subscriptionStatus,
               updatedAt: new Date()
-            })
+            };
+
+          if (subscriptionStatus === 'trialing') {
+            dataToSetForBusiness.hasUsedTrial = true;
+          }
+
+          await db
+            .update(businesses)
+            .set(dataToSetForBusiness)
             .where(eq(businesses.id, cakelyBusinessId));
           console.log(
             `[Stripe Webhook] Negocio ${cakelyBusinessId} actualizado tras checkout.session.completed.`
@@ -254,6 +261,25 @@ export async function POST(request: NextRequest) {
                 subscriptionStatus: subscription.status,
                 updatedAt: new Date()
               })
+              .where(eq(businesses.id, cakelyBusinessId));
+          }
+        }
+
+        break;
+      }
+
+      case 'customer.subscription.created': {
+        const subscription = session as Stripe.Subscription;
+        const cakelyBusinessIdStr = subscription.metadata?.cakelyBusinessId;
+        if (cakelyBusinessIdStr) {
+          const cakelyBusinessId = parseInt(cakelyBusinessIdStr, 10);
+          if (!isNaN(cakelyBusinessId)) {
+            console.log(
+              `[WH ${event.type}] Marcando hasUsedTrial=true para BIZ ${cakelyBusinessId} (status: trialing)`
+            );
+            await db
+              .update(businesses)
+              .set({ hasUsedTrial: true, updatedAt: new Date() })
               .where(eq(businesses.id, cakelyBusinessId));
           }
         }
